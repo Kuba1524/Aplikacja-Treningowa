@@ -113,21 +113,66 @@
 
 <script>
     const DAYS = [
-        { id:0, weekday:0, name:"Niedziela", label:"PUSH", icon:"🔥", color:"#ff3b30", exercises: [{name:"Incline DB Press", sets:4, tag:"CHEST"},{name:"Seated OHP", sets:3, tag:"SHOULDER"},{name:"Machine Press", sets:3, tag:"CHEST"},{name:"Rozpiętki", sets:3, tag:"CHEST"},{name:"Wznosy bokiem", sets:4, tag:"DELTS"},{name:"Ab Wheel", sets:3, tag:"CORE"}]},
-        { id:1, weekday:1, name:"Poniedziałek", label:"PULL", icon:"💪", color:"#00b4d8", exercises: [{name:"Podciąganie", sets:4, tag:"BACK"},{name:"Chest Row", sets:4, tag:"BACK"},{name:"Cable Row", sets:3, tag:"BACK"},{name:"Reverse Peck Deck", sets:4, tag:"REAR"},{name:"Szrugsy", sets:3, tag:"TRAPS"},{name:"Uginanie podchwyt", sets:3, tag:"FOREARMS"},{name:"Uginanie nachwyt", sets:3, tag:"FOREARMS"}]},
-        { id:2, weekday:3, name:"Środa", label:"LEGS + ARMS", icon:"🦵", color:"#2ec4b6", exercises: [{name:"Hip Thrust", sets:4, tag:"GLUTES"},{name:"Hack Squat", sets:3, tag:"QUADS"},{name:"Bulgarian Split", sets:3, tag:"LEGS"},{name:"Leg Curl", sets:3, tag:"HAM"},{name:"Supination Curl", sets:3, tag:"BICEPS"},{name:"Katana Extension", sets:3, tag:"TRICEPS"},{name:"Hammer Curl", sets:3, tag:"BICEPS"},{name:"Wspięcia", sets:4, tag:"CALVES"}]},
-        { id:3, weekday:5, name:"Piątek", label:"UPPER", icon:"⚡", color:"#9d4edd", exercises: [{name:"Bench Press", sets:3, tag:"CHEST"},{name:"Incline Machine", sets:3, tag:"CHEST"},{name:"Lat Pulldown 1R", sets:3, tag:"BACK"},{name:"Cable Lateral", sets:4, tag:"DELTS"},{name:"Incline DB Curl", sets:3, tag:"BICEPS"},{name:"Tricep Pushdown", sets:3, tag:"TRICEPS"},{name:"Cable Crunch", sets:4, tag:"CORE"}]}
+        { 
+            id:0, weekday:0, name:"Niedziela", label:"PUSH", icon:"🔥", color:"#ff3b30", 
+            exercises: [
+                {name:"Incline Dumbbell Press", sets:4, tag:"CHEST"},
+                {name:"Seated Dumbbell OHP", sets:3, tag:"SHOULDER"},
+                {name:"Machine Chest Press", sets:3, tag:"CHEST"},
+                {name:"Chest Dips", sets:3, tag:"CHEST"},
+                {name:"Dumbbell Lateral Raises", sets:4, tag:"DELTS"},
+                {name:"Ab Wheel", sets:3, tag:"CORE"},
+                {name:"Dumbbell Side Bend", sets:3, tag:"CORE"}
+            ]
+        },
+        { 
+            id:1, weekday:1, name:"Poniedziałek", label:"PULL", icon:"💪", color:"#00b4d8", 
+            exercises: [
+                {name:"Weighted Pull Ups", sets:4, tag:"BACK"},
+                {name:"Single-Arm DB Row", sets:4, tag:"BACK"},
+                {name:"Seated Cable Row", sets:3, tag:"BACK"},
+                {name:"Reverse Peck Deck", sets:4, tag:"REAR"},
+                {name:"Dumbbell Shrugs", sets:3, tag:"TRAPS"},
+                {name:"Ez-bar Reverse Curl", sets:3, tag:"FOREARMS"},
+                {name:"Barbell Wrist Curl", sets:3, tag:"FOREARMS"}
+            ]
+        },
+        { 
+            id:2, weekday:3, name:"Środa", label:"LEGS + ARMS", icon:"🦵", color:"#2ec4b6", 
+            exercises: [
+                {name:"Hip Thrust", sets:4, tag:"GLUTES"},
+                {name:"Hack Squat / Leg Press", sets:3, tag:"QUADS"},
+                {name:"RDL", sets:3, tag:"LEGS"},
+                {name:"Seated Leg Curl", sets:3, tag:"HAM"},
+                {name:"Supination Curl [SS]", sets:3, tag:"BICEPS"},
+                {name:"Single-Arm Cable Pushdown [SS]", sets:3, tag:"TRICEPS"},
+                {name:"Cross-Body Hammer Curl [SS]", sets:3, tag:"BICEPS"},
+                {name:"Calf Raises [SS]", sets:4, tag:"CALVES"}
+            ]
+        },
+        { 
+            id:3, weekday:5, name:"Piątek", label:"UPPER", icon:"⚡", color:"#9d4edd", 
+            exercises: [
+                {name:"Dumbbell Press", sets:3, tag:"CHEST"},
+                {name:"Cable Flyes (Low to High)", sets:3, tag:"CHEST"},
+                {name:"Single-Arm Lat Pulldown", sets:3, tag:"BACK"},
+                {name:"Cable Lateral Raise", sets:4, tag:"DELTS"},
+                {name:"EZ-bar Preacher Curl", sets:3, tag:"BICEPS"},
+                {name:"Incline Skull Crushers", sets:3, tag:"TRICEPS"},
+                {name:"Cable Crunch", sets:4, tag:"CORE"}
+            ]
+        }
     ];
 
     let state = JSON.parse(localStorage.getItem('kuba_v11') || '{"currentWeekIndex":0, "weeks":[{}], "startSunday":0}');
     let currentDayId = null;
-
+    
     function save() { localStorage.setItem('kuba_v11', JSON.stringify(state)); }
 
     function updateTimeline() {
         const now = new Date();
         const day = now.getDay();
-
+        
         const currentSunday = new Date(now);
         currentSunday.setDate(now.getDate() - day);
         currentSunday.setHours(0, 0, 0, 0);
@@ -144,7 +189,7 @@
         if (currentSundayTime >= state.startSunday) {
             const msPerWeek = 7 * 24 * 60 * 60 * 1000;
             const elapsedWeeks = Math.floor((currentSundayTime - state.startSunday) / msPerWeek);
-
+            
             const oldLength = state.weeks.length;
             while (state.weeks.length <= elapsedWeeks) {
                 state.weeks.push({});
@@ -161,7 +206,7 @@
         document.getElementById('week-tabs').innerHTML = state.weeks.map((_, w) => `
             <button class="week-btn ${state.currentWeekIndex===w?'active':''}" onclick="setWeek(${w})">TYDZIEŃ ${w+1}</button>
         `).join('');
-
+        
         document.getElementById('day-cards').innerHTML = DAYS.map(day => `
             <div class="day-card" onclick="openDay(${day.id})">
                 <div style="font-size:28px; width:56px; height:56px; background:rgba(255,255,255,0.05); border-radius:16px; display:flex; align-items:center; justify-content:center; color:${day.color}">${day.icon}</div>
@@ -242,7 +287,7 @@
     }
 
     function updateSet(ei, i, field, val) { state.weeks[state.currentWeekIndex][`d${currentDayId}_e${ei}`][i][field] = parseFloat(val) || 0; save(); }
-
+    
     function toggleSet(btn, ei, i) {
         const set = state.weeks[state.currentWeekIndex][`d${currentDayId}_e${ei}`][i];
         set.done = !set.done; save(); updateSummary(); renderWorkout();
@@ -258,15 +303,12 @@
 
     function goHome() { document.getElementById('screen-home').classList.remove('hidden'); document.getElementById('screen-workout').classList.add('hidden'); renderHome(); }
 
-    // Bezwarunkowy, twardy reset - usuwa klucze z pamięci, renderWorkout automatycznie wstawi czyste zera
     function resetWorkout() {
         const weekData = state.weeks[state.currentWeekIndex];
         if (!weekData) return;
 
-        // Czyszczenie daty
         delete weekData[`day_${currentDayId}_date`];
 
-        // Wyczyszczenie wszystkich serii i wpisów dla otwartego dnia
         Object.keys(weekData).forEach(key => {
             if (key.startsWith(`d${currentDayId}_`)) {
                 delete weekData[key];
@@ -274,8 +316,6 @@
         });
 
         save();
-
-        // Ponowne otwarcie generuje fabrycznie nowy, czysty dzień z dzisiejszą datą
         openDay(currentDayId);
     }
 
