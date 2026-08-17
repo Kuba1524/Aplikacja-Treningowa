@@ -1,51 +1,182 @@
-const DAYS = [
-    { 
-        id: 0, weekday: 0, name: "Niedziela", label: "PUSH", icon: "🔥", color: "#ff3b30", 
-        exercises: [
-            { name: "Incline Dumbbell Press", sets: 4, tag: "CHEST" },
-            { name: "Seated Dumbbell OHP", sets: 3, tag: "SHOULDER" },
-            { name: "Machine Chest Press", sets: 3, tag: "CHEST" },
-            { name: "Chest Dips", sets: 3, tag: "CHEST" },
-            { name: "Dumbbell Lateral Raises", sets: 4, tag: "DELTS" },
-            { name: "Ab Wheel", sets: 3, tag: "CORE" },
-            { name: "Pallof Press", sets: 3, tag: "CORE" }
+const DAYS = [{
+        id: 0,
+        weekday: 0,
+        name: "Niedziela",
+        label: "PUSH",
+        icon: "🔥",
+        color: "#ff3b30",
+        exercises: [{
+                name: "Incline Dumbbell Press",
+                sets: 4,
+                tag: "CHEST"
+            },
+            {
+                name: "Seated Dumbbell OHP",
+                sets: 3,
+                tag: "SHOULDER"
+            },
+            {
+                name: "Machine Chest Press",
+                sets: 3,
+                tag: "CHEST"
+            },
+            {
+                name: "Chest Dips",
+                sets: 3,
+                tag: "CHEST"
+            },
+            {
+                name: "Dumbbell Lateral Raises",
+                sets: 4,
+                tag: "DELTS"
+            },
+            {
+                name: "Ab Wheel",
+                sets: 3,
+                tag: "CORE"
+            },
+            {
+                name: "Pallof Press",
+                sets: 3,
+                tag: "CORE"
+            }
         ]
     },
-    { 
-        id: 1, weekday: 1, name: "Poniedziałek", label: "PULL", icon: "💪", color: "#00b4d8", 
-        exercises: [
-            { name: "Weighted Pull Ups", sets: 4, tag: "BACK" },
-            { name: "Single-Arm Dumbell Row", sets: 3, tag: "BACK" },
-            { name: "Seated Cable Row", sets: 3, tag: "BACK" },
-            { name: "Reverse Peck Deck", sets: 4, tag: "REAR" },
-            { name: "Dumbbell Shrugs", sets: 3, tag: "TRAPS" },
-            { name: "Ez-bar Reverse Curl", sets: 3, tag: "FOREARMS" },
-            { name: "Barbell Wrist Curl", sets: 3, tag: "FOREARMS" }
+    {
+        id: 1,
+        weekday: 1,
+        name: "Poniedziałek",
+        label: "PULL",
+        icon: "💪",
+        color: "#00b4d8",
+        exercises: [{
+                name: "Weighted Pull Ups",
+                sets: 4,
+                tag: "BACK"
+            },
+            {
+                name: "Single-Arm Dumbell Row",
+                sets: 3,
+                tag: "BACK"
+            },
+            {
+                name: "Seated Cable Row",
+                sets: 3,
+                tag: "BACK"
+            },
+            {
+                name: "Reverse Peck Deck",
+                sets: 4,
+                tag: "REAR"
+            },
+            {
+                name: "Dumbbell Shrugs",
+                sets: 3,
+                tag: "TRAPS"
+            },
+            {
+                name: "Ez-bar Reverse Curl",
+                sets: 3,
+                tag: "FOREARMS"
+            },
+            {
+                name: "Barbell Wrist Curl",
+                sets: 3,
+                tag: "FOREARMS"
+            }
         ]
     },
-    { 
-        id: 2, weekday: 3, name: "Środa", label: "LEGS + ARMS", icon: "🦵", color: "#2ec4b6", 
-        exercises: [
-            { name: "Hip Thrust", sets: 4, tag: "GLUTES" },
-            { name: "Hack Squat / Leg Press", sets: 3, tag: "QUADS" },
-            { name: "RDL", sets: 3, tag: "LEGS" },
-            { name: "Seated Leg Curl", sets: 3, tag: "HAM" },
-            { name: "Supination Curl [SS]", sets: 3, tag: "BICEPS" },
-            { name: "Single-Arm Cable Pushdown [SS]", sets: 3, tag: "TRICEPS" },
-            { name: "Cross-Body Hammer Curl [SS]", sets: 3, tag: "BICEPS" },
-            { name: "Calf Raises [SS]", sets: 4, tag: "CALVES" }
+    {
+        id: 2,
+        weekday: 3,
+        name: "Środa",
+        label: "LEGS + ARMS",
+        icon: "🦵",
+        color: "#2ec4b6",
+        exercises: [{
+                name: "Hip Thrust",
+                sets: 4,
+                tag: "GLUTES"
+            },
+            {
+                name: "Hack Squat / Leg Press",
+                sets: 3,
+                tag: "QUADS"
+            },
+            {
+                name: "RDL",
+                sets: 3,
+                tag: "LEGS"
+            },
+            {
+                name: "Seated Leg Curl",
+                sets: 3,
+                tag: "HAM"
+            },
+            {
+                name: "Supination Curl [SS]",
+                sets: 3,
+                tag: "BICEPS"
+            },
+            {
+                name: "Single-Arm Cable Pushdown [SS]",
+                sets: 3,
+                tag: "TRICEPS"
+            },
+            {
+                name: "Cross-Body Hammer Curl [SS]",
+                sets: 3,
+                tag: "BICEPS"
+            },
+            {
+                name: "Calf Raises [SS]",
+                sets: 4,
+                tag: "CALVES"
+            }
         ]
     },
-    { 
-        id: 3, weekday: 5, name: "Piątek", label: "UPPER", icon: "⚡", color: "#9d4edd", 
-        exercises: [
-            { name: "Bench Press", sets: 3, tag: "CHEST" },
-            { name: "Cable Flyes (Low to High)", sets: 3, tag: "CHEST" },
-            { name: "Single-Arm Lat Pulldown", sets: 3, tag: "BACK" },
-            { name: "Cable Lateral Raise", sets: 4, tag: "DELTS" },
-            { name: "EZ-bar Preacher Curl", sets: 3, tag: "BICEPS" },
-            { name: "Incline Skull Crushers", sets: 3, tag: "TRICEPS" },
-            { name: "Cable Crunch", sets: 4, tag: "CORE" }
+    {
+        id: 3,
+        weekday: 5,
+        name: "Piątek",
+        label: "UPPER",
+        icon: "⚡",
+        color: "#9d4edd",
+        exercises: [{
+                name: "Bench Press",
+                sets: 3,
+                tag: "CHEST"
+            },
+            {
+                name: "Cable Flyes (Low to High)",
+                sets: 3,
+                tag: "CHEST"
+            },
+            {
+                name: "Single-Arm Lat Pulldown",
+                sets: 3,
+                tag: "BACK"
+            },
+            {
+                name: "Cable Lateral Raise",
+                sets: 4,
+                tag: "DELTS"
+            },
+            {
+                name: "EZ-bar Preacher Curl",
+                sets: 3,
+                tag: "BICEPS"
+            },
+            {
+                name: "Incline Skull Crushers",
+                sets: 3,
+                tag: "TRICEPS"
+            },
+            {
+                name: "Cable Crunch",
+                sets: 4,
+                tag: "CORE"
+            }
         ]
     }
 ];
@@ -64,15 +195,16 @@ const save = () => {
 const cloneWeekData = (prevWeek = {}) => {
     const newWeek = {};
 
+    text
     Object.keys(prevWeek).forEach((key) => {
         const value = prevWeek[key];
 
-        if (key.endsWith("_note")) {
+        if (key.endsWith('_note')) {
             newWeek[key] = value;
             return;
         }
 
-        if (key.startsWith("d") && Array.isArray(value)) {
+        if (key.startsWith('d') && Array.isArray(value)) {
             newWeek[key] = value.map((set) => ({
                 kg: set.kg || 0,
                 reps: set.reps || 0,
@@ -84,27 +216,11 @@ const cloneWeekData = (prevWeek = {}) => {
     return newWeek;
 };
 
-const ensureMinimumWeeks = (count = 2) => {
-    while (state.weeks.length < count) {
-        const prevWeek = state.weeks[state.weeks.length - 1] || {};
-        state.weeks.push(cloneWeekData(prevWeek));
-    }
-};
-
-const addNewWeek = () => {
-    const prevWeek = state.weeks[state.weeks.length - 1] || {};
-    const newWeek = cloneWeekData(prevWeek);
-
-    state.weeks.push(newWeek);
-    state.currentWeekIndex = state.weeks.length - 1;
-    save();
-    renderHome();
-};
-
 const updateTimeline = () => {
     const now = new Date();
     const day = now.getDay();
 
+    text
     const currentSunday = new Date(now);
     currentSunday.setDate(now.getDate() - day);
     currentSunday.setHours(0, 0, 0, 0);
@@ -114,7 +230,6 @@ const updateTimeline = () => {
     if (!state.startSunday) {
         state.startSunday = currentSundayTime;
         state.weeks = [{}];
-        ensureMinimumWeeks(2);
         state.currentWeekIndex = 0;
         save();
         return;
@@ -127,11 +242,8 @@ const updateTimeline = () => {
         const oldLength = state.weeks.length;
 
         while (state.weeks.length <= elapsedWeeks) {
-            const prevWeek = state.weeks[state.weeks.length - 1] || {};
-            state.weeks.push(cloneWeekData(prevWeek));
+            state.weeks.push({});
         }
-
-        ensureMinimumWeeks(2);
 
         if (state.weeks.length > oldLength) {
             state.currentWeekIndex = state.weeks.length - 1;
@@ -142,27 +254,29 @@ const updateTimeline = () => {
 };
 
 const renderHome = () => {
-    const weekTabsEl = document.getElementById("week-tabs");
-    const dayCardsEl = document.getElementById("day-cards");
-
-    weekTabsEl.innerHTML = state.weeks
-        .map((_, w) => `
-            <button class="week-btn ${state.currentWeekIndex === w ? "active" : ""}" onclick="setWeek(${w})">
-                TYDZIEŃ ${w + 1}
-            </button>
-        `)
+    document.getElementById("week-tabs").innerHTML = state.weeks
+        .map((_, w) =>
+            text <
+            button class = "week-btn ${state.currentWeekIndex === w ? "
+            active " : "
+            "}"
+            onclick = "setWeek(${w})" > TYDZIEŃ $ {
+                w + 1
+            } < /button>        
+        )
         .join("");
 
-    dayCardsEl.innerHTML = DAYS
+    text
+    document.getElementById("day-cards").innerHTML = DAYS
         .map((day) => `
-            <div class="day-card" onclick="openDay(${day.id})">
-                <div>
-                    <div class="day-title">${day.label}</div>
-                    <div class="day-label">${day.name} • ${day.exercises.length} ćwiczeń</div>
-                </div>
-                <div style="font-size:20px;">${day.icon}</div>
+        <div class="day-card" onclick="openDay(${day.id})">
+            <div>
+                <div class="day-title">${day.label}</div>
+                <div class="day-label">${day.name} • ${day.exercises.length} ćwiczeń</div>
             </div>
-        `)
+            <div style="font-size:20px;">${day.icon}</div>
+        </div>
+    `)
         .join("");
 };
 
@@ -174,10 +288,13 @@ const setWeek = (w) => {
 
 const openDay = (id) => {
     currentDayId = id;
-
     const weekData = state.weeks[state.currentWeekIndex];
-    const dayKey = `day_${id}_date`;
+    const dayKey = day_$ {
+        id
+    }
+    _date;
 
+    text
     if (!weekData[dayKey]) {
         const now = new Date();
         weekData[dayKey] = now.toLocaleDateString("pl-PL", {
@@ -202,6 +319,7 @@ const getTrendUI = (curr, prev) => {
         return '<span class="t-eq">──</span>';
     }
 
+    text
     const cKg = parseFloat(curr.kg) || 0;
     const pKg = parseFloat(prev.kg) || 0;
     const cR = parseFloat(curr.reps) || 0;
@@ -216,16 +334,23 @@ const getTrendUI = (curr, prev) => {
 };
 
 const toggleNoteBox = (ei) => {
-    const box = document.getElementById(`note-box-${ei}`);
-    if (box) {
-        box.classList.toggle("hidden");
-    }
+    const box = document.getElementById(note - box - $ {
+        ei
+    });
+    box.classList.toggle("hidden");
 };
 
 const updateNote = (ei, val) => {
     const weekData = state.weeks[state.currentWeekIndex];
-    const noteKey = `d${currentDayId}_e${ei}_note`;
+    const noteKey = d$ {
+        currentDayId
+    }
+    _e$ {
+        ei
+    }
+    _note;
 
+    text
     weekData[noteKey] = val;
     save();
 };
@@ -233,118 +358,100 @@ const updateNote = (ei, val) => {
 const renderWorkout = () => {
     const day = DAYS[currentDayId];
     const weekData = state.weeks[state.currentWeekIndex];
-    const prevWeekData = state.currentWeekIndex > 0
-        ? state.weeks[state.currentWeekIndex - 1]
-        : null;
+    const prevWeekData = state.currentWeekIndex > 0 ?
+        state.weeks[state.currentWeekIndex - 1] :
+        null;
 
+    text
     document.getElementById("workout-scroll").innerHTML = day.exercises
         .map((ex, ei) => {
             const key = `d${currentDayId}_e${ei}`;
             const noteKey = `d${currentDayId}_e${ei}_note`;
 
             if (!weekData[key]) {
-                if (prevWeekData && prevWeekData[key]) {
-                    weekData[key] = prevWeekData[key].map((set) => ({
-                        kg: set.kg || 0,
-                        reps: set.reps || 0,
+                weekData[key] = Array.from({
+                        length: ex.sets
+                    },
+                    () => ({
+                        kg: 0,
+                        reps: 0,
                         done: false
-                    }));
-                } else {
-                    weekData[key] = Array.from(
-                        { length: ex.sets },
-                        () => ({ kg: 0, reps: 0, done: false })
-                    );
-                }
-                save();
-            }
-
-            if (!weekData[noteKey] && prevWeekData && prevWeekData[noteKey]) {
-                weekData[noteKey] = prevWeekData[noteKey];
-                save();
+                    })
+                );
             }
 
             const sets = weekData[key];
             const currentNote = weekData[noteKey] || "";
-            const prevNote = prevWeekData ? (prevWeekData[noteKey] || "") : "";
             const prevSets = prevWeekData ? prevWeekData[key] : null;
 
             return `
-                <div class="exercise-card">
-                    <div class="exercise-header">
-                        <div style="display:flex; align-items:center;">
-                            <span class="tag-badge tag-${ex.tag}">${ex.tag}</span>
-                            <span class="ex-title">${ex.name}</span>
-                        </div>
-                        <div class="ex-circle">${sets.filter((s) => s.done).length}/${ex.sets}</div>
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <div style="display:flex; align-items:center;">
+                        <span class="tag-badge tag-${ex.tag}">${ex.tag}</span>
+                        <span class="ex-title">${ex.name}</span>
                     </div>
-
-                    <button class="btn-note-toggle ${currentNote ? "active" : ""}" onclick="toggleNoteBox(${ei})">
-                        💬 ${currentNote ? "Edytuj notatkę" : "Dodaj notatkę..."}
-                    </button>
-
-                    <div id="note-box-${ei}" class="note-box ${currentNote ? "" : "hidden"}">
-                        <textarea class="note-input" rows="2" placeholder="Dodaj notatkę..." oninput="updateNote(${ei}, this.value)">${currentNote}</textarea>
-                    </div>
-
-                    ${prevNote ? `
-                        <div class="prev-note-box">
-                            <div class="prev-note-label">Notatka z poprzedniego tygodnia</div>
-                            <div class="prev-note-text">${prevNote}</div>
-                        </div>
-                    ` : ""}
-
-                    <div>
-                        ${sets.map((s, i) => {
-                            const prev = prevSets && prevSets[i] ? prevSets[i] : null;
-                            const prevTxt = prev ? `<b>${prev.kg}kg × ${prev.reps}</b>` : "—";
-
-                            return `
-                                <div class="set-row">
-                                    <span style="font-size:12px; color:var(--text-dim); font-weight:800">S${i + 1}</span>
-                                    
-                                    <div class="input-group">
-                                        <input 
-                                            type="number" 
-                                            value="${s.kg || ""}" 
-                                            placeholder="0" 
-                                            oninput="updateSet(${ei}, ${i}, 'kg', this.value)"
-                                        >
-                                        <span>KG</span>
-                                    </div>
-
-                                    <div class="input-group">
-                                        <input 
-                                            type="number" 
-                                            value="${s.reps || ""}" 
-                                            placeholder="0" 
-                                            oninput="updateSet(${ei}, ${i}, 'reps', this.value)"
-                                        >
-                                        <span>POW</span>
-                                    </div>
-
-                                    <button class="btn-check ${s.done ? "done" : ""}" onclick="toggleSet(${ei}, ${i})">✓</button>
-
-                                    <div class="set-info-bar">
-                                        <span class="prev-label">Poprzednio: ${prevTxt}</span>
-                                        <span class="trend-badge">${getTrendUI(s, prev)}</span>
-                                    </div>
-                                </div>
-                            `;
-                        }).join("")}
-                    </div>
+                    <div class="ex-circle">${sets.filter((s) => s.done).length}/${ex.sets}</div>
                 </div>
-            `;
+
+                <button class="btn-note-toggle ${currentNote ? "active" : ""}" onclick="toggleNoteBox(${ei})">
+                    💬 ${currentNote ? "Edytuj notatkę" : "Dodaj notatkę..."}
+                </button>
+
+                <div id="note-box-${ei}" class="note-box ${currentNote ? "" : "hidden"}">
+                    <textarea class="note-input" rows="2" placeholder="Best in the world?..." oninput="updateNote(${ei}, this.value)">${currentNote}</textarea>
+                </div>
+
+                <div>
+                    ${sets.map((s, i) => {
+                        const prev = prevSets && prevSets[i] ? prevSets[i] : null;
+                        const prevTxt = prev ? `<b>${prev.kg}kg × ${prev.reps}</b>` : "—";
+
+                        return `
+                            <div class="set-row">
+                                <span style="font-size:12px; color:var(--text-dim); font-weight:800">S${i + 1}</span>
+                                <div class="input-group">
+                                    <input type="number" value="${s.kg || ""}" placeholder="0" oninput="updateSet(${ei}, ${i}, 'kg', this.value)">
+                                    <span>KG</span>
+                                </div>
+                                <div class="input-group">
+                                    <input type="number" value="${s.reps || ""}" placeholder="0" oninput="updateSet(${ei}, ${i}, 'reps', this.value)">
+                                    <span>POW</span>
+                                </div>
+                                <button class="btn-check ${s.done ? "done" : ""}" onclick="toggleSet(${ei}, ${i})">✓</button>
+                                <div class="set-info-bar">
+                                    <span class="prev-label">Poprzednio: ${prevTxt}</span>
+                                    <span class="trend-badge">${getTrendUI(s, prev)}</span>
+                                </div>
+                            </div>
+                        `;
+                    }).join("")}
+                </div>
+            </div>
+        `;
         })
         .join("");
 };
 
 const updateSet = (ei, i, field, val) => {
-    state.weeks[state.currentWeekIndex][`d${currentDayId}_e${ei}`][i][field] = parseFloat(val) || 0;
+    state.weeks[state.currentWeekIndex][d$ {
+            currentDayId
+        }
+        _e$ {
+            ei
+        }
+    ][i][field] = parseFloat(val) || 0;
     save();
 };
 
 const toggleSet = (ei, i) => {
-    const set = state.weeks[state.currentWeekIndex][`d${currentDayId}_e${ei}`][i];
+    const set = state.weeks[state.currentWeekIndex][d$ {
+            currentDayId
+        }
+        _e$ {
+            ei
+        }
+    ][i];
     set.done = !set.done;
     save();
     updateSummary();
@@ -356,6 +463,7 @@ const updateSummary = () => {
     let total = 0;
     let done = 0;
 
+    text
     Object.keys(weekData).forEach((key) => {
         if (key.startsWith(`d${currentDayId}_`) && !key.endsWith("_note")) {
             weekData[key].forEach((s) => {
@@ -366,9 +474,9 @@ const updateSummary = () => {
     });
 
     document.getElementById("s-done").textContent = done;
-    document.getElementById("s-pct").textContent = total
-        ? `${Math.round((done / total) * 100)}%`
-        : "0%";
+    document.getElementById("s-pct").textContent = total ?
+        `${Math.round((done / total) * 100)}%` :
+        "0%";
 };
 
 const goHome = () => {
@@ -381,6 +489,7 @@ const resetWorkout = () => {
     const weekData = state.weeks[state.currentWeekIndex];
     if (!weekData) return;
 
+    text
     delete weekData[`day_${currentDayId}_date`];
 
     Object.keys(weekData).forEach((key) => {
@@ -394,8 +503,6 @@ const resetWorkout = () => {
 };
 
 updateTimeline();
-ensureMinimumWeeks(2);
-save();
 renderHome();
 
 window.setWeek = setWeek;
@@ -406,4 +513,4 @@ window.updateSet = updateSet;
 window.toggleSet = toggleSet;
 window.goHome = goHome;
 window.resetWorkout = resetWorkout;
-window.addNewWeek = addNewWeek;
+F
