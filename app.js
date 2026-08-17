@@ -61,6 +61,46 @@ const save = () => {
     localStorage.setItem("kuba_v11", JSON.stringify(state));
 };
 
+const cloneWeekData = (prevWeek = {}) => {
+    const newWeek = {};
+
+    Object.keys(prevWeek).forEach((key) => {
+        const value = prevWeek[key];
+
+        if (key.endsWith("_note")) {
+            newWeek[key] = value;
+            return;
+        }
+
+        if (key.startsWith("d") && Array.isArray(value)) {
+            newWeek[key] = value.map((set) => ({
+                kg: set.kg || 0,
+                reps: set.reps || 0,
+                done: false
+            }));
+        }
+    });
+
+    return newWeek;
+};
+
+const ensureMinimumWeeks = (count = 2) => {
+    while (state.weeks.length < count) {
+        const prevWeek = state.weeks[state.weeks.length - 1] || {};
+        state.weeks.push(cloneWeekData(prevWeek));
+    }
+};
+
+const addNewWeek = () => {
+    const prevWeek = state.weeks[state.weeks.length - 1] || {};
+    const newWeek = cloneWeekData(prevWeek);
+
+    state.weeks.push(newWeek);
+    state.currentWeekIndex = state.weeks.length - 1;
+    save();
+    renderHome();
+};
+
 const updateTimeline = () => {
     const now = new Date();
     const day = now.getDay();
@@ -74,6 +114,7 @@ const updateTimeline = () => {
     if (!state.startSunday) {
         state.startSunday = currentSundayTime;
         state.weeks = [{}];
+        ensureMinimumWeeks(2);
         state.currentWeekIndex = 0;
         save();
         return;
@@ -86,8 +127,11 @@ const updateTimeline = () => {
         const oldLength = state.weeks.length;
 
         while (state.weeks.length <= elapsedWeeks) {
-            state.weeks.push({});
+            const prevWeek = state.weeks[state.weeks.length - 1] || {};
+            state.weeks.push(cloneWeekData(prevWeek));
         }
+
+        ensureMinimumWeeks(2);
 
         if (state.weeks.length > oldLength) {
             state.currentWeekIndex = state.weeks.length - 1;
@@ -98,7 +142,10 @@ const updateTimeline = () => {
 };
 
 const renderHome = () => {
-    document.getElementById("week-tabs").innerHTML = state.weeks
+    const weekTabsEl = document.getElementById("week-tabs");
+    const dayCardsEl = document.getElementById("day-cards");
+
+    weekTabsEl.innerHTML = state.weeks
         .map((_, w) => `
             <button class="week-btn ${state.currentWeekIndex === w ? "active" : ""}" onclick="setWeek(${w})">
                 TYDZIEŃ ${w + 1}
@@ -106,7 +153,7 @@ const renderHome = () => {
         `)
         .join("");
 
-    document.getElementById("day-cards").innerHTML = DAYS
+    dayCardsEl.innerHTML = DAYS
         .map((day) => `
             <div class="day-card" onclick="openDay(${day.id})">
                 <div>
@@ -127,6 +174,7 @@ const setWeek = (w) => {
 
 const openDay = (id) => {
     currentDayId = id;
+
     const weekData = state.weeks[state.currentWeekIndex];
     const dayKey = `day_${id}_date`;
 
@@ -169,7 +217,9 @@ const getTrendUI = (curr, prev) => {
 
 const toggleNoteBox = (ei) => {
     const box = document.getElementById(`note-box-${ei}`);
-    box.classList.toggle("hidden");
+    if (box) {
+        box.classList.toggle("hidden");
+    }
 };
 
 const updateNote = (ei, val) => {
@@ -193,14 +243,29 @@ const renderWorkout = () => {
             const noteKey = `d${currentDayId}_e${ei}_note`;
 
             if (!weekData[key]) {
-                weekData[key] = Array.from(
-                    { length: ex.sets },
-                    () => ({ kg: 0, reps: 0, done: false })
-                );
+                if (prevWeekData && prevWeekData[key]) {
+                    weekData[key] = prevWeekData[key].map((set) => ({
+                        kg: set.kg || 0,
+                        reps: set.reps || 0,
+                        done: false
+                    }));
+                } else {
+                    weekData[key] = Array.from(
+                        { length: ex.sets },
+                        () => ({ kg: 0, reps: 0, done: false })
+                    );
+                }
+                save();
+            }
+
+            if (!weekData[noteKey] && prevWeekData && prevWeekData[noteKey]) {
+                weekData[noteKey] = prevWeekData[noteKey];
+                save();
             }
 
             const sets = weekData[key];
             const currentNote = weekData[noteKey] || "";
+            const prevNote = prevWeekData ? (prevWeekData[noteKey] || "") : "";
             const prevSets = prevWeekData ? prevWeekData[key] : null;
 
             return `
@@ -218,8 +283,15 @@ const renderWorkout = () => {
                     </button>
 
                     <div id="note-box-${ei}" class="note-box ${currentNote ? "" : "hidden"}">
-                        <textarea class="note-input" rows="2" placeholder="Best in the world?..." oninput="updateNote(${ei}, this.value)">${currentNote}</textarea>
+                        <textarea class="note-input" rows="2" placeholder="Dodaj notatkę..." oninput="updateNote(${ei}, this.value)">${currentNote}</textarea>
                     </div>
+
+                    ${prevNote ? `
+                        <div class="prev-note-box">
+                            <div class="prev-note-label">Notatka z poprzedniego tygodnia</div>
+                            <div class="prev-note-text">${prevNote}</div>
+                        </div>
+                    ` : ""}
 
                     <div>
                         ${sets.map((s, i) => {
@@ -229,15 +301,29 @@ const renderWorkout = () => {
                             return `
                                 <div class="set-row">
                                     <span style="font-size:12px; color:var(--text-dim); font-weight:800">S${i + 1}</span>
+                                    
                                     <div class="input-group">
-                                        <input type="number" value="${s.kg || ""}" placeholder="0" oninput="updateSet(${ei}, ${i}, 'kg', this.value)">
+                                        <input 
+                                            type="number" 
+                                            value="${s.kg || ""}" 
+                                            placeholder="0" 
+                                            oninput="updateSet(${ei}, ${i}, 'kg', this.value)"
+                                        >
                                         <span>KG</span>
                                     </div>
+
                                     <div class="input-group">
-                                        <input type="number" value="${s.reps || ""}" placeholder="0" oninput="updateSet(${ei}, ${i}, 'reps', this.value)">
+                                        <input 
+                                            type="number" 
+                                            value="${s.reps || ""}" 
+                                            placeholder="0" 
+                                            oninput="updateSet(${ei}, ${i}, 'reps', this.value)"
+                                        >
                                         <span>POW</span>
                                     </div>
+
                                     <button class="btn-check ${s.done ? "done" : ""}" onclick="toggleSet(${ei}, ${i})">✓</button>
+
                                     <div class="set-info-bar">
                                         <span class="prev-label">Poprzednio: ${prevTxt}</span>
                                         <span class="trend-badge">${getTrendUI(s, prev)}</span>
@@ -308,6 +394,8 @@ const resetWorkout = () => {
 };
 
 updateTimeline();
+ensureMinimumWeeks(2);
+save();
 renderHome();
 
 window.setWeek = setWeek;
@@ -318,3 +406,4 @@ window.updateSet = updateSet;
 window.toggleSet = toggleSet;
 window.goHome = goHome;
 window.resetWorkout = resetWorkout;
+window.addNewWeek = addNewWeek;
