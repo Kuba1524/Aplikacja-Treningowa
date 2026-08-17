@@ -1,1 +1,38 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0d1117">
+    <title>Kuba Trening - Pro Plan</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
+<div id="screen-home">
+    <div class="header"><h1>Plan <span>Treningowy</span></h1></div>
+    <div class="week-selector" id="week-tabs"></div>
+    <div class="day-grid" id="day-cards"></div>
+</div>
+
+<div id="screen-workout" class="hidden">
+    <div class="nav-bar">
+        <button class="btn-back" onclick="goHome()">←</button>
+        <div>
+            <h2 id="wh-title" style="font-size: 17px; font-weight: 800;"></h2>
+            <span id="wh-date" class="workout-date-tag"></span>
+        </div>
+        <button onclick="resetWorkout()" style="margin-left: auto; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--danger); padding: 8px 14px; border-radius: 10px; font-size: 11px; font-weight: 800;">RESET</button>
+    </div>
+    <div id="workout-scroll" style="padding: 16px; padding-bottom: 120px;"></div>
+    <div class="footer-stats">
+        <div style="text-align:center"><span id="s-done" class="stat-val">0</span><span class="stat-lab">Ukończone Serie</span></div>
+        <div style="text-align:center"><span id="s-pct" class="stat-val">0%</span><span class="stat-lab">Postęp Treningu</span></div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
