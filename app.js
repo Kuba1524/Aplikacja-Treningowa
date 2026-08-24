@@ -80,7 +80,7 @@ const DAYS = [
             { name: "Incline Skull Crushers", sets: 3, reps: "8-12", tag: "TRICEPS" },
             { name: "Cable Crunch", sets: 4, reps: "8-12", tag: "CORE" }
         ]
-    ]
+    }
 ];
 
 let state = {
@@ -227,7 +227,7 @@ const updateTimeline = () => {
 
     if (!state.startSunday) {
         state.startSunday = currentSundayTime;
-        state.weeks = [normalizeWave(state.weeks[0] || {})];
+        state.weeks = [normalizeWeek(state.weeks[0] || {})];
         state.currentWeekIndex = 0;
         save();
         return;
