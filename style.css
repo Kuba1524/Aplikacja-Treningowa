@@ -425,9 +425,17 @@ input[type="number"]:focus {
 }
 
 .ex-reps-range {
+    font-size: 11px;
+    color: var(--accent-2);
+    font-weight: 700;
+    margin-top: 4px;
+    letter-spacing: 0.4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ex-reps-range::before {
+    content: "🎯";
     font-size: 10px;
-    color: var(--text-dim);
-    font-weight: 600;
-    margin-top: 3px;
-    letter-spacing: 0.3px;
 }
