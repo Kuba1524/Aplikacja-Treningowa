@@ -431,19 +431,20 @@ const renderWorkout = () => {
             const prevSets = prevWeekData ? prevWeekData[key] : null;
             const prevNote = prevWeekData ? (prevWeekData[noteKey] || "") : "";
 
-            return `
+           return `
                 <div class="exercise-card">
                     <div class="exercise-header">
                         <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
                             <span class="tag-badge tag-${ex.tag}">${ex.tag}</span>
-                            <div>
-                                <span class="ex-title">${ex.name}</span>
-                                <div class="ex-reps-range">${ex.sets} × ${ex.reps} powtórzeń</div>
-                            </div>
+                            <span class="ex-title">${ex.name}</span>
                         </div>
                         <div class="ex-circle">${sets.filter((s) => s.done).length}/${ex.sets}</div>
                     </div>
-
+            
+                    <div class="rep-range-bar">
+                        <span>🎯 Zakres: <strong>${ex.sets} serie × ${ex.reps} powtórzeń</strong></span>
+                    </div>
+            
                     ${prevNote && prevNote.trim() ? `
                         <div class="history-note">
                             <div class="history-note-label">Notatka z poprzedniego tygodnia</div>
