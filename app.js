@@ -432,7 +432,6 @@ const updateSet = (ei, i, field, val) => {
     const key = getExerciseKey(currentDayId, ei);
     state.weeks[state.currentWeekIndex][key][i][field] = parseFloat(val) || 0;
     save();
-    renderHome();
 };
 
 const toggleSet = (ei, i) => {
