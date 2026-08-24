@@ -373,7 +373,7 @@ const renderWorkout = () => {
                         <div class="ex-circle">${sets.filter((s) => s.done).length}/${ex.sets}</div>
                     </div>
 
-                    ${prevNote ? `
+                    ${prevNote && prevNote.trim() ? `
                         <div class="history-note">
                             <div class="history-note-label">Notatka z poprzedniego tygodnia</div>
                             <div class="history-note-text">${escapeHtml(prevNote)}</div>
