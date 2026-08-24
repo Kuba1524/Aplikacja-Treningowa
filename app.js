@@ -328,7 +328,7 @@ const updateNote = (ei, val) => {
     const btn = document.querySelector(`button[onclick="toggleNoteBox(${ei})"]`);
     if (btn) {
         btn.classList.toggle("active", !!val.trim());
-        btn.innerHTML = `💬 ${val.trim() ? "Edytuj notatkę" : "Dodaj notatkę"}`;
+        btn.textContext = `💬 ${val.trim() ? "Edytuj notatkę" : "Dodaj notatkę"}`;
     }
 };
 
@@ -380,7 +380,7 @@ const renderWorkout = () => {
                         </div>
                     ` : ""}
 
-                    <button class="btn-note-toggle ${currentNote ? "active" : ""}" onclick="toggleNoteBox(${ei})">
+                    <button id="note-toggle-${ei}" class="btn-note-toggle ${currentNote ? "active" : ""}" onclick="toggleNoteBox(${ei})">
                         💬 ${currentNote ? "Edytuj notatkę" : "Dodaj notatkę"}
                     </button>
 
