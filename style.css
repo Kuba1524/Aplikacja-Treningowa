@@ -176,7 +176,7 @@ body {
 .exercise-card {
     background: #1E2937;
     border-radius: 16px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     border: 1px solid #334155;
     overflow: hidden;
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
@@ -224,7 +224,7 @@ body {
 }
 
 .history-note {
-    margin: 14px 0 16px;
+    margin: 0 0 16px;
     padding: 12px 14px;
     border-radius: 12px;
     background: #1E40AF20;
@@ -289,15 +289,12 @@ body {
 }
 
 .set-row {
-    background: #1E2937;
-    border-radius: 12px;
-    padding: 16px 18px;
-    margin-bottom: 12px;
-    border: 1px solid #334155;
+    padding: 14px 18px;
+    border-bottom: 1px solid #334155;
 }
 
 .set-row:last-child {
-    margin-bottom: 0;
+    border-bottom: none;
 }
 
 .set-top-row {
@@ -374,7 +371,7 @@ input[type="number"] {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 10px;
+    margin-top: 8px;
     padding-left: 48px;
 }
 
@@ -399,16 +396,15 @@ input[type="number"] {
 .t-eq { color: var(--text-dim); }
 
 .footer-stats {
-    position: fixed;
+    position: sticky;
     bottom: 0;
-    left: 0;
-    right: 0;
-    background: rgba(15, 20, 28, 0.92);
-    padding: 16px 30px calc(16px + env(safe-area-inset-bottom));
+    background: rgba(15, 20, 28, 0.95);
+    padding: 16px 30px;
     border-top: 1px solid var(--border);
     display: flex;
     justify-content: space-around;
     backdrop-filter: blur(16px);
+    margin-top: 20px;
 }
 
 .stat-val {
@@ -437,7 +433,7 @@ input[type="number"] {
 
 .ex-reps-range {
     font-size: 13px;
-    color: #f87171;
+    color: #9CA3AF;
     font-weight: 700;
     margin-top: 6px;
     letter-spacing: 0.3px;
