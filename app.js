@@ -324,7 +324,12 @@ const updateNote = (ei, val) => {
 
     weekData[noteKey] = val;
     save();
-    renderWorkout();
+
+    const btn = document.querySelector(`button[onclick="toggleNoteBox(${ei})"]`);
+    if (btn) {
+        btn.classList.toggle("active", !!val.trim());
+        btn.innerHTML = `💬 ${val.trim() ? "Edytuj notatkę" : "Dodaj notatkę"}`;
+    }
 };
 
 const ensureWorkoutDataExists = (dayId, exerciseIndex, setsCount) => {
