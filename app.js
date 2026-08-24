@@ -1,5 +1,17 @@
 const STORAGE_KEY = "kuba_v11";
 
+// Funkcja generująca unikalny ID dla użytkownika
+const getUserId = () => {
+    let userId = localStorage.getItem('user_id');
+    if (!userId) {
+        userId = 'user_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+        localStorage.setItem('user_id', userId);
+    }
+    return userId;
+};
+
+const USER_ID = getUserId();
+
 const DAYS = [
     {
         id: 0,
@@ -72,15 +84,65 @@ const DAYS = [
     }
 ];
 
-let state = JSON.parse(
-    localStorage.getItem(STORAGE_KEY) ||
-    '{"currentWeekIndex":0,"weeks":[{}],"startSunday":0}'
-);
+let state = {
+    currentWeekIndex: 0,
+    weeks: [{}],
+    startSunday: 0
+};
 
 let currentDayId = null;
+let saveTimeout;
+let isLoaded = false;
 
-const save = () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+const save = async () => {
+    if (!isLoaded) return;
+    
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(async () => {
+        try {
+            await db.collection('users').doc(USER_ID).set({
+                state: state,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            console.log('✅ Zapisano do Firebase');
+        } catch (error) {
+            console.error('❌ Błąd zapisu Firebase:', error);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
+    }, 500);
+};
+
+const load = async () => {
+    try {
+        const doc = await db.collection('users').doc(USER_ID).get();
+        
+        if (doc.exists) {
+            const data = doc.data();
+            state = data.state || state;
+            console.log('✅ Wczytano dane z Firebase');
+        } else {
+            const localData = localStorage.getItem(STORAGE_KEY);
+            if (localData) {
+                state = JSON.parse(localData);
+                console.log('⚠️ Wczytano z localStorage - migracja do Firebase...');
+                isLoaded = true;
+                await save();
+                return;
+            } else {
+                console.log('ℹ️ Nowy użytkownik - domyślne dane');
+            }
+        }
+        
+        isLoaded = true;
+    } catch (error) {
+        console.error('❌ Błąd wczytywania:', error);
+        const localData = localStorage.getItem(STORAGE_KEY);
+        if (localData) {
+            state = JSON.parse(localData);
+            console.log('⚠️ Używam localStorage (fallback)');
+        }
+        isLoaded = true;
+    }
 };
 
 const getDayDateKey = (dayId) => `day_${dayId}_date`;
@@ -318,17 +380,23 @@ const toggleNoteBox = (ei) => {
     if (box) box.classList.toggle("hidden");
 };
 
+let noteSaveTimeout;
+
 const updateNote = (ei, val) => {
     const weekData = state.weeks[state.currentWeekIndex];
     const noteKey = getNoteKey(currentDayId, ei);
 
     weekData[noteKey] = val;
-    save();
 
-    const btn = document.querySelector(`button[onclick="toggleNoteBox(${ei})"]`);
+    clearTimeout(noteSaveTimeout);
+    noteSaveTimeout = setTimeout(() => {
+        save();
+    }, 300);
+
+    const btn = document.getElementById(`note-toggle-${ei}`);
     if (btn) {
         btn.classList.toggle("active", !!val.trim());
-        btn.textContext = `💬 ${val.trim() ? "Edytuj notatkę" : "Dodaj notatkę"}`;
+        btn.textContent = `💬 ${val.trim() ? "Edytuj notatkę" : "Dodaj notatkę"}`;
     }
 };
 
@@ -493,9 +561,12 @@ const escapeHtml = (str = "") => {
         .replaceAll("'", "&#039;");
 };
 
-ensureStateShape();
-updateTimeline();
-renderHome();
+(async () => {
+    await load();
+    ensureStateShape();
+    updateTimeline();
+    renderHome();
+})();
 
 window.setWeek = setWeek;
 window.openDay = openDay;
