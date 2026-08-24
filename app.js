@@ -436,7 +436,7 @@ const renderWorkout = () => {
                             <span class="tag-badge tag-${ex.tag}">${ex.tag}</span>
                             <div>
                                 <span class="ex-title">${ex.name}</span>
-                                <div class="ex-reps-range">Zaks: ${ex.sets} serie × ${ex.reps} powtórzeń</div>
+                                <div class="ex-reps-range">Zakres: ${ex.sets} serie × ${ex.reps} powtórzeń</div>
                             </div>
                         </div>
                         <div class="ex-circle">${sets.filter((s) => s.done).length}/${ex.sets}</div>
