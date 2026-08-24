@@ -292,7 +292,7 @@ const renderHome = () => {
                         <div class="day-progress-line">
                             <span>${progress.done}/${progress.total} serii</span>
                             <span>${progress.pct}%</span>
-                        </div>
+                </div>
                     </div>
                     <div style="font-size:20px;">${day.icon}</div>
                 </div>
@@ -406,12 +406,11 @@ const ensureWorkoutDataExists = (dayId, exerciseIndex, setsCount) => {
     if (!weekData[key]) {
         weekData[key] = Array.from({ length: setsCount }, () => ({
             kg: 0,
-            reps: 0,
-            done: false
-        }));
-        save();
-    }
-};
+            reps: Number(set?.reps) || 0,
+            done: !!set?.done
+            }));
+        }
+    };
 
 const renderWorkout = () => {
     const day = DAYS[currentDayId];
