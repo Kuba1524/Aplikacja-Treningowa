@@ -470,21 +470,23 @@ const renderWorkout = () => {
 
                             return `
                                 <div class="set-row">
-                                    <span style="font-size:12px; color:var(--text-dim); font-weight:800">S${i + 1}</span>
+                                    <div class="set-top-row">
+                                        <span class="set-pill">S${i + 1}</span>
 
-                                    <div class="input-group">
-                                        <input type="number" value="${s.kg || ""}" placeholder="0" oninput="updateSet(${ei}, ${i}, 'kg', this.value)">
-                                        <span>KG</span>
+                                        <div class="input-group">
+                                            <input type="number" value="${s.kg || ""}" placeholder="0" oninput="updateSet(${ei}, ${i}, 'kg', this.value)">
+                                            <span>KG</span>
+                                        </div>
+
+                                        <div class="input-group">
+                                            <input type="number" value="${s.reps || ""}" placeholder="0" oninput="updateSet(${ei}, ${i}, 'reps', this.value)">
+                                            <span>POW</span>
+                                        </div>
+
+                                        <button class="btn-check ${s.done ? "done" : ""}" onclick="toggleSet(${ei}, ${i})">✓</button>
                                     </div>
 
-                                    <div class="input-group">
-                                        <input type="number" value="${s.reps || ""}" placeholder="0" oninput="updateSet(${ei}, ${i}, 'reps', this.value)">
-                                        <span>POW</span>
-                                    </div>
-
-                                    <button class="btn-check ${s.done ? "done" : ""}" onclick="toggleSet(${ei}, ${i})">✓</button>
-
-                                    <div class="set-info-bar">
+                                    <div class="set-bottom-row">
                                         <span class="prev-label">Poprzednio: ${prevTxt}</span>
                                         <span class="trend-badge">${getTrendUI(s, prev)}</span>
                                     </div>
