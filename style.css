@@ -174,28 +174,27 @@ body {
 }
 
 .exercise-card {
-    background: var(--card-bg);
-    border-radius: var(--radius-lg);
+    background: #1E2937;
+    border-radius: 16px;
     margin-bottom: 20px;
-    border: 1px solid var(--border);
+    border: 1px solid #334155;
     overflow: hidden;
-    box-shadow: var(--shadow);
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    padding: 20px;
 }
 
 .exercise-header {
-    padding: 16px 18px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: rgba(255,255,255,0.02);
-    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
 }
 
 .tag-badge {
     font-size: 10px;
-    font-weight: 800;
+    font-weight: 600;
     letter-spacing: 0.5px;
-    padding: 4px 8px;
+    padding: 4px 10px;
     border-radius: 999px;
     text-transform: uppercase;
     display: inline-block;
@@ -210,7 +209,7 @@ body {
 .tag-BICEPS, .tag-TRICEPS { background: rgba(249, 115, 22, 0.15); color: #fdba74; border: 1px solid rgba(249, 115, 22, 0.3); }
 
 .ex-title {
-    font-size: 15px;
+    font-size: 17px;
     font-weight: 700;
     color: #fff;
 }
@@ -225,11 +224,11 @@ body {
 }
 
 .history-note {
-    margin: 14px 18px 0;
+    margin: 14px 0 16px;
     padding: 12px 14px;
     border-radius: 12px;
-    background: rgba(59, 130, 246, 0.08);
-    border: 1px solid rgba(59, 130, 246, 0.18);
+    background: #1E40AF20;
+    border: 1px solid #1E40AF40;
 }
 
 .history-note-label {
@@ -237,7 +236,7 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.7px;
     font-weight: 800;
-    color: var(--accent-2);
+    color: #60A5FA;
     margin-bottom: 6px;
 }
 
@@ -290,11 +289,11 @@ body {
 }
 
 .set-row {
+    background: #1E2937;
+    border-radius: 12px;
     padding: 16px 18px;
-    background: #1F2937;
-    border-radius: 14px;
-    margin-bottom: 20px;
-    border: 1px solid #374151;
+    margin-bottom: 12px;
+    border: 1px solid #334155;
 }
 
 .set-row:last-child {
@@ -308,13 +307,13 @@ body {
 }
 
 .set-pill {
-    background: #1E40AF;
+    background: #3B82F6;
     color: white;
-    font-size: 11px;
-    font-weight: 800;
+    font-size: 13px;
+    font-weight: 700;
     padding: 4px 10px;
     border-radius: 999px;
-    min-width: 34px;
+    min-width: 36px;
     text-align: center;
     flex-shrink: 0;
 }
@@ -337,11 +336,11 @@ body {
 
 input[type="number"] {
     width: 100%;
-    background: #111827;
-    border: 1px solid #374151;
+    background: #334155;
+    border: 1px solid #475569;
     color: #fff;
-    padding: 12px 10px;
-    border-radius: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
     text-align: center;
     font-family: 'JetBrains Mono', monospace;
     font-size: 16px;
@@ -350,12 +349,12 @@ input[type="number"] {
 }
 
 .btn-check {
-    height: 44px;
-    width: 44px;
+    height: 42px;
+    width: 42px;
     border-radius: 10px;
-    background: #111827;
-    border: 2px solid #6B7280;
-    color: #6B7280;
+    background: transparent;
+    border: 2px solid #64748B;
+    color: #64748B;
     font-size: 20px;
     cursor: pointer;
     display: flex;
@@ -366,8 +365,8 @@ input[type="number"] {
 }
 
 .btn-check.done {
-    background: #10B981;
-    border-color: #10B981;
+    background: #22C55E;
+    border-color: #22C55E;
     color: white;
 }
 
@@ -380,13 +379,13 @@ input[type="number"] {
 }
 
 .prev-label {
-    font-size: 12px;
-    color: #6B7280;
+    font-size: 13px;
+    color: #64748B;
     font-weight: 600;
 }
 
 .prev-label b {
-    color: #6B7280;
+    color: #64748B;
     font-family: 'JetBrains Mono', monospace;
 }
 
@@ -437,14 +436,9 @@ input[type="number"] {
 }
 
 .ex-reps-range {
-    font-size: 12px;
+    font-size: 13px;
     color: #f87171;
     font-weight: 700;
-    margin-top: 4px;
+    margin-top: 6px;
     letter-spacing: 0.3px;
-}
-
-.ex-reps-range::before {
-    content: "🎯";
-    font-size: 10px;
 }
