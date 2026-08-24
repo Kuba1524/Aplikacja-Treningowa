@@ -21,13 +21,13 @@ const DAYS = [
         icon: "🔥",
         color: "#ff3b30",
         exercises: [
-            { name: "Incline Dumbbell Press", sets: 4, tag: "CHEST" },
-            { name: "Seated Dumbbell OHP", sets: 3, tag: "SHOULDER" },
-            { name: "Machine Chest Press", sets: 3, tag: "CHEST" },
-            { name: "Chest Dips", sets: 3, tag: "CHEST" },
-            { name: "Dumbbell Lateral Raises", sets: 4, tag: "DELTS" },
-            { name: "Ab Wheel", sets: 3, tag: "CORE" },
-            { name: "Pallof Press", sets: 3, tag: "CORE" }
+            { name: "Incline Dumbbell Press", sets: 4, reps: "6-10", tag: "CHEST" },
+            { name: "Seated Dumbbell OHP", sets: 3, reps: "6-10", tag: "SHOULDER" },
+            { name: "Machine Chest Press", sets: 3, reps: "6-10", tag: "CHEST" },
+            { name: "Chest Dips", sets: 3, reps: "6-10", tag: "CHEST" },
+            { name: "Dumbbell Lateral Raises", sets: 4, reps: "8-12", tag: "DELTS" },
+            { name: "Ab Wheel", sets: 3, reps: "8-12", tag: "CORE" },
+            { name: "Pallof Press", sets: 3, reps: "8-12", tag: "CORE" }
         ]
     },
     {
@@ -38,13 +38,13 @@ const DAYS = [
         icon: "💪",
         color: "#00b4d8",
         exercises: [
-            { name: "Weighted Pull Ups", sets: 4, tag: "BACK" },
-            { name: "Single-Arm Dumbell Row", sets: 3, tag: "BACK" },
-            { name: "Seated Cable Row", sets: 3, tag: "BACK" },
-            { name: "Reverse Peck Deck", sets: 4, tag: "REAR" },
-            { name: "Dumbbell Shrugs", sets: 3, tag: "TRAPS" },
-            { name: "Ez-bar Reverse Curl", sets: 3, tag: "FOREARMS" },
-            { name: "Barbell Wrist Curl", sets: 3, tag: "FOREARMS" }
+            { name: "Weighted Pull Ups", sets: 4, reps: "6-8", tag: "BACK" },
+            { name: "Single-Arm Dumbbell Row", sets: 3, reps: "6-10", tag: "BACK" },
+            { name: "Seated Cable Row", sets: 3, reps: "6-10", tag: "BACK" },
+            { name: "Reverse Peck Deck", sets: 4, reps: "8-12", tag: "REAR" },
+            { name: "Dumbbell Shrugs", sets: 3, reps: "8-12", tag: "TRAPS" },
+            { name: "Ez-bar Reverse Curl", sets: 3, reps: "8-12", tag: "FOREARMS" },
+            { name: "Barbell Wrist Curl", sets: 3, reps: "10-15", tag: "FOREARMS" }
         ]
     },
     {
@@ -55,14 +55,14 @@ const DAYS = [
         icon: "🦵",
         color: "#2ec4b6",
         exercises: [
-            { name: "Hip Thrust", sets: 4, tag: "GLUTES" },
-            { name: "Hack Squat / Leg Press", sets: 3, tag: "QUADS" },
-            { name: "RDL", sets: 3, tag: "LEGS" },
-            { name: "Seated Leg Curl", sets: 3, tag: "HAM" },
-            { name: "Supination Curl [SS]", sets: 3, tag: "BICEPS" },
-            { name: "Single-Arm Cable Pushdown [SS]", sets: 3, tag: "TRICEPS" },
-            { name: "Cross-Body Hammer Curl [SS]", sets: 3, tag: "BICEPS" },
-            { name: "Calf Raises [SS]", sets: 4, tag: "CALVES" }
+            { name: "Hip Thrust", sets: 4, reps: "6-10", tag: "GLUTES" },
+            { name: "Hack Squat / Leg Press", sets: 3, reps: "6-10", tag: "QUADS" },
+            { name: "RDL", sets: 3, reps: "6-10", tag: "LEGS" },
+            { name: "Seated Leg Curl", sets: 3, reps: "8-12", tag: "HAM" },
+            { name: "Supination Curl [SS]", sets: 3, reps: "8-12", tag: "BICEPS" },
+            { name: "Single-Arm Cable Pushdown [SS]", sets: 3, reps: "8-12", tag: "TRICEPS" },
+            { name: "Cross-Body Hammer Curl [SS]", sets: 3, reps: "8-12", tag: "BICEPS" },
+            { name: "Calf Raises [SS]", sets: 4, reps: "10-15", tag: "CALVES" }
         ]
     },
     {
@@ -73,13 +73,13 @@ const DAYS = [
         icon: "⚡",
         color: "#9d4edd",
         exercises: [
-            { name: "Bench Press", sets: 3, tag: "CHEST" },
-            { name: "Cable Flyes (Low to High)", sets: 3, tag: "CHEST" },
-            { name: "Single-Arm Lat Pulldown", sets: 3, tag: "BACK" },
-            { name: "Cable Lateral Raise", sets: 4, tag: "DELTS" },
-            { name: "EZ-bar Preacher Curl", sets: 3, tag: "BICEPS" },
-            { name: "Incline Skull Crushers", sets: 3, tag: "TRICEPS" },
-            { name: "Cable Crunch", sets: 4, tag: "CORE" }
+            { name: "Bench Press", sets: 3, reps: "5-8", tag: "CHEST" },
+            { name: "Cable Flyes (Low to High)", sets: 3, reps: "8-12", tag: "CHEST" },
+            { name: "Single-Arm Lat Pulldown", sets: 3, reps: "6-10", tag: "BACK" },
+            { name: "Cable Lateral Raise", sets: 4, reps: "8-12", tag: "DELTS" },
+            { name: "EZ-bar Preacher Curl", sets: 3, reps: "8-12", tag: "BICEPS" },
+            { name: "Incline Skull Crushers", sets: 3, reps: "8-12", tag: "TRICEPS" },
+            { name: "Cable Crunch", sets: 4, reps: "8-12", tag: "CORE" }
         ]
     }
 ];
@@ -359,7 +359,7 @@ const openDay = (id) => {
 
 const getTrendUI = (curr, prev) => {
     if (!prev || !prev.done || !curr.done) {
-        return '<span class="t-eq">──</span>';
+        return '<span class="t-eq">—</span>';
     }
 
     const cKg = parseFloat(curr.kg) || 0;
@@ -372,7 +372,7 @@ const getTrendUI = (curr, prev) => {
     if (cR > pR) return '<span class="t-up">▲ POWT.</span>';
     if (cR < pR) return '<span class="t-down">▼ POWT.</span>';
 
-    return '<span class="t-eq">〓</span>';
+    return '<span class="t-eq">━━</span>';
 };
 
 const toggleNoteBox = (ei) => {
@@ -436,7 +436,10 @@ const renderWorkout = () => {
                     <div class="exercise-header">
                         <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
                             <span class="tag-badge tag-${ex.tag}">${ex.tag}</span>
-                            <span class="ex-title">${ex.name}</span>
+                            <div>
+                                <span class="ex-title">${ex.name}</span>
+                                <div class="ex-reps-range">${ex.sets} × ${ex.reps} powtórzeń</div>
+                            </div>
                         </div>
                         <div class="ex-circle">${sets.filter((s) => s.done).length}/${ex.sets}</div>
                     </div>
