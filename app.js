@@ -1,10 +1,10 @@
 const STORAGE_KEY = "kuba_v11";
 
 const getUserId = () => {
-    let userId = localStorage.getItem('user_id');
+    let userId = localStorage.getItem("user_id");
     if (!userId) {
-        userId = 'user_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
-        localStorage.setItem('user_id', userId);
+        userId = "user_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now();
+        localStorage.setItem("user_id", userId);
     }
     return userId;
 };
@@ -91,82 +91,63 @@ let state = {
 
 let currentDayId = null;
 let saveTimeout;
+let noteSaveTimeout;
 let isLoaded = false;
-
-const save = async () => {
-    if (!isLoaded) return;
-    
-    clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(async () => {
-        try {
-            await db.collection('users').doc(USER_ID).set({
-                state: state,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            console.log('✅ Zapisano do Firebase');
-        } catch (error) {
-            console.error('❌ Błąd zapisu Firebase:', error);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        }
-    }, 500);
-};
-
-const load = async () => {
-    try {
-        const doc = await db.collection('users').doc(USER_ID).get();
-        
-        if (doc.exists) {
-            const data = doc.data();
-            state = data.state || state;
-            console.log('✅ Wczytano dane z Firebase');
-        } else {
-            const localData = localStorage.getItem(STORAGE_KEY);
-            if (localData) {
-                state = JSON.parse(localData);
-                console.log('⚠️ Wczytano z localStorage - migracja do Firebase...');
-                isLoaded = true;
-                await save();
-                return;
-            } else {
-                console.log('ℹ️ Nowy użytkownik - domyślne dane');
-            }
-        }
-        
-        isLoaded = true;
-    } catch (error) {
-        console.error('❌ Błąd wczytywania:', error);
-        const localData = localStorage.getItem(STORAGE_KEY);
-        if (localData) {
-            state = JSON.parse(localData);
-            console.log('⚠️ Używam localStorage (fallback)');
-        }
-        isLoaded = true;
-    }
-};
 
 const getDayDateKey = (dayId) => `day_${dayId}_date`;
 const getExerciseKey = (dayId, exerciseIndex) => `d${dayId}_e${exerciseIndex}`;
 const getNoteKey = (dayId, exerciseIndex) => `d${dayId}_e${exerciseIndex}_note`;
 
-const ensureStateShape = () => {
-    if (!state || typeof state !== "object") {
-        state = { currentWeekIndex: 0, weeks: [{}], startSunday: 0 };
-    }
+const save = async () => {
+    if (!isLoaded) return;
 
-    if (!Array.isArray(state.weeks) || state.weeks.length === 0) {
-        state.weeks = [{}];
-    }
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(async () => {
+        try {
+            await db.collection("users").doc(USER_ID).set({
+                state: state,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            console.log("✅ Zapisano do Firebase");
+        } catch (error) {
+            console.error("❌ Błąd zapisu Firebase:", error);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
+    }, 400);
+};
 
-    if (typeof state.currentWeekIndex !== "number") {
-        state.currentWeekIndex = 0;
-    }
+const load = async () => {
+    try {
+        const doc = await db.collection("users").doc(USER_ID).get();
 
-    if (typeof state.startSunday !== "number") {
-        state.startSunday = 0;
-    }
+        if (doc.exists) {
+            const data = doc.data();
+            state = data.state || state;
+            console.log("✅ Wczytano dane z Firebase");
+        } else {
+            const localData = localStorage.getItem(STORAGE_KEY);
+            if (localData) {
+                state = JSON.parse(localData);
+                console.log("⚠️ Wczytano z localStorage - migracja do Firebase...");
+                isLoaded = true;
+                await save();
+                return;
+            } else {
+                console.log("ℹ️ Nowy użytkownik - domyślne dane");
+            }
+        }
 
-    state.weeks = state.weeks.map((week) => normalizeWeek(week));
-    save();
+        isLoaded = true;
+    } catch (error) {
+        console.error("❌ Błąd wczytywania:", error);
+        const localData = localStorage.getItem(STORAGE_KEY);
+        if (localData) {
+            state = JSON.parse(localData);
+            console.log("⚠️ Używam localStorage (fallback)");
+        }
+        isLoaded = true;
+    }
 };
 
 const normalizeWeek = (week = {}) => {
@@ -190,6 +171,26 @@ const normalizeWeek = (week = {}) => {
     });
 
     return normalized;
+};
+
+const ensureStateShape = () => {
+    if (!state || typeof state !== "object") {
+        state = { currentWeekIndex: 0, weeks: [{}], startSunday: 0 };
+    }
+
+    if (!Array.isArray(state.weeks) || state.weeks.length === 0) {
+        state.weeks = [{}];
+    }
+
+    if (typeof state.currentWeekIndex !== "number") {
+        state.currentWeekIndex = 0;
+    }
+
+    if (typeof state.startSunday !== "number") {
+        state.startSunday = 0;
+    }
+
+    state.weeks = state.weeks.map((week) => normalizeWeek(week));
 };
 
 const cloneWeekData = (prevWeek = {}) => {
@@ -247,6 +248,21 @@ const updateTimeline = () => {
     }
 };
 
+const formatNumberPL = (value) => {
+    const num = Number(value) || 0;
+    if (Number.isInteger(num)) return String(num);
+    return num.toFixed(1).replace(".", ",");
+};
+
+const escapeHtml = (str = "") => {
+    return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+};
+
 const getWeekCompletion = (weekIndex) => {
     const weekData = state.weeks[weekIndex] || {};
     let total = 0;
@@ -259,6 +275,26 @@ const getWeekCompletion = (weekIndex) => {
                 if (set.done) done++;
             });
         }
+    });
+
+    return {
+        total,
+        done,
+        pct: total ? Math.round((done / total) * 100) : 0
+    };
+};
+
+const getDayProgress = (dayId) => {
+    const day = DAYS[dayId];
+    const weekData = state.weeks[state.currentWeekIndex] || {};
+    let total = 0;
+    let done = 0;
+
+    day.exercises.forEach((ex, ei) => {
+        const key = getExerciseKey(dayId, ei);
+        const sets = weekData[key] || [];
+        total += ex.sets;
+        done += sets.filter((s) => s.done).length;
     });
 
     return {
@@ -301,26 +337,6 @@ const renderHome = () => {
         .join("");
 };
 
-const getDayProgress = (dayId) => {
-    const day = DAYS[dayId];
-    const weekData = state.weeks[state.currentWeekIndex] || {};
-    let total = 0;
-    let done = 0;
-
-    day.exercises.forEach((ex, ei) => {
-        const key = getExerciseKey(dayId, ei);
-        const sets = weekData[key] || [];
-        total += ex.sets;
-        done += sets.filter((s) => s.done).length;
-    });
-
-    return {
-        total,
-        done,
-        pct: total ? Math.round((done / total) * 100) : 0
-    };
-};
-
 const setWeek = (w) => {
     state.currentWeekIndex = w;
     save();
@@ -329,6 +345,20 @@ const setWeek = (w) => {
     if (currentDayId !== null) {
         renderWorkout();
         updateSummary();
+    }
+};
+
+const ensureWorkoutDataExists = (dayId, exerciseIndex, setsCount) => {
+    const weekData = state.weeks[state.currentWeekIndex];
+    const key = getExerciseKey(dayId, exerciseIndex);
+
+    if (!weekData[key]) {
+        weekData[key] = Array.from({ length: setsCount }, () => ({
+            kg: 0,
+            reps: 0,
+            done: false
+        }));
+        save();
     }
 };
 
@@ -358,7 +388,7 @@ const openDay = (id) => {
 
 const getTrendUI = (curr, prev) => {
     if (!prev || !prev.done || !curr.done) {
-        return '<span class="t-eq">—</span>';
+        return '<span class="t-empty"></span>';
     }
 
     const cKg = parseFloat(curr.kg) || 0;
@@ -371,15 +401,13 @@ const getTrendUI = (curr, prev) => {
     if (cR > pR) return '<span class="t-up">▲ POWT.</span>';
     if (cR < pR) return '<span class="t-down">▼ POWT.</span>';
 
-    return '<span class="t-eq">━━</span>';
+    return '<span class="t-base">= BAZA</span>';
 };
 
 const toggleNoteBox = (ei) => {
     const box = document.getElementById(`note-box-${ei}`);
     if (box) box.classList.toggle("hidden");
 };
-
-let noteSaveTimeout;
 
 const updateNote = (ei, val) => {
     const weekData = state.weeks[state.currentWeekIndex];
@@ -390,26 +418,12 @@ const updateNote = (ei, val) => {
     clearTimeout(noteSaveTimeout);
     noteSaveTimeout = setTimeout(() => {
         save();
-    }, 300);
+    }, 250);
 
     const btn = document.getElementById(`note-toggle-${ei}`);
     if (btn) {
         btn.classList.toggle("active", !!val.trim());
-        btn.textContent = `💬 ${val.trim() ? "Edytuj notatkę" : "Dodaj notatkę"}`;
-    }
-};
-
-const ensureWorkoutDataExists = (dayId, exerciseIndex, setsCount) => {
-    const weekData = state.weeks[state.currentWeekIndex];
-    const key = getExerciseKey(dayId, exerciseIndex);
-
-    if (!weekData[key]) {
-        weekData[key] = Array.from({ length: setsCount }, () => ({
-            kg: 0,
-            reps: 0,
-            done: false
-        }));
-        save();
+        btn.textContent = val.trim() ? "💬 Edytuj notatkę" : "💬 Dodaj notatkę";
     }
 };
 
@@ -433,9 +447,9 @@ const renderWorkout = () => {
             return `
                 <div class="exercise-card">
                     <div class="exercise-header">
-                        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+                        <div class="exercise-title-wrap">
                             <span class="tag-badge tag-${ex.tag}">${ex.tag}</span>
-                            <div>
+                            <div class="exercise-main">
                                 <span class="ex-title">${ex.name}</span>
                                 <div class="ex-reps-range">Zakres: ${ex.sets} serie × ${ex.reps} powtórzeń</div>
                             </div>
@@ -451,7 +465,7 @@ const renderWorkout = () => {
                     ` : ""}
 
                     <button id="note-toggle-${ei}" class="btn-note-toggle ${currentNote ? "active" : ""}" onclick="toggleNoteBox(${ei})">
-                        💬 ${currentNote ? "Edytuj notatkę" : "Dodaj notatkę"}
+                        ${currentNote ? "💬 Edytuj notatkę" : "💬 Dodaj notatkę"}
                     </button>
 
                     <div id="note-box-${ei}" class="note-box ${currentNote ? "" : "hidden"}">
@@ -463,10 +477,12 @@ const renderWorkout = () => {
                         >${escapeHtml(currentNote)}</textarea>
                     </div>
 
-                    <div>
+                    <div class="sets-list">
                         ${sets.map((s, i) => {
                             const prev = prevSets && prevSets[i] ? prevSets[i] : null;
-                            const prevTxt = prev ? `<b>${prev.kg}kg × ${prev.reps}</b>` : "—";
+                            const prevTxt = prev && prev.done
+                                ? `${formatNumberPL(prev.kg)} kg × ${formatNumberPL(prev.reps)}`
+                                : "";
 
                             return `
                                 <div class="set-row">
@@ -474,12 +490,24 @@ const renderWorkout = () => {
                                         <span class="set-pill">S${i + 1}</span>
 
                                         <div class="input-group">
-                                            <input type="number" value="${s.kg || ""}" placeholder="0" oninput="updateSet(${ei}, ${i}, 'kg', this.value)">
+                                            <input
+                                                type="number"
+                                                step="0.1"
+                                                value="${s.kg || ""}"
+                                                placeholder="0"
+                                                oninput="updateSet(${ei}, ${i}, 'kg', this.value)"
+                                            >
                                             <span>KG</span>
                                         </div>
 
                                         <div class="input-group">
-                                            <input type="number" value="${s.reps || ""}" placeholder="0" oninput="updateSet(${ei}, ${i}, 'reps', this.value)">
+                                            <input
+                                                type="number"
+                                                step="1"
+                                                value="${s.reps || ""}"
+                                                placeholder="0"
+                                                oninput="updateSet(${ei}, ${i}, 'reps', this.value)"
+                                            >
                                             <span>POW</span>
                                         </div>
 
@@ -487,7 +515,7 @@ const renderWorkout = () => {
                                     </div>
 
                                     <div class="set-bottom-row">
-                                        <span class="prev-label">Poprzednio: ${prevTxt}</span>
+                                        <span class="prev-label">${prevTxt}</span>
                                         <span class="trend-badge">${getTrendUI(s, prev)}</span>
                                     </div>
                                 </div>
@@ -554,15 +582,6 @@ const resetWorkout = () => {
 
     save();
     openDay(currentDayId);
-};
-
-const escapeHtml = (str = "") => {
-    return String(str)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
 };
 
 (async () => {
