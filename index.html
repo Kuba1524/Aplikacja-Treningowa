@@ -41,6 +41,26 @@
         </div>
     </div>
 
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <!-- Firebase Config -->
+    <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBwW5kAYrZTtbaBx60y_4qUXU6dVJ-tD-s",
+      authDomain: "training-app-a5a2f.firebaseapp.com",
+      projectId: "training-app-a5a2f",
+      storageBucket: "training-app-a5a2f.firebasestorage.app",
+      messagingSenderId: "418834782578",
+      appId: "1:418834782578:web:9e1c16504afd7ebc29e5eb",
+      measurementId: "G-V1HENNKF2X"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    </script>
+
     <script src="app.js"></script>
 </body>
 </html>
