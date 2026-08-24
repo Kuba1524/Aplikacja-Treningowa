@@ -80,7 +80,7 @@ const DAYS = [
             { name: "Incline Skull Crushers", sets: 3, reps: "8-12", tag: "TRICEPS" },
             { name: "Cable Crunch", sets: 4, reps: "8-12", tag: "CORE" }
         ]
-    }
+    ]
 ];
 
 let state = {
@@ -227,7 +227,7 @@ const updateTimeline = () => {
 
     if (!state.startSunday) {
         state.startSunday = currentSundayTime;
-        state.weeks = [normalizeWeek(state.weeks[0] || {})];
+        state.weeks = [normalizeWave(state.weeks[0] || {})];
         state.currentWeekIndex = 0;
         save();
         return;
@@ -292,7 +292,7 @@ const renderHome = () => {
                         <div class="day-progress-line">
                             <span>${progress.done}/${progress.total} serii</span>
                             <span>${progress.pct}%</span>
-                </div>
+                        </div>
                     </div>
                     <div style="font-size:20px;">${day.icon}</div>
                 </div>
@@ -406,11 +406,12 @@ const ensureWorkoutDataExists = (dayId, exerciseIndex, setsCount) => {
     if (!weekData[key]) {
         weekData[key] = Array.from({ length: setsCount }, () => ({
             kg: 0,
-            reps: Number(set?.reps) || 0,
-            done: !!set?.done
-            }));
-        }
-    };
+            reps: 0,
+            done: false
+        }));
+        save();
+    }
+};
 
 const renderWorkout = () => {
     const day = DAYS[currentDayId];
