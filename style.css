@@ -423,3 +423,11 @@ input[type="number"]:focus {
     display: block;
     text-transform: uppercase;
 }
+
+.ex-reps-range {
+    font-size: 10px;
+    color: var(--text-dim);
+    font-weight: 600;
+    margin-top: 3px;
+    letter-spacing: 0.3px;
+}
