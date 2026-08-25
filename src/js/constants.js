@@ -1,99 +1,130 @@
-// Dnie treningowe
+/**
+ * Application constants - Training plan data
+ */
+
+// Days of the week with exercises
 export const DAYS = [
     {
         id: 0,
-        weekday: 0,
-        name: "Niedziela",
-        label: "PUSH",
-        icon: "🔥",
-        color: "#ff3b30",
+        name: "Poniedziałek - Klatka",
         exercises: [
-            { name: "Incline Dumbbell Press", sets: 4, reps: "6-10", tag: "CHEST" },
-            { name: "Seated Dumbbell OHP", sets: 3, reps: "6-10", tag: "SHOULDER" },
-            { name: "Machine Chest Press", sets: 3, reps: "6-10", tag: "CHEST" },
-            { name: "Chest Dips", sets: 3, reps: "6-10", tag: "CHEST" },
-            { name: "Dumbbell Lateral Raises", sets: 4, reps: "8-12", tag: "DELTS" },
-            { name: "Ab Wheel", sets: 3, reps: "8-12", tag: "CORE" },
-            { name: "Pallof Press", sets: 3, reps: "8-12", tag: "CORE" },
+            {
+                name: "Wyciskanie sztangi leżąc",
+                sets: 4,
+            },
+            {
+                name: "Rozpiętki hantlami",
+                sets: 3,
+            },
+            {
+                name: "Naciąg liny w dół",
+                sets: 3,
+            },
         ],
     },
     {
         id: 1,
-        weekday: 1,
-        name: "Poniedziałek",
-        label: "PULL",
-        icon: "💪",
-        color: "#00b4d8",
+        name: "Wtorek - Plecy",
         exercises: [
-            { name: "Weighted Pull Ups", sets: 4, reps: "6-8", tag: "BACK" },
-            { name: "Single-Arm Dumbbell Row", sets: 3, reps: "6-10", tag: "BACK" },
-            { name: "Seated Cable Row", sets: 3, reps: "6-10", tag: "BACK" },
-            { name: "Reverse Peck Deck", sets: 4, reps: "8-12", tag: "REAR" },
-            { name: "Dumbbell Shrugs", sets: 3, reps: "8-12", tag: "TRAPS" },
-            { name: "Ez-bar Reverse Curl", sets: 3, reps: "8-12", tag: "FOREARMS" },
-            { name: "Barbell Wrist Curl", sets: 3, reps: "10-15", tag: "FOREARMS" },
+            {
+                name: "Wiosłowanie sztangą",
+                sets: 4,
+            },
+            {
+                name: "Ściąganie łąka",
+                sets: 3,
+            },
+            {
+                name: "Wiosłowanie hantlem",
+                sets: 3,
+            },
         ],
     },
     {
         id: 2,
-        weekday: 3,
-        name: "Środa",
-        label: "LEGS + ARMS",
-        icon: "🦵",
-        color: "#2ec4b6",
+        name: "Środa - Nogi",
         exercises: [
-            { name: "Hip Thrust", sets: 4, reps: "6-10", tag: "GLUTES" },
-            { name: "Hack Squat / Leg Press", sets: 3, reps: "6-10", tag: "QUADS" },
-            { name: "RDL", sets: 3, reps: "6-10", tag: "LEGS" },
-            { name: "Seated Leg Curl", sets: 3, reps: "8-12", tag: "HAM" },
-            { name: "Supination Curl [SS]", sets: 3, reps: "8-12", tag: "BICEPS" },
-            { name: "Single-Arm Cable Pushdown [SS]", sets: 3, reps: "8-12", tag: "TRICEPS" },
-            { name: "Cross-Body Hammer Curl [SS]", sets: 3, reps: "8-12", tag: "BICEPS" },
-            { name: "Calf Raises [SS]", sets: 4, reps: "10-15", tag: "CALVES" },
+            {
+                name: "Przysiad sztangą",
+                sets: 4,
+            },
+            {
+                name: "Martwy ciąg",
+                sets: 3,
+            },
+            {
+                name: "Leg press",
+                sets: 3,
+            },
         ],
     },
     {
         id: 3,
-        weekday: 5,
-        name: "Piątek",
-        label: "UPPER",
-        icon: "⚡",
-        color: "#9d4edd",
+        name: "Czwartek - Ramiona",
         exercises: [
-            { name: "Bench Press", sets: 3, reps: "5-8", tag: "CHEST" },
-            { name: "Cable Flyes (Low to High)", sets: 3, reps: "8-12", tag: "CHEST" },
-            { name: "Single-Arm Lat Pulldown", sets: 3, reps: "6-10", tag: "BACK" },
-            { name: "Cable Lateral Raise", sets: 4, reps: "8-12", tag: "DELTS" },
-            { name: "EZ-bar Preacher Curl", sets: 3, reps: "8-12", tag: "BICEPS" },
-            { name: "Incline Skull Crushers", sets: 3, reps: "8-12", tag: "TRICEPS" },
-            { name: "Cable Crunch", sets: 4, reps: "8-12", tag: "CORE" },
+            {
+                name: "Wyciskanie hantli",
+                sets: 4,
+            },
+            {
+                name: "Podciąg sztangi",
+                sets: 3,
+            },
+            {
+                name: "Unosy bokiem",
+                sets: 3,
+            },
+        ],
+    },
+    {
+        id: 4,
+        name: "Piątek - Biceps/Triceps",
+        exercises: [
+            {
+                name: "Uginanie hantli",
+                sets: 4,
+            },
+            {
+                name: "Wyciskanie w dół",
+                sets: 3,
+            },
+            {
+                name: "Uginanie sztangi",
+                sets: 3,
+            },
+        ],
+    },
+    {
+        id: 5,
+        name: "Sobota - Kardio",
+        exercises: [
+            {
+                name: "Bieganie",
+                sets: 1,
+            },
+        ],
+    },
+    {
+        id: 6,
+        name: "Niedziela - Odpoczynek",
+        exercises: [
+            {
+                name: "Rozciąganie",
+                sets: 1,
+            },
         ],
     },
 ];
 
-// Domyślny stan
-export const DEFAULT_STATE = {
-    currentWeekIndex: 0,
-    weeks: [{}],
-    startSunday: 0,
-};
+// Initialize weeks (8 weeks of training)
+export const WEEKS = Array(8)
+    .fill(null)
+    .map(() => ({}));
 
-// Storage keys
-export const STORAGE_KEYS = {
-    STATE: "gym_app_state",
-    THEME: "gym_app_theme",
-    PREFERENCES: "gym_app_preferences",
-};
-
-// Keyboard shortcuts
-export const SHORTCUTS = {
-    ESCAPE: "Escape",
-    ENTER: "Enter",
-};
-
-// Animation durations (ms)
-export const ANIMATIONS = {
-    FAST: 150,
-    NORMAL: 300,
-    SLOW: 500,
+// App settings
+export const APP_CONFIG = {
+    version: "1.0.0",
+    appName: "KubaGym",
+    storageKey: "appState",
+    weeksCount: 8,
 };
