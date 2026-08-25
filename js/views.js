@@ -174,10 +174,11 @@ window.Views = (() => {
         `;
     };
 
-    const renderStats = (ctx) => {
+       const renderStats = (ctx) => {
         const { state, DAYS, currentWeekIndex } = ctx;
         const screen = document.getElementById("screen-stats");
-    
+        if (!screen || !window.StatsModule) return;
+
         const totalWorkouts = window.StatsModule.getTotalWorkouts(state, DAYS, ctx.getExerciseKey);
         const monthWorkouts = window.StatsModule.getCurrentMonthWorkouts(
             state,
@@ -187,104 +188,133 @@ window.Views = (() => {
         );
         const streak = window.StatsModule.getWeekStreak(state, DAYS, ctx.getExerciseKey);
         const weekStats = window.StatsModule.getWeekStats(state, DAYS, currentWeekIndex, ctx.getExerciseKey);
-        const activityCells = window.StatsModule.getActivityCells(state, DAYS, ctx.getExerciseKey);
         const prs = window.StatsModule.getPrimaryExercises(state, DAYS, ctx.getExerciseKey);
-    
+        const cal = window.StatsModule.getActivityCalendar
+            ? window.StatsModule.getActivityCalendar(state, DAYS, ctx.getExerciseKey)
+            : { labels: [], rows: [], cols: 0, currentCol: 0 };
+
+        const calRowsHtml = cal.labels
+            .map((lab, ri) => {
+                const cells = (cal.rows[ri] || [])
+                    .map((lvl, ci) => {
+                        const today = ci === cal.currentCol ? " today" : "";
+                        return `<div class="cal-cell l${lvl}${today}" title="Tydzień ${ci + 1}"></div>`;
+                    })
+                    .join("");
+                return `<div class="cal-lab">${lab}</div>${cells}`;
+            })
+            .join("");
+
+        const prHtml = (prs || [])
+            .slice(0, 4)
+            .map((pr) => {
+                const delta = pr.deltaPct;
+                let deltaClass = "flat";
+                let deltaTxt = "—";
+                if (typeof delta === "number") {
+                    if (delta > 0) {
+                        deltaClass = "";
+                        deltaTxt = `+${Math.round(delta)}%`;
+                    } else if (delta < 0) {
+                        deltaClass = "down";
+                        deltaTxt = `${Math.round(delta)}%`;
+                    } else {
+                        deltaTxt = "0%";
+                    }
+                }
+
+                const spark =
+                    typeof window.StatsModule.createSparklineSVG === "function"
+                        ? window.StatsModule.createSparklineSVG(pr.values || pr.history || [], "#60a5fa")
+                        : "";
+
+                const best =
+                    pr.bestLabel ||
+                    (pr.bestKg != null
+                        ? `${pr.bestKg} kg × ${pr.bestReps ?? "—"}`
+                        : pr.topWeight != null
+                          ? `${pr.topWeight} kg`
+                          : "—");
+
+                const range = pr.rangeLabel || pr.dateRange || "";
+
+                return `
+                <div class="pr-card">
+                    <div class="pr-card-top">
+                        <div>
+                            <div class="pr-name">${pr.name}</div>
+                            <div class="pr-topw">Top weight: ${pr.topWeight ?? pr.bestKg ?? "—"} kg</div>
+                        </div>
+                        <div class="pr-delta ${deltaClass}">${deltaTxt}</div>
+                    </div>
+                    ${spark}
+                    <div class="pr-foot">
+                        <span>Best set: ${best}</span>
+                        <span>${range}</span>
+                    </div>
+                </div>`;
+            })
+            .join("");
+
         screen.innerHTML = `
             <div class="container">
                 <div class="header-block">
                     <div class="header-title">Stats</div>
                     <div class="header-sub">Progress & history</div>
                 </div>
-    
-                <div class="stats-grid-top">
-                    <div class="card stats-compact stats-compact-a">
-                        <div class="stats-compact-label">🏋 Workouts</div>
-                        <div class="stats-compact-value">${totalWorkouts}</div>
-                        <div class="stats-compact-sub">Łącznie ukończonych treningów</div>
+
+                <div class="stats-kpi-row">
+                    <div class="stats-kpi">
+                        <div class="stats-kpi-label">Workouts</div>
+                        <div class="stats-kpi-value">${totalWorkouts}</div>
+                        <div class="stats-kpi-sub">Łącznie ukończonych treningów</div>
                     </div>
-    
-                    <div class="card stats-compact stats-compact-b">
-                        <div class="stats-compact-label">🗓 This month</div>
-                        <div class="stats-compact-value">${monthWorkouts}</div>
-                        <div class="stats-compact-sub">Treningi w tym miesiącu</div>
+                    <div class="stats-kpi">
+                        <div class="stats-kpi-label">This month</div>
+                        <div class="stats-kpi-value">${monthWorkouts}</div>
+                        <div class="stats-kpi-sub">Treningi w tym miesiącu</div>
                     </div>
-    
-                    <div class="card stats-compact stats-compact-c">
-                        <div class="stats-compact-label">🔥 Week streak</div>
-                        <div class="stats-compact-value">${streak}</div>
-                        <div class="stats-compact-sub">Tygodnie z aktywnością</div>
+                    <div class="stats-kpi">
+                        <div class="stats-kpi-label">Week streak</div>
+                        <div class="stats-kpi-value">${streak}</div>
+                        <div class="stats-kpi-sub">Tygodnie z aktywnością</div>
                     </div>
-    
-                    <div class="card stats-compact stats-compact-d">
-                        <div class="stats-compact-label">✅ Completed sets</div>
-                        <div class="stats-compact-value">${weekStats.completedSets}</div>
-                        <div class="stats-compact-sub">Serie w aktualnym tygodniu</div>
+                    <div class="stats-kpi">
+                        <div class="stats-kpi-label">Completed sets</div>
+                        <div class="stats-kpi-value accent">${weekStats.completedSets}</div>
+                        <div class="stats-kpi-sub">Serie w aktualnym tygodniu</div>
                     </div>
                 </div>
-    
-                <div style="height:14px;"></div>
-    
-                <div class="card activity-grid-card">
-                    <div class="section-title-row">
-                        <div>
-                            <div class="section-title">Aktywność</div>
-                            <div class="section-sub">Im mocniejszy kolor, tym więcej ukończonych serii</div>
+
+                <div class="stats-section">
+                    <div class="stats-section-head">
+                        <div class="stats-section-title">Aktywność</div>
+                        <div class="stats-section-sub">Im mocniejszy niebieski, tym więcej ukończonych serii · kolumny = tygodnie</div>
+                    </div>
+                    <div class="cal-wrap" style="--cal-cols: ${Math.max(cal.cols, 1)}">
+                        <div class="cal-grid">
+                            ${calRowsHtml || '<div class="cal-lab">—</div>'}
                         </div>
                     </div>
-    
-                    <div class="activity-grid">
-                        ${activityCells.map((lvl) => `<div class="activity-cell ${lvl ? `l${lvl}` : ""}"></div>`).join("")}
-                    </div>
-    
-                    <div class="activity-legend">
-                        <span>0 serii</span>
-                        <div class="activity-legend-dots">
-                            <i class="activity-cell"></i>
-                            <i class="activity-cell l1"></i>
-                            <i class="activity-cell l2"></i>
-                            <i class="activity-cell l3"></i>
-                            <i class="activity-cell l4"></i>
-                        </div>
-                        <span>mocny trening</span>
+                    <div class="cal-legend">
+                        <span>mniej</span>
+                        <div class="cal-cell"></div>
+                        <div class="cal-cell l1"></div>
+                        <div class="cal-cell l2"></div>
+                        <div class="cal-cell l3"></div>
+                        <div class="cal-cell l4"></div>
+                        <span>więcej</span>
                     </div>
                 </div>
-    
-                <div style="height:14px;"></div>
-    
-                <div class="section-title-row">
-                    <div>
-                        <div class="section-title">Best Performance</div>
-                        <div class="section-sub">Najważniejsze ćwiczenia i trend najlepszego wyniku</div>
+
+                <div class="stats-section">
+                    <div class="stats-section-head">
+                        <div class="stats-section-title">Best Performance</div>
+                        <div class="stats-section-sub">Kluczowe ćwiczenia i trend wyniku</div>
                     </div>
-                </div>
-    
-                <div class="pr-list">
-                    ${prs.length ? prs.map((item) => {
-                        const history = item.history;
-                        const latest = history[history.length - 1];
-                        const gain = window.StatsModule.getProgressPercent(history);
-                        const values = history.map((x) => Number(x.bestSet?.kg || 0));
-    
-                        return `
-                            <div class="card pr-card">
-                                <div class="pr-top">
-                                    <div>
-                                        <div class="pr-title">${item.name}</div>
-                                        <div class="pr-sub">Top weight: ${window.Utils.formatNumberPL(latest.topWeight)} kg</div>
-                                    </div>
-                                    <div class="pr-gain">${gain >= 0 ? "+" : ""}${gain}%</div>
-                                </div>
-                                ${window.StatsModule.createSparklineSVG(values)}
-                                <div class="pr-bottom">
-                                    <span>Best set: ${latest.bestSet ? `${window.Utils.formatNumberPL(latest.bestSet.kg)} kg × ${window.Utils.formatNumberPL(latest.bestSet.reps)}` : "—"}</span>
-                                    <span>${window.Utils.getWeekRangeLabel(state.startSunday, latest.weekIndex)}</span>
-                                </div>
-                            </div>
-                        `;
-                    }).join("") : `
-                        <div class="empty-box">Brak danych do statystyk. Ukończ kilka serii, a tutaj pojawi się progres.</div>
-                    `}
+                    <div class="pr-grid">
+                        ${prHtml || '<div class="pr-card"><div class="pr-name">Brak danych</div></div>'}
+                    </div>
                 </div>
             </div>
         `;
