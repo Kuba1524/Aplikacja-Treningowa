@@ -112,6 +112,10 @@ const normalizeWeek = (week = {}) => {
 };
 
 const ensureStateShape = () => {
+    if (!Array.isArray(state.bodyWeight)) {
+        state.bodyWeight = [];
+    }
+    
     if (!state || typeof state !== "object") {
         state = { currentWeekIndex: 0, weeks: [{}], startSunday: 0 };
     }
@@ -316,6 +320,7 @@ const renderCurrentView = () => {
         getTodayPlan,
         getWeekDaysUI,
         ensureWorkoutDataExists,
+        logBodyWeight,
         getTrendUI
     };
 
@@ -580,6 +585,35 @@ const initApp = async () => {
         showProfileGate();
     }
 };
+
+const logBodyWeight = (rawKg) => {
+    const kg = parseFloat(String(rawKg).replace(",", "."));
+    if (!kg || kg < 30 || kg > 300) {
+        alert("Podaj wagę w kg (np. 78.5)");
+        return;
+    }
+    if (!Array.isArray(state.bodyWeight)) state.bodyWeight = [];
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const ts = today.getTime();
+
+    // jeden wpis na dzień – nadpisz dzisiejszy
+    const idx = state.bodyWeight.findIndex((x) => {
+        const d = new Date(x.ts);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime() === ts;
+    });
+
+    const entry = { ts, kg: Math.round(kg * 10) / 10 };
+    if (idx >= 0) state.bodyWeight[idx] = entry;
+    else state.bodyWeight.push(entry);
+
+    persistState();
+    if (currentView === "stats") renderCurrentView();
+};
+
+window.logBodyWeight = logBodyWeight;
 
 window.selectProfile = selectProfile;
 window.navigateTo = navigateTo;
