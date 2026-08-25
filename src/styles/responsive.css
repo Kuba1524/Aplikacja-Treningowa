@@ -1,0 +1,96 @@
+@media (min-width: 640px) {
+    .container {
+        padding: var(--space-lg) var(--space-xl);
+    }
+
+    .mini-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .tabs-row {
+        gap: var(--space-lg);
+    }
+}
+
+@media (min-width: 720px) {
+    .stats-grid-top {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .activity-grid {
+        grid-template-columns: repeat(18, 1fr);
+    }
+}
+
+@media (min-width: 900px) {
+    .container {
+        padding: var(--space-2xl) var(--space-3xl);
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1.1fr 0.9fr;
+        align-items: start;
+    }
+
+    .pr-list {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1280px) {
+    .app-shell {
+        max-width: 1400px;
+    }
+
+    .container {
+        max-width: 1200px;
+    }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+    .app-main {
+        padding-bottom: calc(var(--nav-h) + 10px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* Already dark */
+    }
+}
+
+@media (prefers-color-scheme: light) {
+    :root {
+        --bg: #ffffff;
+        --bg-soft: #f8f9fa;
+        --card-bg: #f3f4f6;
+        --text-main: #0f172a;
+        --text-dim: #64748b;
+    }
+}
+
+@media print {
+    .nav-btn,
+    .bottom-nav,
+    .icon-btn {
+        display: none;
+    }
+
+    body {
+        background: white;
+        color: black;
+    }
+
+    .card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+}
