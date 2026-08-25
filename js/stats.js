@@ -49,7 +49,7 @@ window.StatsModule = (() => {
         return total;
     };
 
-    const getCurrentMonthWorkouts = (state, DAYS, getExerciseKey, getDayDateKey) => {
+    const getCurrentMonthWorkouts = (state, DAYS, getExerciseKey, getDayTimestampKey) => {
         const now = new Date();
         const month = now.getMonth();
         const year = now.getFullYear();
@@ -57,8 +57,11 @@ window.StatsModule = (() => {
 
         state.weeks.forEach((weekData) => {
             DAYS.forEach((day) => {
-                const dayDate = weekData[getDayDateKey(day.id)];
-                if (!dayDate) return;
+                const ts = weekData[getDayTimestampKey(day.id)];
+                if (!ts) return;
+
+                const date = new Date(ts);
+                if (Number.isNaN(date.getTime())) return;
 
                 let has = false;
                 day.exercises.forEach((ex, ei) => {
@@ -69,8 +72,7 @@ window.StatsModule = (() => {
 
                 if (!has) return;
 
-                const parsed = new Date(dayDate);
-                if (!Number.isNaN(parsed.getTime()) && parsed.getMonth() === month && parsed.getFullYear() === year) {
+                if (date.getMonth() === month && date.getFullYear() === year) {
                     total++;
                 }
             });
@@ -111,17 +113,29 @@ window.StatsModule = (() => {
                     const key = getExerciseKey(day.id, ei);
                     const sets = weekData[key] || [];
 
-                    let best1RM = 0;
                     let bestSet = null;
+                    let topWeight = 0;
+                    let totalReps = 0;
                     let doneSets = 0;
 
                     sets.forEach((set) => {
                         if (set.done) {
                             doneSets++;
-                            const est = window.Utils.estimate1RM(set.kg, set.reps);
-                            if (est > best1RM) {
-                                best1RM = est;
-                                bestSet = { kg: set.kg, reps: set.reps };
+                            totalReps += Number(set.reps) || 0;
+
+                            const kg = Number(set.kg) || 0;
+                            const reps = Number(set.reps) || 0;
+
+                            if (
+                                !bestSet ||
+                                kg > bestSet.kg ||
+                                (kg === bestSet.kg && reps > bestSet.reps)
+                            ) {
+                                bestSet = { kg, reps };
+                            }
+
+                            if (kg > topWeight) {
+                                topWeight = kg;
                             }
                         }
                     });
@@ -129,8 +143,9 @@ window.StatsModule = (() => {
                     if (doneSets > 0) {
                         history.push({
                             weekIndex,
-                            best1RM,
                             bestSet,
+                            topWeight,
+                            totalReps,
                             doneSets
                         });
                     }
@@ -162,8 +177,10 @@ window.StatsModule = (() => {
 
     const getProgressPercent = (history) => {
         if (!history || history.length < 2) return 0;
-        const first = history[0]?.best1RM || 0;
-        const last = history[history.length - 1]?.best1RM || 0;
+
+        const first = history[0]?.bestSet?.kg || 0;
+        const last = history[history.length - 1]?.bestSet?.kg || 0;
+
         if (!first || !last) return 0;
         return Math.round(((last - first) / first) * 100);
     };
@@ -183,7 +200,8 @@ window.StatsModule = (() => {
             });
         });
 
-        const last = values.slice(-72);
+        const last = values.slice(-84);
+
         return last.map((v) => {
             if (v === 0) return 0;
             if (v <= 4) return 1;
