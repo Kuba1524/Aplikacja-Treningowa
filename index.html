@@ -2,90 +2,81 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Profesjonalna aplikacja do śledzenia treningów i postępów." />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0e14" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="KubaGym" />
+    <title>Kuba Training</title>
 
-    <title>KubaGym - Aplikacja Treningowa</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet" />
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
-
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-
-    <link rel="stylesheet" href="./src/styles/index.css" />
-
-    <link rel="manifest" href="/manifest.json" />
+    <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-    <div class="app-container">
-        <div class="app-main">
-            <!-- Home Screen -->
-            <div id="screen-home" class="screen">
-                <div class="container" id="home-content">
-                    <!-- treść wstawia JS (renderHome) -->
-                </div>
-            </div>
+    <div class="app-shell">
+        <main class="app-main">
+            <section id="screen-home" class="screen"></section>
+            <section id="screen-plan" class="screen hidden"></section>
+            <section id="screen-stats" class="screen hidden"></section>
+            <section id="screen-workout" class="screen hidden"></section>
+        </main>
 
-            <div id="screen-plan" class="screen hidden">
-                <div class="container">
-                    <h1 class="text-3xl weight-700 mb-lg">Plan Treningowy</h1>
-                    <div id="plan-content"></div>
-                </div>
-            </div>
+        <nav class="bottom-nav" id="bottom-nav">
+            <button class="nav-btn active" data-view="home" onclick="navigateTo('home')">
+                <span class="nav-ico">⌂</span>
+                <span class="nav-lab">Home</span>
+            </button>
 
-            <div id="screen-stats" class="screen hidden">
-                <div class="container">
-                    <h1 class="text-3xl weight-700 mb-lg">Statystyki</h1>
-                    <div id="stats-content"></div>
-                </div>
-            </div>
+            <button class="nav-btn" data-view="plan" onclick="navigateTo('plan')">
+                <span class="nav-ico">▦</span>
+                <span class="nav-lab">Plan</span>
+            </button>
 
-            <div id="screen-workout" class="screen hidden">
-                <div class="container">
-                    <div class="flex justify-between align-center mb-lg">
-                        <h1 id="workout-title" class="text-3xl weight-700">Trening</h1>
-                        <button class="btn btn-ghost" onclick="goBackFromWorkout()">← Wróć</button>
-                    </div>
-                    <div id="workout-content"></div>
-                </div>
-            </div>
-        </div>
+            <button class="nav-btn nav-btn-primary" data-view="workout" onclick="navigateToWorkoutFromNav()">
+                <span class="nav-ico">▶</span>
+                <span class="nav-lab">Start</span>
+            </button>
 
-        <!-- Bottom Navigation -->
-        <nav id="bottom-nav" class="bottom-nav">
-            <div class="flex justify-center gap-lg">
-                <button class="nav-btn active" data-view="home" onclick="navigateTo('home')">
-                    <span>🏠 Dom</span>
-                </button>
-                <button class="nav-btn" data-view="plan" onclick="navigateTo('plan')">
-                    <span>📋 Plan</span>
-                </button>
-                <button class="nav-btn" data-view="workout" onclick="navigateToWorkoutFromNav()">
-                    <span>💪 Trening</span>
-                </button>
-                <button class="nav-btn" data-view="stats" onclick="navigateTo('stats')">
-                    <span>📊 Statystyki</span>
-                </button>
-            </div>
+            <button class="nav-btn" data-view="stats" onclick="navigateTo('stats')">
+                <span class="nav-ico">▥</span>
+                <span class="nav-lab">Stats</span>
+            </button>
+
+            <button class="nav-btn" data-view="more" onclick="navigateTo('plan')">
+                <span class="nav-ico">☰</span>
+                <span class="nav-lab">More</span>
+            </button>
         </nav>
     </div>
 
-    <script type="module" src="./src/js/main.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
     <script>
-        if ("serviceWorker" in navigator) {
-            window.addEventListener("load", () => {
-                navigator.serviceWorker.register("/sw.js").catch((err) => {
-                    console.log("ServiceWorker registration failed: ", err);
-                });
-            });
-        }
+        const firebaseConfig = {
+            apiKey: "AIzaSyBwW5kAYrZTtbaBx60y_4qUXU6dVJ-tD-s",
+            authDomain: "training-app-a5a2f.firebaseapp.com",
+            projectId: "training-app-a5a2f",
+            storageBucket: "training-app-a5a2f.firebasestorage.app",
+            messagingSenderId: "418834782578",
+            appId: "1:418834782578:web:9e1c16504afd7ebc29e5eb",
+            measurementId: "G-V1HENNKF2X"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
     </script>
+
+    <!-- WAŻNE: ustaw właściwy user_id PRZED storage.js, żeby wczytać Twoje dane z Firestore -->
+    <script>
+        localStorage.setItem("user_id", "user_jmdwj59ev_1787597107103");
+    </script>
+
+    <script src="js/utils.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/stats.js"></script>
+    <script src="js/views.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
