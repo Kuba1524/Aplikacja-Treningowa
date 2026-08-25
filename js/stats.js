@@ -282,6 +282,35 @@ window.StatsModule = (() => {
         `;
     };
 
+    const getActivityCalendar = (state, DAYS, getExerciseKey) => {
+        const weeks = Array.isArray(state.weeks) ? state.weeks : [];
+        const trainDays = DAYS.filter((d) => d && typeof d.weekday === "number");
+        const labels = trainDays.map((d) => {
+            const map = ["ND", "PN", "WT", "ŚR", "CZ", "PT", "SB"];
+            return map[d.weekday] || d.label || "?";
+        });
+
+        const cols = weeks.length;
+        const rows = trainDays.map((day) => {
+            return weeks.map((weekData, wi) => {
+                if (!weekData || typeof weekData !== "object") return 0;
+                let done = 0;
+                (day.exercises || []).forEach((ex, ei) => {
+                    const key = getExerciseKey(day.id, ei);
+                    const sets = weekData[key] || [];
+                    done += sets.filter((s) => s && s.done).length;
+                });
+                if (done === 0) return 0;
+                if (done <= 3) return 1;
+                if (done <= 8) return 2;
+                if (done <= 15) return 3;
+                return 4;
+            });
+        });
+
+        return { labels, rows, cols, currentCol: Math.min(state.currentWeekIndex || 0, Math.max(cols - 1, 0)) };
+    };
+
     return {
         getWeekStats,
         getTotalWorkouts,
@@ -290,6 +319,7 @@ window.StatsModule = (() => {
         getPrimaryExercises,
         getProgressPercent,
         getActivityCells,
-        createSparklineSVG
+        createSparklineSVG,
+        getActivityCalendar
     };
 })();
