@@ -83,6 +83,7 @@ let noteSaveTimeout = null;
 let isLoaded = false;
 
 const getDayDateKey = (dayId) => `day_${dayId}_date`;
+const getDayTimestampKey = (dayId) => `day_${dayId}_ts`;
 const getExerciseKey = (dayId, exerciseIndex) => `d${dayId}_e${exerciseIndex}`;
 const getNoteKey = (dayId, exerciseIndex) => `d${dayId}_e${exerciseIndex}_note`;
 
