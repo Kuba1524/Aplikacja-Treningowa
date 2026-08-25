@@ -233,7 +233,7 @@ window.Views = (() => {
                     </div>
     
                     <div class="activity-legend">
-                        <span>Brak</span>
+                        <span>0 serii</span>
                         <div class="activity-legend-dots">
                             <i class="activity-cell"></i>
                             <i class="activity-cell l1"></i>
@@ -241,7 +241,7 @@ window.Views = (() => {
                             <i class="activity-cell l3"></i>
                             <i class="activity-cell l4"></i>
                         </div>
-                        <span>Dużo</span>
+                        <span>mocny trening</span>
                     </div>
                 </div>
     
