@@ -120,15 +120,21 @@ const ensureStateShape = () => {
         state.weeks = [{}];
     }
 
-    if (typeof state.currentWeekIndex !== "number") {
+    state.weeks = state.weeks.map((week) => {
+        if (!week || typeof week !== "object") return {};
+        return normalizeWeek(week);
+    });
+
+    if (typeof state.currentWeekIndex !== "number" || state.currentWeekIndex < 0) {
         state.currentWeekIndex = 0;
+    }
+    if (state.currentWeekIndex >= state.weeks.length) {
+        state.currentWeekIndex = state.weeks.length - 1;
     }
 
     if (typeof state.startSunday !== "number") {
         state.startSunday = 0;
     }
-
-    state.weeks = state.weeks.map((week) => normalizeWeek(week));
 };
 
 const cloneWeekData = (prevWeek = {}) => {
