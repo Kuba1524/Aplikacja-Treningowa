@@ -12,7 +12,6 @@
 
     <link rel="stylesheet" href="css/style.css" />
     <style>
-        /* Ekran wyboru profilu */
         .profile-gate {
             position: fixed;
             inset: 0;
@@ -23,7 +22,7 @@
             justify-content: center;
             padding: 24px;
         }
-        .profile-gate.hidden { display: none; }
+        .profile-gate.hidden { display: none !important; }
         .profile-gate-inner {
             width: 100%;
             max-width: 380px;
@@ -32,11 +31,12 @@
         .profile-gate h1 {
             font-size: 1.6rem;
             font-weight: 800;
-            margin-bottom: 8px;
+            margin: 0 0 8px;
+            color: #f0f6fc;
         }
         .profile-gate p {
             color: #8b949e;
-            margin-bottom: 28px;
+            margin: 0 0 28px;
             font-size: 0.95rem;
         }
         .profile-list {
@@ -49,60 +49,29 @@
             align-items: center;
             gap: 14px;
             width: 100%;
-            padding: 16px 18px;
+            padding: 18px 20px;
             border-radius: 16px;
             border: 1px solid rgba(255,255,255,0.1);
             background: #151a23;
             color: #f0f6fc;
-            font-size: 1.1rem;
+            font-size: 1.15rem;
             font-weight: 600;
             cursor: pointer;
             font-family: inherit;
         }
         .profile-btn:active { transform: scale(0.98); }
-        .profile-btn .emoji { font-size: 1.6rem; }
+        .profile-btn .emoji { font-size: 1.7rem; }
         .profile-btn .name { flex: 1; text-align: left; }
-        .app-user-chip {
-            position: fixed;
-            top: 10px;
-            right: 12px;
-            z-index: 50;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(21,26,35,0.9);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 999px;
-            padding: 6px 10px 6px 12px;
-            font-size: 0.8rem;
-            color: #8b949e;
-        }
-        .app-user-chip button {
-            border: none;
-            background: transparent;
-            color: #3b82f6;
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            font-family: inherit;
-            padding: 2px 4px;
-        }
     </style>
 </head>
 <body>
-    <!-- Wybór profilu -->
+    <!-- Pokazuje się TYLKO gdy nie ma zapisanego profilu -->
     <div id="profile-gate" class="profile-gate hidden">
         <div class="profile-gate-inner">
             <h1>Kto trenuje?</h1>
-            <p>Wybierz swój profil — dane są osobne</p>
+            <p>Wybierz raz — zapamiętamy na tym urządzeniu</p>
             <div id="profile-list" class="profile-list"></div>
         </div>
-    </div>
-
-    <!-- Chip z aktualnym użytkownikiem -->
-    <div id="user-chip" class="app-user-chip hidden">
-        <span id="user-chip-name">—</span>
-        <button type="button" onclick="switchProfile()">Zmień</button>
     </div>
 
     <div class="app-shell">
@@ -130,9 +99,9 @@
                 <span class="nav-ico">▥</span>
                 <span class="nav-lab">Stats</span>
             </button>
-            <button class="nav-btn" data-view="more" onclick="switchProfile()">
+            <button class="nav-btn" data-view="more" onclick="navigateTo('plan')">
                 <span class="nav-ico">☰</span>
-                <span class="nav-lab">Profil</span>
+                <span class="nav-lab">More</span>
             </button>
         </nav>
     </div>
