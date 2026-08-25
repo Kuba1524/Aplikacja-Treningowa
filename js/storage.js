@@ -14,11 +14,20 @@ window.StorageModule = (() => {
 
     const PROFILE_KEY = "selected_profile_id";
 
-    const getSelectedProfileId = () => localStorage.getItem(PROFILE_KEY);
+    const isValidUserId = (userId) =>
+        typeof userId === "string" && userId.length > 5;
+
+    const getSelectedProfileId = () => {
+        const id = localStorage.getItem(PROFILE_KEY);
+        if (!isValidUserId(id)) return null;
+        if (!PROFILES.some((p) => p.id === id)) return null;
+        return id;
+    };
 
     const setSelectedProfileId = (id) => {
+        if (!isValidUserId(id)) return;
         localStorage.setItem(PROFILE_KEY, id);
-        localStorage.setItem("user_id", id); // kompatybilność ze starym kodem
+        localStorage.setItem("user_id", id);
     };
 
     const clearSelectedProfile = () => {
@@ -28,57 +37,61 @@ window.StorageModule = (() => {
 
     const getProfile = (id) => PROFILES.find((p) => p.id === id) || null;
 
-    const storageKeyFor = (userId) => `kuba_v11_${userId}`;
+    const storageKeyFor = (userId) => "kuba_v11_" + userId;
+
+    const safeParse = (raw) => {
+        if (!raw || raw === "undefined" || raw === "null") return null;
+        try {
+            return JSON.parse(raw);
+        } catch (e) {
+            return null;
+        }
+    };
 
     const load = async (userId, fallbackState) => {
-        if (!userId) return fallbackState;
+        if (!isValidUserId(userId)) return fallbackState;
 
         try {
             const doc = await db.collection("users").doc(userId).get();
-
             if (doc.exists) {
                 const data = doc.data();
                 return data.state || fallbackState;
             }
-
-            const localData = localStorage.getItem(storageKeyFor(userId));
-            if (localData) return JSON.parse(localData);
-
-            return fallbackState;
+            const local = safeParse(localStorage.getItem(storageKeyFor(userId)));
+            return local || fallbackState;
         } catch (error) {
-            console.error("❌ Błąd wczytywania:", error);
-            const localData = localStorage.getItem(storageKeyFor(userId));
-            if (localData) return JSON.parse(localData);
-            return fallbackState;
+            console.error("Błąd wczytywania:", error);
+            const local = safeParse(localStorage.getItem(storageKeyFor(userId)));
+            return local || fallbackState;
         }
     };
 
     const save = async (userId, state) => {
-        if (!userId) return;
+        if (!isValidUserId(userId)) return;
 
         try {
             await db.collection("users").doc(userId).set(
                 {
-                    state,
-                    profileName: getProfile(userId)?.name || "",
+                    state: state,
+                    profileName: (getProfile(userId) && getProfile(userId).name) || "",
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 },
                 { merge: true }
             );
             localStorage.setItem(storageKeyFor(userId), JSON.stringify(state));
         } catch (error) {
-            console.error("❌ Błąd zapisu Firebase:", error);
+            console.error("Błąd zapisu Firebase:", error);
             localStorage.setItem(storageKeyFor(userId), JSON.stringify(state));
         }
     };
 
     return {
-        PROFILES,
-        getSelectedProfileId,
-        setSelectedProfileId,
-        clearSelectedProfile,
-        getProfile,
-        load,
-        save
+        PROFILES: PROFILES,
+        getSelectedProfileId: getSelectedProfileId,
+        setSelectedProfileId: setSelectedProfileId,
+        clearSelectedProfile: clearSelectedProfile,
+        getProfile: getProfile,
+        load: load,
+        save: save
     };
 })();
