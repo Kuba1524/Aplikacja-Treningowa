@@ -154,11 +154,11 @@ const cloneWeekData = (prevWeek = {}) => {
 };
 
 const persistState = () => {
-    if (!isLoaded) return;
+    if (!isLoaded || !currentUserId) return;
 
     clearTimeout(saveTimeout);
     saveTimeout = setTimeout(async () => {
-        await window.StorageModule.save(state);
+        await window.StorageModule.save(currentUserId, state);
     }, 350);
 };
 
@@ -496,17 +496,82 @@ const resetWorkout = () => {
     openDay(currentDayId);
 };
 
-const initApp = async () => {
-    const loaded = await window.StorageModule.load(state);
-    state = loaded || state;
+const showProfileGate = () => {
+    const gate = document.getElementById("profile-gate");
+    const list = document.getElementById("profile-list");
+    const chip = document.getElementById("user-chip");
+
+    list.innerHTML = "";
+    window.StorageModule.PROFILES.forEach((p) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "profile-btn";
+        btn.innerHTML = `<span class="emoji">${p.emoji}</span><span class="name">${p.name}</span>`;
+        btn.onclick = () => selectProfile(p.id);
+        list.appendChild(btn);
+    });
+
+    gate.classList.remove("hidden");
+    chip.classList.add("hidden");
+};
+
+const updateUserChip = () => {
+    const chip = document.getElementById("user-chip");
+    const nameEl = document.getElementById("user-chip-name");
+    const profile = window.StorageModule.getProfile(currentUserId);
+    if (!profile) {
+        chip.classList.add("hidden");
+        return;
+    }
+    nameEl.textContent = `${profile.emoji} ${profile.name}`;
+    chip.classList.remove("hidden");
+};
+
+const selectProfile = async (profileId) => {
+    window.StorageModule.setSelectedProfileId(profileId);
+    document.getElementById("profile-gate").classList.add("hidden");
+    await bootWithUser(profileId);
+};
+
+const switchProfile = () => {
+    // zapisz bieżące dane przed zmianą
+    if (isLoaded && currentUserId) {
+        window.StorageModule.save(currentUserId, state);
+    }
+    isLoaded = false;
+    currentUserId = null;
+    window.StorageModule.clearSelectedProfile();
+    showProfileGate();
+};
+
+const bootWithUser = async (userId) => {
+    currentUserId = userId;
+
+    const empty = { currentWeekIndex: 0, weeks: [{}], startSunday: 0 };
+    const loaded = await window.StorageModule.load(userId, empty);
+    state = loaded || empty;
 
     ensureStateShape();
     isLoaded = true;
     updateTimeline();
+    updateUserChip();
 
     currentView = "home";
+    currentDayId = null;
     renderCurrentView();
 };
+
+const initApp = async () => {
+    const existing = window.StorageModule.getSelectedProfileId();
+    if (!existing) {
+        showProfileGate();
+        return;
+    }
+    await bootWithUser(existing);
+};
+
+window.switchProfile = switchProfile;
+window.selectProfile = selectProfile;
 
 window.navigateTo = navigateTo;
 window.navigateToWorkoutFromNav = navigateToWorkoutFromNav;
