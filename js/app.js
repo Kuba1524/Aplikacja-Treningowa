@@ -238,7 +238,6 @@ const getWeekDaysUI = () => {
     const now = new Date();
     const weekday = now.getDay();
     const sunday = window.Utils.getCurrentSunday();
-
     const labels = ["ND", "PN", "WT", "ŚR", "CZ", "PT", "SB"];
 
     return labels.map((lab, i) => {
@@ -264,16 +263,13 @@ const ensureWorkoutDataExists = (dayId, exerciseIndex, setsCount) => {
     const weekData = state.weeks[state.currentWeekIndex];
     const key = getExerciseKey(dayId, exerciseIndex);
 
-    if (!weekData[dayKey]) {
-        const now = new Date();
-        weekData[dayKey] = now.toLocaleDateString("pl-PL", {
-            day: "numeric",
-            month: "long",
-            weekday: "short"
-    });
-    weekData[getDayTimestampKey(id)] = now.getTime();
-    persistState();
-}
+    if (!weekData[key]) {
+        weekData[key] = Array.from({ length: setsCount }, () => ({
+            kg: 0,
+            reps: 0,
+            done: false
+        }));
+    }
 };
 
 const getTrendUI = (curr, prev) => {
@@ -312,18 +308,9 @@ const renderCurrentView = () => {
         getTrendUI
     };
 
-    if (currentView === "home") {
-        window.Views.renderHome(ctx);
-    }
-
-    if (currentView === "plan") {
-        window.Views.renderPlan(ctx);
-    }
-
-    if (currentView === "stats") {
-        window.Views.renderStats(ctx);
-    }
-
+    if (currentView === "home") window.Views.renderHome(ctx);
+    if (currentView === "plan") window.Views.renderPlan(ctx);
+    if (currentView === "stats") window.Views.renderStats(ctx);
     if (currentView === "workout") {
         window.Views.renderWorkout(ctx);
         updateSummary();
@@ -347,16 +334,17 @@ const updateVisibleScreen = () => {
     });
 
     const bottomNav = document.getElementById("bottom-nav");
-    if (bottomNav) {
-        bottomNav.classList.toggle("hidden", currentView === "workout");
-    }
+    if (bottomNav) bottomNav.classList.toggle("hidden", currentView === "workout");
 };
 
 const updateBottomNav = () => {
     document.querySelectorAll(".nav-btn").forEach((btn) => {
         const view = btn.dataset.view;
-        const active = view === currentView || (view === "more" && currentView === "plan");
-        btn.classList.toggle("active", active && view !== "workout");
+        btn.classList.remove("active");
+
+        if (currentView === "home" && view === "home") btn.classList.add("active");
+        if (currentView === "plan" && view === "plan") btn.classList.add("active");
+        if (currentView === "stats" && view === "stats") btn.classList.add("active");
     });
 };
 
@@ -373,6 +361,11 @@ const navigateToWorkoutFromNav = () => {
         return;
     }
 
+    if (currentDayId !== null) {
+        openDay(currentDayId);
+        return;
+    }
+
     if (DAYS.length) {
         openDay(DAYS[0].id);
     }
@@ -385,6 +378,9 @@ const setWeek = (w) => {
 };
 
 const openDay = (id) => {
+    const day = DAYS.find((d) => d.id === id);
+    if (!day) return;
+
     currentDayId = id;
     const weekData = state.weeks[state.currentWeekIndex];
     const dayKey = getDayDateKey(id);
@@ -396,9 +392,14 @@ const openDay = (id) => {
             month: "long",
             weekday: "short"
         });
-        persistState();
+        weekData[getDayTimestampKey(id)] = now.getTime();
     }
 
+    day.exercises.forEach((ex, ei) => {
+        ensureWorkoutDataExists(id, ei, ex.sets);
+    });
+
+    persistState();
     currentView = "workout";
     renderCurrentView();
 };
@@ -437,7 +438,6 @@ const updateSet = (ei, i, field, val) => {
     if (currentDayId === null) return;
 
     const key = getExerciseKey(currentDayId, ei);
-
     if (!state.weeks[state.currentWeekIndex][key]) return;
 
     state.weeks[state.currentWeekIndex][key][i][field] = parseFloat(val) || 0;
@@ -482,8 +482,7 @@ const resetWorkout = () => {
     if (currentDayId === null) return;
 
     const weekData = state.weeks[state.currentWeekIndex];
-    if (!weekData) return;
-    
+
     delete weekData[getDayDateKey(currentDayId)];
     delete weekData[getDayTimestampKey(currentDayId)];
 
