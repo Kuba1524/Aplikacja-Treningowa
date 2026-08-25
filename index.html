@@ -1,80 +1,77 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#0d1117">
-    <title>Kuba Trening - Pro Plan</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0e14" />
+    <title>Kuba Training</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet" />
+
+    <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
+    <div class="app-shell">
+        <main class="app-main">
+            <section id="screen-home" class="screen"></section>
+            <section id="screen-plan" class="screen hidden"></section>
+            <section id="screen-stats" class="screen hidden"></section>
+            <section id="screen-workout" class="screen hidden"></section>
+        </main>
 
-    <div id="screen-home">
-        <div class="header">
-            <h1>Plan <span>Treningowy</span></h1>
-        </div>
-    
-        <div class="top-mode-switch">
-            <button id="tab-plan" class="mode-tab active" onclick="switchHomeTab('plan')">PLAN TRENINGOWY</button>
-            <button id="tab-stats" class="mode-tab" onclick="switchHomeTab('stats')">STATYSTYKI</button>
-        </div>
-    
-        <div id="home-plan-view">
-            <div class="week-selector" id="week-tabs"></div>
-            <div class="day-grid" id="day-cards"></div>
-        </div>
-    
-        <div id="home-stats-view" class="hidden">
-            <div id="stats-dashboard"></div>
-        </div>
-    </div>
-    
-    <div id="screen-workout" class="hidden">
-        <div class="nav-bar">
-            <button class="btn-back" onclick="goHome()">←</button>
-            <div>
-                <h2 id="wh-title" style="font-size: 17px; font-weight: 800;"></h2>
-                <span id="wh-date" class="workout-date-tag"></span>
-            </div>
-            <button onclick="resetWorkout()" style="margin-left: auto; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--danger); padding: 8px 14px; border-radius: 10px; font-size: 11px; font-weight: 800;">RESET</button>
-        </div>
+        <nav class="bottom-nav" id="bottom-nav">
+            <button class="nav-btn active" data-view="home" onclick="navigateTo('home')">
+                <span class="nav-ico">⌂</span>
+                <span class="nav-lab">Home</span>
+            </button>
 
-        <div id="workout-scroll" style="padding: 16px; padding-bottom: 120px;"></div>
+            <button class="nav-btn" data-view="plan" onclick="navigateTo('plan')">
+                <span class="nav-ico">▦</span>
+                <span class="nav-lab">Plan</span>
+            </button>
 
-        <div class="footer-stats">
-            <div style="text-align:center">
-                <span id="s-done" class="stat-val">0</span>
-                <span class="stat-lab">Ukończone Serie</span>
-            </div>
-            <div style="text-align:center">
-                <span id="s-pct" class="stat-val">0%</span>
-                <span class="stat-lab">Postęp Treningu</span>
-            </div>
-        </div>
+            <button class="nav-btn nav-btn-primary" data-view="workout" onclick="navigateToWorkoutFromNav()">
+                <span class="nav-ico">▶</span>
+                <span class="nav-lab">Start</span>
+            </button>
+
+            <button class="nav-btn" data-view="stats" onclick="navigateTo('stats')">
+                <span class="nav-ico">▥</span>
+                <span class="nav-lab">Stats</span>
+            </button>
+
+            <button class="nav-btn" data-view="more" onclick="navigateTo('plan')">
+                <span class="nav-ico">☰</span>
+                <span class="nav-lab">More</span>
+            </button>
+        </nav>
     </div>
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-    <!-- Firebase Config -->
     <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyBwW5kAYrZTtbaBx60y_4qUXU6dVJ-tD-s",
-      authDomain: "training-app-a5a2f.firebaseapp.com",
-      projectId: "training-app-a5a2f",
-      storageBucket: "training-app-a5a2f.firebasestorage.app",
-      messagingSenderId: "418834782578",
-      appId: "1:418834782578:web:9e1c16504afd7ebc29e5eb",
-      measurementId: "G-V1HENNKF2X"
-    };
+        const firebaseConfig = {
+            apiKey: "AIzaSyBwW5kAYrZTtbaBx60y_4qUXU6dVJ-tD-s",
+            authDomain: "training-app-a5a2f.firebaseapp.com",
+            projectId: "training-app-a5a2f",
+            storageBucket: "training-app-a5a2f.firebasestorage.app",
+            messagingSenderId: "418834782578",
+            appId: "1:418834782578:web:9e1c16504afd7ebc29e5eb",
+            measurementId: "G-V1HENNKF2X"
+        };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
     </script>
 
-    <script src="app.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/stats.js"></script>
+    <script src="js/views.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
