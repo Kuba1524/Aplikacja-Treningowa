@@ -500,49 +500,36 @@ const resetWorkout = () => {
 const showProfileGate = () => {
     const gate = document.getElementById("profile-gate");
     const list = document.getElementById("profile-list");
-    const chip = document.getElementById("user-chip");
+    if (!gate || !list) {
+        console.error("Brak #profile-gate w HTML");
+        return;
+    }
 
     list.innerHTML = "";
     window.StorageModule.PROFILES.forEach((p) => {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "profile-btn";
-        btn.innerHTML = `<span class="emoji">${p.emoji}</span><span class="name">${p.name}</span>`;
-        btn.onclick = () => selectProfile(p.id);
+        btn.innerHTML =
+            '<span class="emoji">' +
+            p.emoji +
+            '</span><span class="name">' +
+            p.name +
+            "</span>";
+        btn.onclick = function () {
+            selectProfile(p.id);
+        };
         list.appendChild(btn);
     });
 
     gate.classList.remove("hidden");
-    chip.classList.add("hidden");
-};
-
-const updateUserChip = () => {
-    const chip = document.getElementById("user-chip");
-    const nameEl = document.getElementById("user-chip-name");
-    const profile = window.StorageModule.getProfile(currentUserId);
-    if (!profile) {
-        chip.classList.add("hidden");
-        return;
-    }
-    nameEl.textContent = `${profile.emoji} ${profile.name}`;
-    chip.classList.remove("hidden");
 };
 
 const selectProfile = async (profileId) => {
     window.StorageModule.setSelectedProfileId(profileId);
-    document.getElementById("profile-gate").classList.add("hidden");
+    const gate = document.getElementById("profile-gate");
+    if (gate) gate.classList.add("hidden");
     await bootWithUser(profileId);
-};
-
-const switchProfile = () => {
-    // zapisz bieżące dane przed zmianą
-    if (isLoaded && currentUserId) {
-        window.StorageModule.save(currentUserId, state);
-    }
-    isLoaded = false;
-    currentUserId = null;
-    window.StorageModule.clearSelectedProfile();
-    showProfileGate();
 };
 
 const bootWithUser = async (userId) => {
@@ -555,7 +542,6 @@ const bootWithUser = async (userId) => {
     ensureStateShape();
     isLoaded = true;
     updateTimeline();
-    updateUserChip();
 
     currentView = "home";
     currentDayId = null;
@@ -563,17 +549,20 @@ const bootWithUser = async (userId) => {
 };
 
 const initApp = async () => {
-    const existing = window.StorageModule.getSelectedProfileId();
-    if (!existing) {
+    try {
+        const existing = window.StorageModule.getSelectedProfileId();
+        if (!existing) {
+            showProfileGate();
+            return;
+        }
+        await bootWithUser(existing);
+    } catch (e) {
+        console.error("initApp error:", e);
         showProfileGate();
-        return;
     }
-    await bootWithUser(existing);
 };
 
-window.switchProfile = switchProfile;
 window.selectProfile = selectProfile;
-
 window.navigateTo = navigateTo;
 window.navigateToWorkoutFromNav = navigateToWorkoutFromNav;
 window.setWeek = setWeek;
