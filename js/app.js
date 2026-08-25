@@ -264,14 +264,16 @@ const ensureWorkoutDataExists = (dayId, exerciseIndex, setsCount) => {
     const weekData = state.weeks[state.currentWeekIndex];
     const key = getExerciseKey(dayId, exerciseIndex);
 
-    if (!weekData[key]) {
-        weekData[key] = Array.from({ length: setsCount }, () => ({
-            kg: 0,
-            reps: 0,
-            done: false
-        }));
-        persistState();
-    }
+    if (!weekData[dayKey]) {
+        const now = new Date();
+        weekData[dayKey] = now.toLocaleDateString("pl-PL", {
+            day: "numeric",
+            month: "long",
+            weekday: "short"
+    });
+    weekData[getDayTimestampKey(id)] = now.getTime();
+    persistState();
+}
 };
 
 const getTrendUI = (curr, prev) => {
