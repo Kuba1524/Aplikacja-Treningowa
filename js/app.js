@@ -319,12 +319,21 @@ const renderCurrentView = () => {
         getTrendUI
     };
 
-    if (currentView === "home") window.Views.renderHome(ctx);
-    if (currentView === "plan") window.Views.renderPlan(ctx);
-    if (currentView === "stats") window.Views.renderStats(ctx);
-    if (currentView === "workout") {
-        window.Views.renderWorkout(ctx);
-        updateSummary();
+    try {
+        if (currentView === "home") window.Views.renderHome(ctx);
+        if (currentView === "plan") window.Views.renderPlan(ctx);
+        if (currentView === "stats") window.Views.renderStats(ctx);
+        if (currentView === "workout") {
+            window.Views.renderWorkout(ctx);
+            updateSummary();
+        }
+    } catch (err) {
+        console.error("Błąd renderowania widoku:", currentView, err);
+        const screen = document.getElementById("screen-" + currentView);
+        if (screen) {
+            screen.innerHTML =
+                '<div class="container" style="padding:24px"><div class="card"><p>Błąd ekranu. Kliknij Plan albo Home jeszcze raz.</p></div></div>';
+        }
     }
 
     updateVisibleScreen();
