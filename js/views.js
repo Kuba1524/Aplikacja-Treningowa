@@ -172,84 +172,101 @@ window.Views = (() => {
     const renderStats = (ctx) => {
         const { state, DAYS, currentWeekIndex } = ctx;
         const screen = document.getElementById("screen-stats");
-
+    
         const totalWorkouts = window.StatsModule.getTotalWorkouts(state, DAYS, ctx.getExerciseKey);
-        const monthWorkouts = window.StatsModule.getCurrentMonthWorkouts(state, DAYS, ctx.getExerciseKey, ctx.getDayDateKey);
+        const monthWorkouts = window.StatsModule.getCurrentMonthWorkouts(
+            state,
+            DAYS,
+            ctx.getExerciseKey,
+            ctx.getDayTimestampKey
+        );
         const streak = window.StatsModule.getWeekStreak(state, DAYS, ctx.getExerciseKey);
         const weekStats = window.StatsModule.getWeekStats(state, DAYS, currentWeekIndex, ctx.getExerciseKey);
         const activityCells = window.StatsModule.getActivityCells(state, DAYS, ctx.getExerciseKey);
         const prs = window.StatsModule.getPrimaryExercises(state, DAYS, ctx.getExerciseKey);
-
+    
         screen.innerHTML = `
             <div class="container">
                 <div class="header-block">
                     <div class="header-title">Stats</div>
                     <div class="header-sub">Progress & history</div>
                 </div>
-
+    
                 <div class="stats-grid-top">
-                    <div class="card stats-compact">
-                        <div class="stats-compact-label">Workouts</div>
+                    <div class="card stats-compact stats-compact-a">
+                        <div class="stats-compact-label">🏋 Workouts</div>
                         <div class="stats-compact-value">${totalWorkouts}</div>
                         <div class="stats-compact-sub">Łącznie ukończonych treningów</div>
                     </div>
-
-                    <div class="card stats-compact">
-                        <div class="stats-compact-label">This month</div>
+    
+                    <div class="card stats-compact stats-compact-b">
+                        <div class="stats-compact-label">🗓 This month</div>
                         <div class="stats-compact-value">${monthWorkouts}</div>
                         <div class="stats-compact-sub">Treningi w tym miesiącu</div>
                     </div>
-
-                    <div class="card stats-compact">
-                        <div class="stats-compact-label">Week streak</div>
+    
+                    <div class="card stats-compact stats-compact-c">
+                        <div class="stats-compact-label">🔥 Week streak</div>
                         <div class="stats-compact-value">${streak}</div>
                         <div class="stats-compact-sub">Tygodnie z aktywnością</div>
                     </div>
-
-                    <div class="card stats-compact">
-                        <div class="stats-compact-label">Completed sets</div>
+    
+                    <div class="card stats-compact stats-compact-d">
+                        <div class="stats-compact-label">✅ Completed sets</div>
                         <div class="stats-compact-value">${weekStats.completedSets}</div>
                         <div class="stats-compact-sub">Serie w aktualnym tygodniu</div>
                     </div>
                 </div>
-
+    
                 <div style="height:14px;"></div>
-
+    
                 <div class="card activity-grid-card">
                     <div class="section-title-row">
                         <div>
                             <div class="section-title">Aktywność</div>
-                            <div class="section-sub">Ostatnie treningi i regularność</div>
+                            <div class="section-sub">Im mocniejszy kolor, tym więcej ukończonych serii</div>
                         </div>
                     </div>
-
+    
                     <div class="activity-grid">
                         ${activityCells.map((lvl) => `<div class="activity-cell ${lvl ? `l${lvl}` : ""}"></div>`).join("")}
                     </div>
-                </div>
-
-                <div style="height:14px;"></div>
-
-                <div class="section-title-row">
-                    <div>
-                        <div class="section-title">Personal Records</div>
-                        <div class="section-sub">Najważniejsze ćwiczenia i progres</div>
+    
+                    <div class="activity-legend">
+                        <span>Brak</span>
+                        <div class="activity-legend-dots">
+                            <i class="activity-cell"></i>
+                            <i class="activity-cell l1"></i>
+                            <i class="activity-cell l2"></i>
+                            <i class="activity-cell l3"></i>
+                            <i class="activity-cell l4"></i>
+                        </div>
+                        <span>Dużo</span>
                     </div>
                 </div>
-
+    
+                <div style="height:14px;"></div>
+    
+                <div class="section-title-row">
+                    <div>
+                        <div class="section-title">Best Performance</div>
+                        <div class="section-sub">Najważniejsze ćwiczenia i trend najlepszego wyniku</div>
+                    </div>
+                </div>
+    
                 <div class="pr-list">
                     ${prs.length ? prs.map((item) => {
                         const history = item.history;
                         const latest = history[history.length - 1];
                         const gain = window.StatsModule.getProgressPercent(history);
-                        const values = history.map((x) => Number(x.best1RM.toFixed(1)));
-
+                        const values = history.map((x) => Number(x.bestSet?.kg || 0));
+    
                         return `
                             <div class="card pr-card">
                                 <div class="pr-top">
                                     <div>
                                         <div class="pr-title">${item.name}</div>
-                                        <div class="pr-sub">1RM: ${latest.best1RM.toFixed(1)} kg</div>
+                                        <div class="pr-sub">Top weight: ${window.Utils.formatNumberPL(latest.topWeight)} kg</div>
                                     </div>
                                     <div class="pr-gain">${gain >= 0 ? "+" : ""}${gain}%</div>
                                 </div>
