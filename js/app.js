@@ -301,6 +301,7 @@ const renderCurrentView = () => {
         currentWeekIndex: state.currentWeekIndex,
         currentDayId,
         getDayDateKey,
+        getDayTimestampKey,
         getExerciseKey,
         getNoteKey,
         getWeekCompletion,
@@ -482,8 +483,9 @@ const resetWorkout = () => {
 
     const weekData = state.weeks[state.currentWeekIndex];
     if (!weekData) return;
-
+    
     delete weekData[getDayDateKey(currentDayId)];
+    delete weekData[getDayTimestampKey(currentDayId)];
 
     Object.keys(weekData).forEach((key) => {
         if (key.startsWith(`d${currentDayId}_`)) {
