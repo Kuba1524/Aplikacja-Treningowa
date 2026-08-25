@@ -11,9 +11,9 @@ window.Views = (() => {
 
         const screen = document.getElementById("screen-home");
         if (!screen) return;
-            if (!window.StatsModule) {
-                screen.innerHTML = '<div class="container"><p>Ładowanie…</p></div>';
-                return;
+        if (!window.StatsModule) {
+            screen.innerHTML = '<div class="container"><p>Ładowanie…</p></div>';
+            return;
         }
         const todayPlan = getTodayPlan();
         const weekSummary = getWeekCompletion(currentWeekIndex);
@@ -128,7 +128,12 @@ window.Views = (() => {
     };
 
     const renderPlan = (ctx) => {
-        const { state, currentWeekIndex, DAYS, getDayProgress } = ctx;
+        const {
+            state,
+            currentWeekIndex,
+            DAYS,
+            getDayProgress
+        } = ctx;
         const screen = document.getElementById("screen-plan");
 
         screen.innerHTML = `
@@ -174,8 +179,12 @@ window.Views = (() => {
         `;
     };
 
-       const renderStats = (ctx) => {
-        const { state, DAYS, currentWeekIndex } = ctx;
+    const renderStats = (ctx) => {
+        const {
+            state,
+            DAYS,
+            currentWeekIndex
+        } = ctx;
         const screen = document.getElementById("screen-stats");
         if (!screen || !window.StatsModule) return;
 
@@ -189,68 +198,137 @@ window.Views = (() => {
         const streak = window.StatsModule.getWeekStreak(state, DAYS, ctx.getExerciseKey);
         const weekStats = window.StatsModule.getWeekStats(state, DAYS, currentWeekIndex, ctx.getExerciseKey);
         const prs = window.StatsModule.getPrimaryExercises(state, DAYS, ctx.getExerciseKey);
-        const cal = window.StatsModule.getActivityCalendar
-            ? window.StatsModule.getActivityCalendar(state, DAYS, ctx.getExerciseKey)
-            : { labels: [], rows: [], cols: 0, currentCol: 0 };
 
-        const calRowsHtml = cal.labels
+        const cal = window.StatsModule.getActivityCalendar ?
+            window.StatsModule.getActivityCalendar(
+                state,
+                DAYS,
+                ctx.getExerciseKey,
+                ctx.getDayTimestampKey
+            ) :
+            {
+                labels: [],
+                rows: [],
+                cols: 0,
+                monthHeaders: [],
+                currentCol: 0
+            };
+
+        const bw = window.StatsModule.getBodyWeightSeries ?
+            window.StatsModule.getBodyWeightSeries(state, 48) :
+            {
+                values: [],
+                last: null,
+                delta: null,
+                delta30: null
+            };
+
+        const monthHeadHtml = `
+            <div class="cal-months" style="--cal-cols: ${Math.max(cal.cols, 1)}">
+                <div></div>
+                ${(cal.monthHeaders || [])
+                    .map((m) => `<div class="cal-month-lab">${m || ""}</div>`)
+                    .join("")}
+            </div>`;
+
+        const calRowsHtml = (cal.labels || [])
             .map((lab, ri) => {
                 const cells = (cal.rows[ri] || [])
                     .map((lvl, ci) => {
-                        const today = ci === cal.currentCol ? " today" : "";
-                        return `<div class="cal-cell l${lvl}${today}" title="Tydzień ${ci + 1}"></div>`;
+                        const t = ci === cal.currentCol ? " today" : "";
+                        return `<div class="cal-cell l${lvl}${t}" title="${lab} · tydz. ${ci + 1}"></div>`;
                     })
                     .join("");
                 return `<div class="cal-lab">${lab}</div>${cells}`;
             })
             .join("");
 
+        let bwSpark = "";
+        if (bw.values && bw.values.length > 1 && window.StatsModule.createSparklineSVG) {
+            bwSpark = window.StatsModule.createSparklineSVG(bw.values, "#22c55e");
+            bwSpark = bwSpark.replace('class="pr-sparkline"', 'class="bw-chart"');
+        }
+
+        const delta = bw.delta;
+        let deltaCls = "flat";
+        let deltaTxt = "";
+        if (typeof delta === "number") {
+            if (delta > 0) {
+                deltaCls = "up";
+                deltaTxt = "↑ " + delta;
+            } else if (delta < 0) {
+                deltaCls = "down";
+                deltaTxt = "↓ " + Math.abs(delta);
+            } else {
+                deltaTxt = "0";
+            }
+        }
+
+        const d30 = bw.delta30;
+        const d30Txt =
+            typeof d30 === "number" ?
+            `<span style="color:${d30 <= 0 ? "var(--success)" : "var(--danger)"}">${d30 > 0 ? "+" : ""}${d30} kg / 30d</span>` :
+            "";
+
         const prHtml = (prs || [])
-            .slice(0, 4)
             .map((pr) => {
-                const delta = pr.deltaPct;
+                const history = pr.history || [];
+                const values = history.map((h) => h.topWeight || (h.bestSet && h.bestSet.kg) || 0);
+                const first = values[0] || 0;
+                const last = values[values.length - 1] || 0;
+                let deltaPct = 0;
+                if (first > 0 && values.length >= 2) {
+                    deltaPct = ((last - first) / first) * 100;
+                }
+
                 let deltaClass = "flat";
-                let deltaTxt = "—";
-                if (typeof delta === "number") {
-                    if (delta > 0) {
+                let deltaLabel = "—";
+                if (values.length >= 2) {
+                    if (deltaPct > 0) {
                         deltaClass = "";
-                        deltaTxt = `+${Math.round(delta)}%`;
-                    } else if (delta < 0) {
+                        deltaLabel = "+" + Math.round(deltaPct) + "%";
+                    } else if (deltaPct < 0) {
                         deltaClass = "down";
-                        deltaTxt = `${Math.round(delta)}%`;
+                        deltaLabel = Math.round(deltaPct) + "%";
                     } else {
-                        deltaTxt = "0%";
+                        deltaLabel = "0%";
                     }
                 }
 
+                const best = history.reduce((acc, h) => {
+                    const kg = (h.bestSet && h.bestSet.kg) || h.topWeight || 0;
+                    const reps = (h.bestSet && h.bestSet.reps) || 0;
+                    if (!acc || kg > acc.kg || (kg === acc.kg && reps > acc.reps)) {
+                        return {
+                            kg,
+                            reps
+                        };
+                    }
+                    return acc;
+                }, null);
+
                 const spark =
-                    typeof window.StatsModule.createSparklineSVG === "function"
-                        ? window.StatsModule.createSparklineSVG(pr.values || pr.history || [], "#60a5fa")
-                        : "";
+                    values.length > 1 && window.StatsModule.createSparklineSVG ?
+                    window.StatsModule.createSparklineSVG(values, "#60a5fa") :
+                    "";
 
-                const best =
-                    pr.bestLabel ||
-                    (pr.bestKg != null
-                        ? `${pr.bestKg} kg × ${pr.bestReps ?? "—"}`
-                        : pr.topWeight != null
-                          ? `${pr.topWeight} kg`
-                          : "—");
-
-                const range = pr.rangeLabel || pr.dateRange || "";
+                const bestTxt = best ?
+                    best.kg + " kg × " + (best.reps || "—") :
+                    "—";
 
                 return `
                 <div class="pr-card">
                     <div class="pr-card-top">
                         <div>
                             <div class="pr-name">${pr.name}</div>
-                            <div class="pr-topw">Top weight: ${pr.topWeight ?? pr.bestKg ?? "—"} kg</div>
+                            <div class="pr-topw">Top weight: ${last || "—"} kg</div>
                         </div>
-                        <div class="pr-delta ${deltaClass}">${deltaTxt}</div>
+                        <div class="pr-delta ${deltaClass}">${deltaLabel}</div>
                     </div>
                     ${spark}
                     <div class="pr-foot">
-                        <span>Best set: ${best}</span>
-                        <span>${range}</span>
+                        <span>Best set: ${bestTxt}</span>
+                        <span>${history.length} wpisów</span>
                     </div>
                 </div>`;
             })
@@ -286,24 +364,43 @@ window.Views = (() => {
                     </div>
                 </div>
 
+                <div class="bw-card">
+                    <div class="bw-top">
+                        <div class="bw-title">Body weight</div>
+                        <button type="button" class="bw-log-btn" onclick="document.getElementById('bw-form').classList.toggle('open')">+ Log</button>
+                    </div>
+                    <div class="bw-main">
+                        <div class="bw-value">${bw.last != null ? bw.last : "—"}</div>
+                        <div class="bw-unit">kg</div>
+                        ${deltaTxt ? `<div class="bw-delta ${deltaCls}">${deltaTxt}</div>` : ""}
+                    </div>
+                    <div style="font-size:12px;color:var(--text-dim);margin-bottom:4px">${d30Txt}</div>
+                    ${bwSpark || ""}
+                    <div id="bw-form" class="bw-form">
+                        <input id="bw-input" class="bw-input" type="number" step="0.1" min="30" max="300" placeholder="np. 78.5" inputmode="decimal" />
+                        <button type="button" class="bw-save" onclick="logBodyWeight(document.getElementById('bw-input').value)">Zapisz</button>
+                    </div>
+                </div>
+
                 <div class="stats-section">
                     <div class="stats-section-head">
-                        <div class="stats-section-title">Aktywność</div>
-                        <div class="stats-section-sub">Im mocniejszy niebieski, tym więcej ukończonych serii · kolumny = tygodnie</div>
+                        <div class="stats-section-title">Activity</div>
+                        <div class="stats-section-sub">Dni treningowe · kolumny = tygodnie · jaśniejszy niebieski = więcej serii</div>
                     </div>
-                    <div class="cal-wrap" style="--cal-cols: ${Math.max(cal.cols, 1)}">
-                        <div class="cal-grid">
+                    <div class="cal-wrap">
+                        ${monthHeadHtml}
+                        <div class="cal-grid" style="--cal-cols: ${Math.max(cal.cols, 1)}">
                             ${calRowsHtml || '<div class="cal-lab">—</div>'}
                         </div>
                     </div>
                     <div class="cal-legend">
-                        <span>mniej</span>
+                        <span>Less</span>
                         <div class="cal-cell"></div>
                         <div class="cal-cell l1"></div>
                         <div class="cal-cell l2"></div>
                         <div class="cal-cell l3"></div>
                         <div class="cal-cell l4"></div>
-                        <span>więcej</span>
+                        <span>More</span>
                     </div>
                 </div>
 
@@ -321,7 +418,12 @@ window.Views = (() => {
     };
 
     const renderWorkout = (ctx) => {
-        const { currentDayId, DAYS, state, currentWeekIndex } = ctx;
+        const {
+            currentDayId,
+            DAYS,
+            state,
+            currentWeekIndex
+        } = ctx;
         const day = DAYS[currentDayId];
         const weekData = state.weeks[currentWeekIndex];
         const prevWeekData = currentWeekIndex > 0 ? state.weeks[currentWeekIndex - 1] : null;
