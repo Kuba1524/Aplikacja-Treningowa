@@ -135,8 +135,6 @@ const load = async () => {
                 isLoaded = true;
                 await save();
                 return;
-            } else {
-                console.log("ℹ️ Nowy użytkownik - domyślne dane");
             }
         }
 
@@ -146,7 +144,6 @@ const load = async () => {
         const localData = localStorage.getItem(STORAGE_KEY);
         if (localData) {
             state = JSON.parse(localData);
-            console.log("⚠️ Używam localStorage (fallback)");
         }
         isLoaded = true;
     }
@@ -613,7 +610,7 @@ const resetWorkout = () => {
 };
 
 /* =========================
-   STATS
+   STATS V2
 ========================= */
 
 const switchHomeTab = (tab) => {
@@ -659,6 +656,7 @@ const calculateWeekStats = (weekIndex) => {
     let tonnage = 0;
     let completedSets = 0;
     let activeDays = 0;
+    let workoutsDone = 0;
 
     DAYS.forEach((day) => {
         let dayHasActivity = false;
@@ -668,51 +666,75 @@ const calculateWeekStats = (weekIndex) => {
             const sets = weekData[key] || [];
 
             sets.forEach((set) => {
-                if (set.done && set.kg > 0 && set.reps > 0) {
-                    tonnage += Number(set.kg) * Number(set.reps);
+                if (set.done) {
                     completedSets++;
                     dayHasActivity = true;
-                } else if (set.done) {
-                    completedSets++;
-                    dayHasActivity = true;
+
+                    if (set.kg > 0 && set.reps > 0) {
+                        tonnage += Number(set.kg) * Number(set.reps);
+                    }
                 }
             });
         });
 
-        if (dayHasActivity) activeDays++;
+        if (dayHasActivity) {
+            activeDays++;
+            workoutsDone++;
+        }
     });
 
     return {
         tonnage: Math.round(tonnage),
         completedSets,
-        activeDays
+        activeDays,
+        workoutsDone
     };
 };
 
-const getWeeklyTonnageByDay = (weekIndex) => {
+const getWeeklyChange = () => {
+    const current = calculateWeekStats(state.currentWeekIndex);
+    const previous = state.currentWeekIndex > 0
+        ? calculateWeekStats(state.currentWeekIndex - 1)
+        : { tonnage: 0, completedSets: 0, activeDays: 0, workoutsDone: 0 };
+
+    const pct = (curr, prev) => {
+        if (!prev && curr > 0) return 100;
+        if (!prev) return 0;
+        return Math.round(((curr - prev) / prev) * 100);
+    };
+
+    return {
+        current,
+        previous,
+        tonnageDiff: pct(current.tonnage, previous.tonnage),
+        setsDiff: pct(current.completedSets, previous.completedSets),
+        daysDiff: pct(current.activeDays, previous.activeDays)
+    };
+};
+
+const getMuscleGroupStats = (weekIndex) => {
     const weekData = state.weeks[weekIndex] || {};
+    const groups = {};
 
-    return DAYS.map((day) => {
-        let total = 0;
-
+    DAYS.forEach((day) => {
         day.exercises.forEach((ex, ei) => {
             const key = getExerciseKey(day.id, ei);
             const sets = weekData[key] || [];
+            const doneSets = sets.filter((s) => s.done).length;
 
-            sets.forEach((set) => {
-                if (set.done && set.kg > 0 && set.reps > 0) {
-                    total += Number(set.kg) * Number(set.reps);
-                }
-            });
+            if (!groups[ex.tag]) {
+                groups[ex.tag] = 0;
+            }
+
+            groups[ex.tag] += doneSets;
         });
-
-        return {
-            id: day.id,
-            label: day.name.slice(0, 3).toUpperCase(),
-            full: day.name,
-            value: Math.round(total)
-        };
     });
+
+    return Object.entries(groups)
+        .map(([tag, sets]) => ({ tag, sets }))
+        .filter((x) => x.sets > 0)
+        .sort((a, b) => b.sets - a.sets)
+        .slice(0, 6);
 };
 
 const getExerciseHistory = (exerciseName) => {
@@ -729,27 +751,32 @@ const getExerciseHistory = (exerciseName) => {
                 let best1RM = 0;
                 let bestSet = null;
                 let tonnage = 0;
+                let doneSets = 0;
 
                 sets.forEach((set) => {
                     if (set.done) {
+                        doneSets++;
                         const est = estimate1RM(set.kg, set.reps);
+
                         if (est > best1RM) {
                             best1RM = est;
                             bestSet = { kg: set.kg, reps: set.reps };
                         }
+
                         if (set.kg > 0 && set.reps > 0) {
                             tonnage += Number(set.kg) * Number(set.reps);
                         }
                     }
                 });
 
-                if (best1RM > 0 || tonnage > 0) {
+                if (best1RM > 0 || tonnage > 0 || doneSets > 0) {
                     history.push({
                         weekIndex,
                         date: getWeekRangeLabel(weekIndex),
                         best1RM,
                         tonnage: Math.round(tonnage),
-                        bestSet
+                        bestSet,
+                        doneSets
                     });
                 }
             });
@@ -787,17 +814,38 @@ const getProgressPercent = (history) => {
     return Math.round(((last - first) / first) * 100);
 };
 
+const getTopProgressExercises = () => {
+    const exercisesMap = new Map();
+
+    DAYS.forEach((day) => {
+        day.exercises.forEach((ex) => {
+            if (!exercisesMap.has(ex.name)) {
+                const history = getExerciseHistory(ex.name);
+                if (history.length >= 2) {
+                    exercisesMap.set(ex.name, {
+                        name: ex.name,
+                        tag: ex.tag,
+                        history,
+                        gain: getProgressPercent(history)
+                    });
+                }
+            }
+        });
+    });
+
+    return [...exercisesMap.values()]
+        .filter((x) => x.history.length >= 2)
+        .sort((a, b) => b.gain - a.gain)
+        .slice(0, 4);
+};
+
 const createSparklineSVG = (values, color = "#60a5fa") => {
     const width = 240;
-    const height = 44;
+    const height = 48;
     const padding = 4;
 
     if (!values.length) {
-        return `
-            <svg class="pr-sparkline" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
-                <rect x="0" y="0" width="${width}" height="${height}" rx="12" fill="transparent"></rect>
-            </svg>
-        `;
+        return `<svg class="pr-sparkline" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none"></svg>`;
     }
 
     const min = Math.min(...values);
@@ -828,7 +876,7 @@ const createSparklineSVG = (values, color = "#60a5fa") => {
                     <circle
                         cx="${p[0]}"
                         cy="${p[1]}"
-                        r="${last ? 3.8 : 2.4}"
+                        r="${last ? 3.8 : 2.3}"
                         fill="${last ? color : "#94a3b8"}"
                     ></circle>
                 `;
@@ -843,9 +891,7 @@ const createBigSparklineSVG = (values) => {
     const padding = 10;
 
     if (!values.length) {
-        return `
-            <svg class="sparkline-chart" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none"></svg>
-        `;
+        return `<svg class="sparkline-chart" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none"></svg>`;
     }
 
     const min = Math.min(...values);
@@ -865,7 +911,7 @@ const createBigSparklineSVG = (values) => {
         <svg class="sparkline-chart" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
             <defs>
                 <linearGradient id="bigSparkFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.30"></stop>
+                    <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.28"></stop>
                     <stop offset="100%" stop-color="#60a5fa" stop-opacity="0"></stop>
                 </linearGradient>
                 <linearGradient id="bigSparkStroke" x1="0" y1="0" x2="1" y2="0">
@@ -909,6 +955,7 @@ const renderExerciseInsight = (exerciseName) => {
     const tonnageGrowth = firstTonnage > 0
         ? Math.round(((latestTonnage - firstTonnage) / firstTonnage) * 100)
         : 0;
+    const totalDoneSets = history.reduce((sum, item) => sum + (item.doneSets || 0), 0);
 
     return `
         <div class="exercise-insight-panel">
@@ -941,6 +988,119 @@ const renderExerciseInsight = (exerciseName) => {
                     </div>
                     <div class="insight-metric-sub">${bestAll.date}</div>
                 </div>
+
+                <div class="insight-metric">
+                    <div class="insight-metric-label">Wykonane serie</div>
+                    <div class="insight-metric-value">${totalDoneSets}</div>
+                    <div class="insight-metric-sub">w całej historii ćwiczenia</div>
+                </div>
+
+                <div class="insight-metric">
+                    <div class="insight-metric-label">Ostatni tonaż</div>
+                    <div class="insight-metric-value">${formatNumberPL(latest.tonnage)} kg</div>
+                    <div class="insight-metric-sub">${latest.date}</div>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+const renderWeeklyCompareCard = () => {
+    const change = getWeeklyChange();
+
+    const badge = (value) => {
+        if (value > 0) return `<span class="delta up">+${value}%</span>`;
+        if (value < 0) return `<span class="delta down">${value}%</span>`;
+        return `<span class="delta neutral">0%</span>`;
+    };
+
+    return `
+        <div class="stats-panel">
+            <div class="stats-panel-header">
+                <div>
+                    <div class="stats-panel-title">Porównanie tygodni</div>
+                    <div class="stats-panel-subtitle">Obecny tydzień vs poprzedni</div>
+                </div>
+                <div class="panel-pill">TREND</div>
+            </div>
+
+            <div class="compare-grid">
+                <div class="compare-row">
+                    <span class="compare-name">Tonaż</span>
+                    <span class="compare-values">${formatNumberPL(change.current.tonnage)} / ${formatNumberPL(change.previous.tonnage)} kg</span>
+                    ${badge(change.tonnageDiff)}
+                </div>
+
+                <div class="compare-row">
+                    <span class="compare-name">Serie</span>
+                    <span class="compare-values">${change.current.completedSets} / ${change.previous.completedSets}</span>
+                    ${badge(change.setsDiff)}
+                </div>
+
+                <div class="compare-row">
+                    <span class="compare-name">Aktywne dni</span>
+                    <span class="compare-values">${change.current.activeDays} / ${change.previous.activeDays}</span>
+                    ${badge(change.daysDiff)}
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+const renderMuscleGroupsCard = () => {
+    const groups = getMuscleGroupStats(state.currentWeekIndex);
+    const max = Math.max(...groups.map((g) => g.sets), 1);
+
+    return `
+        <div class="stats-panel">
+            <div class="stats-panel-header">
+                <div>
+                    <div class="stats-panel-title">Partie mięśniowe</div>
+                    <div class="stats-panel-subtitle">Najczęściej trenowane w tym tygodniu</div>
+                </div>
+                <div class="panel-pill">VOLUME</div>
+            </div>
+
+            <div class="muscle-list">
+                ${groups.length ? groups.map((g) => `
+                    <div class="muscle-row">
+                        <div class="muscle-row-top">
+                            <span class="muscle-name">${g.tag}</span>
+                            <span class="muscle-val">${g.sets} serii</span>
+                        </div>
+                        <div class="muscle-bar-track">
+                            <div class="muscle-bar-fill" style="width:${Math.max(10, Math.round((g.sets / max) * 100))}%"></div>
+                        </div>
+                    </div>
+                `).join("") : `<div class="empty-stat">Brak danych z ukończonych serii w tym tygodniu.</div>`}
+            </div>
+        </div>
+    `;
+};
+
+const renderTopProgressCard = () => {
+    const top = getTopProgressExercises();
+
+    return `
+        <div class="stats-panel">
+            <div class="stats-panel-header">
+                <div>
+                    <div class="stats-panel-title">Top progres</div>
+                    <div class="stats-panel-subtitle">Ćwiczenia z najlepszym wzrostem</div>
+                </div>
+                <div class="panel-pill">PR</div>
+            </div>
+
+            <div class="top-progress-list">
+                ${top.length ? top.map((item) => `
+                    <div class="top-progress-item">
+                        <div>
+                            <div class="top-progress-title">${item.name}</div>
+                            <div class="top-progress-sub">${item.tag}</div>
+                        </div>
+                        <div class="top-progress-gain">+${item.gain}%</div>
+                    </div>
+                `).join("") : `<div class="empty-stat">Za mało historii, aby policzyć progres.</div>`}
             </div>
         </div>
     `;
@@ -951,8 +1111,6 @@ const renderStatsDashboard = () => {
     if (!container) return;
 
     const currentWeekStats = calculateWeekStats(state.currentWeekIndex);
-    const daily = getWeeklyTonnageByDay(state.currentWeekIndex);
-    const maxBar = Math.max(...daily.map((d) => d.value), 1);
     const prs = getPrimaryExercises();
 
     if (!selectedStatsExercise && prs.length) {
@@ -976,72 +1134,57 @@ const renderStatsDashboard = () => {
             <div class="stats-card">
                 <div class="stats-label">Aktywność</div>
                 <div class="stats-value">${currentWeekStats.activeDays}/4</div>
-                <div class="streak-chip">🔥 Seria aktywności</div>
+                <div class="streak-chip">🔥 Treningowe dni</div>
             </div>
         </div>
 
-        <div class="stats-panel">
-            <div class="stats-panel-header">
-                <div>
-                    <div class="stats-panel-title">Tonaż według dni</div>
-                    <div class="stats-panel-subtitle">${getWeekRangeLabel(state.currentWeekIndex)}</div>
-                </div>
-                <div class="panel-pill">TYDZIEŃ ${state.currentWeekIndex + 1}</div>
+        <div class="stats-main-grid">
+            <div class="stats-col">
+                ${renderWeeklyCompareCard()}
+                ${renderMuscleGroupsCard()}
             </div>
 
-            <div class="bar-chart">
-                ${daily.map((d) => {
-                    const pct = Math.max(8, Math.round((d.value / maxBar) * 100));
-                    const isTop = d.value === maxBar && d.value > 0;
-                    return `
-                        <div class="bar-col ${isTop ? "top" : ""}">
-                            <div class="bar-value">${d.value > 0 ? formatNumberPL(d.value) : ""}</div>
-                            <div class="bar-wrap">
-                                <div class="bar" style="height:${d.value > 0 ? pct : 8}%; opacity:${d.value > 0 ? 1 : 0.18};"></div>
-                            </div>
-                            <div class="bar-day">${d.label}</div>
+            <div class="stats-col">
+                ${renderTopProgressCard()}
+
+                <div class="stats-panel">
+                    <div class="stats-panel-header">
+                        <div>
+                            <div class="stats-panel-title">Personal Records</div>
+                            <div class="stats-panel-subtitle">Kluczowe ćwiczenia i progres 1RM</div>
                         </div>
-                    `;
-                }).join("")}
-            </div>
-        </div>
+                        <div class="panel-pill">TOP BOJE</div>
+                    </div>
 
-        <div class="stats-panel">
-            <div class="stats-panel-header">
-                <div>
-                    <div class="stats-panel-title">Personal Records</div>
-                    <div class="stats-panel-subtitle">Kluczowe ćwiczenia i progres obciążenia</div>
-                </div>
-                <div class="panel-pill">TOP BOJE</div>
-            </div>
+                    <div class="pr-list">
+                        ${prs.length ? prs.map((item) => {
+                            const history = item.history;
+                            const gain = getProgressPercent(history);
+                            const latest = history[history.length - 1];
+                            const values = history.map((x) => Number(x.best1RM.toFixed(1)));
+                            const safeName = item.name.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 
-            <div class="pr-list">
-                ${prs.map((item) => {
-                    const history = item.history;
-                    const gain = getProgressPercent(history);
-                    const latest = history[history.length - 1];
-                    const values = history.map((x) => Number(x.best1RM.toFixed(1)));
-                    const safeName = item.name.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+                            return `
+                                <div class="pr-item" onclick="selectStatsExercise('${safeName}')">
+                                    <div class="pr-top">
+                                        <div>
+                                            <div class="pr-title">${item.name}</div>
+                                            <div class="pr-sub">1RM: ${latest.best1RM.toFixed(1)} kg</div>
+                                        </div>
+                                        <div class="pr-gain">${gain >= 0 ? "+" : ""}${gain}%</div>
+                                    </div>
 
-                    return `
-                        <div class="pr-item" onclick="selectStatsExercise('${safeName}')">
-                            <div class="pr-top">
-                                <div>
-                                    <div class="pr-title">${item.name}</div>
-                                    <div class="pr-sub">1RM: ${latest.best1RM.toFixed(1)} kg</div>
+                                    ${createSparklineSVG(values)}
+
+                                    <div class="pr-bottom">
+                                        <span>Best set: ${latest.bestSet ? `${formatNumberPL(latest.bestSet.kg)} kg × ${formatNumberPL(latest.bestSet.reps)}` : "—"}</span>
+                                        <span>${latest.date}</span>
+                                    </div>
                                 </div>
-                                <div class="pr-gain">${gain >= 0 ? "+" : ""}${gain}%</div>
-                            </div>
-
-                            ${createSparklineSVG(values)}
-
-                            <div class="pr-bottom">
-                                <span>Best set: ${latest.bestSet ? `${formatNumberPL(latest.bestSet.kg)} kg × ${formatNumberPL(latest.bestSet.reps)}` : "—"}</span>
-                                <span>${latest.date}</span>
-                            </div>
-                        </div>
-                    `;
-                }).join("")}
+                            `;
+                        }).join("") : `<div class="empty-stat">Brak danych do sekcji Personal Records.</div>`}
+                    </div>
+                </div>
             </div>
         </div>
 
