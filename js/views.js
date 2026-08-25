@@ -10,6 +10,11 @@ window.Views = (() => {
         } = ctx;
 
         const screen = document.getElementById("screen-home");
+        if (!screen) return;
+            if (!window.StatsModule) {
+                screen.innerHTML = '<div class="container"><p>Ładowanie…</p></div>';
+                return;
+        }
         const todayPlan = getTodayPlan();
         const weekSummary = getWeekCompletion(currentWeekIndex);
         const weekStats = window.StatsModule.getWeekStats(state, DAYS, currentWeekIndex, ctx.getExerciseKey);
