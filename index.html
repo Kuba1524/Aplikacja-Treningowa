@@ -65,7 +65,6 @@
     </style>
 </head>
 <body>
-    <!-- Pokazuje się TYLKO gdy nie ma zapisanego profilu -->
     <div id="profile-gate" class="profile-gate hidden">
         <div class="profile-gate-inner">
             <h1>Kto trenuje?</h1>
@@ -84,23 +83,49 @@
 
         <nav class="bottom-nav" id="bottom-nav">
             <button class="nav-btn active" data-view="home" onclick="navigateTo('home')">
-                <span class="nav-ico">⌂</span>
+                <span class="nav-ico" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5z"/>
+                    </svg>
+                </span>
                 <span class="nav-lab">Home</span>
             </button>
+        
             <button class="nav-btn" data-view="plan" onclick="navigateTo('plan')">
-                <span class="nav-ico">▦</span>
+                <span class="nav-ico" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="4" y="5" width="16" height="15" rx="2"/>
+                        <path d="M8 3v4M16 3v4M4 10h16"/>
+                    </svg>
+                </span>
                 <span class="nav-lab">Plan</span>
             </button>
+        
             <button class="nav-btn nav-btn-primary" data-view="workout" onclick="navigateToWorkoutFromNav()">
-                <span class="nav-ico">▶</span>
+                <span class="nav-ico nav-ico-primary" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M7 8h2v8H7zM15 8h2v8h-2z"/>
+                        <path d="M9 11h6M5 10v4M19 10v4"/>
+                    </svg>
+                </span>
                 <span class="nav-lab">Start</span>
             </button>
+        
             <button class="nav-btn" data-view="stats" onclick="navigateTo('stats')">
-                <span class="nav-ico">▥</span>
+                <span class="nav-ico" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 19V10M12 19V5M19 19v-7"/>
+                    </svg>
+                </span>
                 <span class="nav-lab">Stats</span>
             </button>
+        
             <button class="nav-btn" data-view="more" onclick="navigateTo('plan')">
-                <span class="nav-ico">☰</span>
+                <span class="nav-ico" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 7h14M5 12h14M5 17h10"/>
+                    </svg>
+                </span>
                 <span class="nav-lab">More</span>
             </button>
         </nav>
