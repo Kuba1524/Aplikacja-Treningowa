@@ -1,72 +1,43 @@
 :root {
-    /* ============ COLORS ============ */
+    /* Colors - Dark theme */
     --bg: #0b0e14;
-    --bg-soft: #0f141c;
-    --card-bg: #151a23;
-    --card-2: #182131;
-    --card-3: #1d2736;
-    --card-inner: #1c222d;
-
-    --accent: #3b82f6;
-    --accent-2: #60a5fa;
-    --accent-dark: #1e40af;
-    --accent-light: #93c5fd;
-
-    --success: #22c55e;
-    --success-dark: #15803d;
-    --success-light: #86efac;
-
-    --danger: #ef4444;
-    --danger-dark: #991b1b;
-    --danger-light: #fca5a5;
-
-    --warning: #f59e0b;
-    --warning-dark: #b45309;
-    --warning-light: #fcd34d;
-
-    --text-main: #f0f6fc;
+    --bg-soft: #0f1219;
+    --card-bg: #161b22;
+    --card-inner: #0d1117;
+    --card-2: #21262d;
+    --text-main: #e6edf3;
     --text-dim: #8b949e;
-    --text-soft: #94a3b8;
+    --border: #30363d;
 
-    --border: rgba(255, 255, 255, 0.08);
-    --border-light: rgba(255, 255, 255, 0.12);
-    --border-dark: rgba(255, 255, 255, 0.04);
+    /* Accent colors */
+    --accent: #58a6ff;
+    --accent-dark: #1f6feb;
+    --accent-light: #79c0ff;
+    --success: #3fb950;
+    --warning: #d29922;
+    --danger: #f85149;
 
-    /* ============ SHADOWS ============ */
-    --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.15);
-    --shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
-    --shadow-lg: 0 24px 48px rgba(0, 0, 0, 0.35);
-
-    /* ============ BORDER RADIUS ============ */
-    --radius-xs: 6px;
-    --radius-sm: 12px;
-    --radius-md: 16px;
-    --radius-lg: 22px;
-    --radius-xl: 26px;
-
-    /* ============ SPACING ============ */
+    /* Spacing */
     --space-xs: 4px;
     --space-sm: 8px;
-    --space-md: 12px;
-    --space-lg: 16px;
-    --space-xl: 20px;
-    --space-2xl: 24px;
-    --space-3xl: 32px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+    --space-2xl: 48px;
+    --space-3xl: 64px;
 
-    /* ============ TYPOGRAPHY ============ */
+    /* Typography */
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     --font-mono: "JetBrains Mono", monospace;
-    --font-sans: "Inter", sans-serif;
-
-    --text-xs: 10px;
-    --text-sm: 12px;
-    --text-base: 14px;
-    --text-lg: 16px;
-    --text-xl: 18px;
-    --text-2xl: 20px;
-    --text-3xl: 24px;
-    --text-4xl: 34px;
-    --text-5xl: 42px;
-
+    --text-xs: 12px;
+    --text-sm: 14px;
+    --text-base: 16px;
+    --text-lg: 18px;
+    --text-xl: 20px;
+    --text-2xl: 24px;
+    --text-3xl: 30px;
+    --text-4xl: 36px;
+    --text-5xl: 48px;
     --weight-400: 400;
     --weight-500: 500;
     --weight-600: 600;
@@ -74,21 +45,47 @@
     --weight-800: 800;
     --weight-900: 900;
 
-    /* ============ LAYOUT ============ */
-    --nav-h: 86px;
+    /* Borders and radius */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
 
-    /* ============ TRANSITIONS ============ */
-    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-normal: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+    /* Shadows */
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+
+    /* Transitions */
+    --transition-fast: 150ms ease;
+    --transition-base: 300ms ease;
+    --transition-slow: 500ms ease;
+
+    /* Navigation */
+    --nav-h: 70px;
 }
 
-[data-theme="light"] {
-    --bg: #ffffff;
-    --bg-soft: #f8f9fa;
-    --card-bg: #f3f4f6;
-    --card-2: #e5e7eb;
-    --text-main: #0f172a;
-    --text-dim: #64748b;
-    --text-soft: #475569;
+/* Light theme */
+@media (prefers-color-scheme: light) {
+    :root {
+        --bg: #ffffff;
+        --bg-soft: #f6f8fa;
+        --card-bg: #f6f8fa;
+        --card-inner: #ffffff;
+        --card-2: #eaeef2;
+        --text-main: #24292f;
+        --text-dim: #57606a;
+        --border: #d0d7de;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    :root {
+        --space-lg: 16px;
+        --text-lg: 16px;
+        --text-2xl: 20px;
+        --text-3xl: 24px;
+        --text-4xl: 28px;
+        --text-5xl: 32px;
+    }
 }

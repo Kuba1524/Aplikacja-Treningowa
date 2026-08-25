@@ -1,44 +1,31 @@
-@keyframes fadeInUp {
+@keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translateY(20px);
     }
     to {
         opacity: 1;
+    }
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(10px);
+        opacity: 0;
+    }
+    to {
         transform: translateY(0);
+        opacity: 1;
     }
 }
 
-@keyframes fadeOutDown {
+@keyframes slideInDown {
     from {
-        opacity: 1;
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+    to {
         transform: translateY(0);
-    }
-    to {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-}
-
-@keyframes slideInRight {
-    from {
-        opacity: 0;
-        transform: translateX(30px);
-    }
-    to {
         opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-@keyframes slideOutRight {
-    from {
-        opacity: 1;
-        transform: translateX(0);
-    }
-    to {
-        opacity: 0;
-        transform: translateX(30px);
     }
 }
 
@@ -60,78 +47,36 @@
     }
 }
 
-@keyframes shake {
+@keyframes bounce {
     0%, 100% {
-        transform: translateX(0);
+        transform: translateY(0);
     }
-    10%, 30%, 50%, 70%, 90% {
-        transform: translateX(-2px);
-    }
-    20%, 40%, 60%, 80% {
-        transform: translateX(2px);
+    50% {
+        transform: translateY(-10px);
     }
 }
 
-.screen {
-    animation: fadeInUp var(--transition-normal);
+/* Animation utility classes */
+.animate-fadeIn {
+    animation: fadeIn var(--transition-base);
 }
 
-.screen.hidden {
-    animation: fadeOutDown var(--transition-normal);
-    display: none !important;
+.animate-slideInUp {
+    animation: slideInUp var(--transition-base);
 }
 
-.card {
-    transition: all var(--transition-normal);
+.animate-slideInDown {
+    animation: slideInDown var(--transition-base);
 }
 
-.card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
+.animate-pulse {
+    animation: pulse var(--transition-slow) infinite;
 }
 
-button {
-    transition: all var(--transition-fast);
+.animate-spin {
+    animation: spin 1s linear infinite;
 }
 
-button:hover:not(:disabled) {
-    transform: translateY(-1px);
-}
-
-button:active:not(:disabled) {
-    transform: translateY(0);
-}
-
-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-input, textarea {
-    transition: all var(--transition-fast);
-}
-
-input:focus, textarea:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px var(--accent), 0 0 0 4px rgba(59, 130, 246, 0.1);
-}
-
-@keyframes skeleton-loading {
-    0% {
-        background-position: -1000px 0;
-    }
-    100% {
-        background-position: 1000px 0;
-    }
-}
-
-.skeleton {
-    animation: skeleton-loading 2s infinite;
-    background: linear-gradient(
-        90deg,
-        var(--card-bg) 0%,
-        var(--card-2) 50%,
-        var(--card-bg) 100%
-    );
-    background-size: 1000px 100%;
+.animate-bounce {
+    animation: bounce var(--transition-base);
 }
