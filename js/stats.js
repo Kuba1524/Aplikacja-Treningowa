@@ -98,26 +98,30 @@ window.StatsModule = (() => {
 
     const getWeekStreak = (state, DAYS, getExerciseKey) => {
         let streak = 0;
-
+        if (!state || !Array.isArray(state.weeks)) return 0;
+    
         for (let i = state.weeks.length - 1; i >= 0; i--) {
+            const weekData = state.weeks[i];
+            if (!weekData || typeof weekData !== "object") break;
+    
             let hasWeekActivity = false;
-
+    
             DAYS.forEach((day) => {
-                day.exercises.forEach((ex, ei) => {
+                (day.exercises || []).forEach((ex, ei) => {
                     const key = getExerciseKey(day.id, ei);
-                    const sets = state.weeks[i][key] || [];
-                    if (sets.some((s) => s.done)) {
+                    const sets = weekData[key] || [];
+                    if (sets.some((s) => s && s.done)) {
                         hasWeekActivity = true;
                     }
                 });
             });
-
+    
             if (hasWeekActivity) streak++;
             else break;
-        }
+    }
 
-        return streak;
-    };
+    return streak;
+};
 
     const getExerciseHistory = (state, DAYS, exerciseName, getExerciseKey) => {
         const history = [];
