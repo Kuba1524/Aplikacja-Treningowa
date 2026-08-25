@@ -11,8 +11,100 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet" />
 
     <link rel="stylesheet" href="css/style.css" />
+    <style>
+        /* Ekran wyboru profilu */
+        .profile-gate {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: #0b0e14;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .profile-gate.hidden { display: none; }
+        .profile-gate-inner {
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+        }
+        .profile-gate h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+        .profile-gate p {
+            color: #8b949e;
+            margin-bottom: 28px;
+            font-size: 0.95rem;
+        }
+        .profile-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .profile-btn {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+            padding: 16px 18px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: #151a23;
+            color: #f0f6fc;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .profile-btn:active { transform: scale(0.98); }
+        .profile-btn .emoji { font-size: 1.6rem; }
+        .profile-btn .name { flex: 1; text-align: left; }
+        .app-user-chip {
+            position: fixed;
+            top: 10px;
+            right: 12px;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(21,26,35,0.9);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 999px;
+            padding: 6px 10px 6px 12px;
+            font-size: 0.8rem;
+            color: #8b949e;
+        }
+        .app-user-chip button {
+            border: none;
+            background: transparent;
+            color: #3b82f6;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            padding: 2px 4px;
+        }
+    </style>
 </head>
 <body>
+    <!-- Wybór profilu -->
+    <div id="profile-gate" class="profile-gate hidden">
+        <div class="profile-gate-inner">
+            <h1>Kto trenuje?</h1>
+            <p>Wybierz swój profil — dane są osobne</p>
+            <div id="profile-list" class="profile-list"></div>
+        </div>
+    </div>
+
+    <!-- Chip z aktualnym użytkownikiem -->
+    <div id="user-chip" class="app-user-chip hidden">
+        <span id="user-chip-name">—</span>
+        <button type="button" onclick="switchProfile()">Zmień</button>
+    </div>
+
     <div class="app-shell">
         <main class="app-main">
             <section id="screen-home" class="screen"></section>
@@ -26,33 +118,27 @@
                 <span class="nav-ico">⌂</span>
                 <span class="nav-lab">Home</span>
             </button>
-
             <button class="nav-btn" data-view="plan" onclick="navigateTo('plan')">
                 <span class="nav-ico">▦</span>
                 <span class="nav-lab">Plan</span>
             </button>
-
             <button class="nav-btn nav-btn-primary" data-view="workout" onclick="navigateToWorkoutFromNav()">
                 <span class="nav-ico">▶</span>
                 <span class="nav-lab">Start</span>
             </button>
-
             <button class="nav-btn" data-view="stats" onclick="navigateTo('stats')">
                 <span class="nav-ico">▥</span>
                 <span class="nav-lab">Stats</span>
             </button>
-
-            <button class="nav-btn" data-view="more" onclick="navigateTo('plan')">
+            <button class="nav-btn" data-view="more" onclick="switchProfile()">
                 <span class="nav-ico">☰</span>
-                <span class="nav-lab">More</span>
+                <span class="nav-lab">Profil</span>
             </button>
         </nav>
     </div>
 
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyBwW5kAYrZTtbaBx60y_4qUXU6dVJ-tD-s",
@@ -63,14 +149,8 @@
             appId: "1:418834782578:web:9e1c16504afd7ebc29e5eb",
             measurementId: "G-V1HENNKF2X"
         };
-
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-    </script>
-
-    <!-- WAŻNE: ustaw właściwy user_id PRZED storage.js, żeby wczytać Twoje dane z Firestore -->
-    <script>
-        localStorage.setItem("user_id", "user_jmdwj59ev_1787597107103");
     </script>
 
     <script src="js/utils.js"></script>
