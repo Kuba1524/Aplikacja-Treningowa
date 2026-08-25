@@ -217,7 +217,11 @@ const getWeekCompletion = (weekIndex) => {
 };
 
 const getDayProgress = (dayId) => {
-    const day = DAYS[dayId];
+    const day = DAYS.find((d) => d.id === dayId) || DAYS[dayId];
+    if (!day || !day.exercises) {
+        return { total: 0, done: 0, pct: 0 };
+    }
+
     const weekData = state.weeks[state.currentWeekIndex] || {};
     let total = 0;
     let done = 0;
@@ -225,8 +229,8 @@ const getDayProgress = (dayId) => {
     day.exercises.forEach((ex, ei) => {
         const key = getExerciseKey(dayId, ei);
         const sets = weekData[key] || [];
-        total += ex.sets;
-        done += sets.filter((s) => s.done).length;
+        total += ex.sets || sets.length || 0;
+        done += sets.filter((s) => s && s.done).length;
     });
 
     return {
