@@ -282,17 +282,37 @@ window.StatsModule = (() => {
         `;
     };
 
-    const getActivityCalendar = (state, DAYS, getExerciseKey) => {
+    const getActivityCalendar = (state, DAYS, getExerciseKey, getDayTimestampKey) => {
         const weeks = Array.isArray(state.weeks) ? state.weeks : [];
-        const trainDays = DAYS.filter((d) => d && typeof d.weekday === "number");
-        const labels = trainDays.map((d) => {
-            const map = ["ND", "PN", "WT", "ŚR", "CZ", "PT", "SB"];
-            return map[d.weekday] || d.label || "?";
+        const trainDays = (DAYS || []).filter((d) => d && typeof d.weekday === "number");
+        const dayNames = ["ND", "PN", "WT", "ŚR", "CZ", "PT", "SB"];
+        const monthShort = ["Sty", "Lut", "Mar", "Kwi", "Maj", "Cze", "Lip", "Sie", "Wrz", "Paź", "Lis", "Gru"];
+
+        const labels = trainDays.map((d) => dayNames[d.weekday] || d.label || "?");
+
+        const colMeta = weeks.map((_, wi) => {
+            let date = null;
+            if (state.startSunday) {
+                date = new Date(state.startSunday + wi * 7 * 24 * 60 * 60 * 1000);
+            }
+            return {
+                weekIndex: wi,
+                month: date ? date.getMonth() : null,
+                monthLabel: date ? monthShort[date.getMonth()] : "",
+                year: date ? date.getFullYear() : null
+            };
         });
 
-        const cols = weeks.length;
+        const monthHeaders = colMeta.map((c, i) => {
+            if (c.month == null) return "";
+            if (i === 0) return c.monthLabel;
+            const prev = colMeta[i - 1];
+            if (prev.month !== c.month || prev.year !== c.year) return c.monthLabel;
+            return "";
+        });
+
         const rows = trainDays.map((day) => {
-            return weeks.map((weekData, wi) => {
+            return weeks.map((weekData) => {
                 if (!weekData || typeof weekData !== "object") return 0;
                 let done = 0;
                 (day.exercises || []).forEach((ex, ei) => {
@@ -300,15 +320,48 @@ window.StatsModule = (() => {
                     const sets = weekData[key] || [];
                     done += sets.filter((s) => s && s.done).length;
                 });
-                if (done === 0) return 0;
-                if (done <= 3) return 1;
-                if (done <= 8) return 2;
-                if (done <= 15) return 3;
+                if (done <= 0) return 0;
+                if (done <= 4) return 1;
+                if (done <= 10) return 2;
+                if (done <= 18) return 3;
                 return 4;
             });
         });
 
-        return { labels, rows, cols, currentCol: Math.min(state.currentWeekIndex || 0, Math.max(cols - 1, 0)) };
+        return {
+            labels,
+            rows,
+            cols: weeks.length,
+            monthHeaders,
+            currentCol: Math.min(
+                typeof state.currentWeekIndex === "number" ? state.currentWeekIndex : 0,
+                Math.max(weeks.length - 1, 0)
+            )
+        };
+    };
+
+    const getBodyWeightSeries = (state, limit = 40) => {
+        const list = Array.isArray(state.bodyWeight) ? state.bodyWeight.slice() : [];
+        list.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+        const sliced = list.slice(-limit);
+        const values = sliced.map((x) => Number(x.kg) || 0);
+        const last = sliced.length ? Number(sliced[sliced.length - 1].kg) || null : null;
+        const prev = sliced.length > 1 ? Number(sliced[sliced.length - 2].kg) || null : null;
+        let delta = null;
+        if (last != null && prev != null) delta = Math.round((last - prev) * 10) / 10;
+
+        let delta30 = null;
+        if (last != null && sliced.length) {
+            const now = sliced[sliced.length - 1].ts || Date.now();
+            const target = now - 30 * 24 * 60 * 60 * 1000;
+            let closest = null;
+            sliced.forEach((x) => {
+                if (x.ts <= target) closest = x;
+            });
+            if (closest) delta30 = Math.round((last - Number(closest.kg)) * 10) / 10;
+        }
+
+        return { values, last, delta, delta30, entries: sliced };
     };
 
     return {
@@ -320,6 +373,7 @@ window.StatsModule = (() => {
         getProgressPercent,
         getActivityCells,
         createSparklineSVG,
-        getActivityCalendar
+        getActivityCalendar,
+        getBodyWeightSeries
     };
 })();
