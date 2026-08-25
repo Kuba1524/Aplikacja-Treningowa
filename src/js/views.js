@@ -51,7 +51,7 @@ export function renderHome(ctx) {
         </div>
     `;
 
-    document.getElementById("plan-content").innerHTML = homeContent;
+    document.getElementById("home-content").innerHTML = homeContent;
 }
 
 /**
