@@ -81,6 +81,7 @@ let currentView = "home";
 let saveTimeout = null;
 let noteSaveTimeout = null;
 let isLoaded = false;
+let currentUserId = null;
 
 const getDayDateKey = (dayId) => `day_${dayId}_date`;
 const getDayTimestampKey = (dayId) => `day_${dayId}_ts`;
