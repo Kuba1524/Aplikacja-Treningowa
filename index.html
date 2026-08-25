@@ -12,11 +12,25 @@
 <body>
 
     <div id="screen-home">
-        <div class="header"><h1>Plan <span>Treningowy</span></h1></div>
-        <div class="week-selector" id="week-tabs"></div>
-        <div class="day-grid" id="day-cards"></div>
+        <div class="header">
+            <h1>Plan <span>Treningowy</span></h1>
+        </div>
+    
+        <div class="top-mode-switch">
+            <button id="tab-plan" class="mode-tab active" onclick="switchHomeTab('plan')">PLAN TRENINGOWY</button>
+            <button id="tab-stats" class="mode-tab" onclick="switchHomeTab('stats')">STATYSTYKI</button>
+        </div>
+    
+        <div id="home-plan-view">
+            <div class="week-selector" id="week-tabs"></div>
+            <div class="day-grid" id="day-cards"></div>
+        </div>
+    
+        <div id="home-stats-view" class="hidden">
+            <div id="stats-dashboard"></div>
+        </div>
     </div>
-
+    
     <div id="screen-workout" class="hidden">
         <div class="nav-bar">
             <button class="btn-back" onclick="goHome()">←</button>
