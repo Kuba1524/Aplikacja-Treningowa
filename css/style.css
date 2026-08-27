@@ -879,174 +879,127 @@ button {
     margin-top: 2px;
 }
 
-.stat-card {
-    padding: 18px;
+
+/* ===== Sets (workout day view) ===== */
+.set-row {
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(148,163,184,0.12);
 }
 
-.stat-card-top {
-    display: flex;
-    justify-content: space-between;
+.set-row:last-child {
+    border-bottom: none;
+    padding-bottom: 2px;
+}
+
+.set-top-row {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) minmax(0, 1fr) 42px;
+    align-items: center;
     gap: 10px;
-    align-items: flex-start;
 }
 
-.stat-label {
-    font-size: 13px;
-    color: var(--text-dim);
-    font-weight: 700;
-}
-
-.stat-value {
-    font-size: 40px;
-    font-weight: 900;
-    letter-spacing: -0.03em;
-    margin-top: 6px;
-    line-height: 1;
-}
-
-.stat-inline {
-    font-size: 15px;
-    color: var(--accent-2);
+.set-pill {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: white;
+    font-size: 12px;
     font-weight: 800;
-    font-variant-numeric: tabular-nums;
+    padding: 6px 0;
+    border-radius: 999px;
+    min-width: 36px;
+    text-align: center;
+    letter-spacing: 0.02em;
 }
 
-.stat-note {
-    margin-top: 10px;
-    font-size: 12px;
-    color: var(--text-soft);
-    font-weight: 600;
-}
-
-.mini-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-}
-
-.kpi-card {
-    padding: 16px;
-}
-
-.kpi-label {
-    font-size: 12px;
-    color: var(--text-dim);
-    font-weight: 700;
-}
-
-.kpi-value {
-    margin-top: 8px;
-    font-size: 32px;
-    font-weight: 900;
-    line-height: 1;
-    letter-spacing: -0.03em;
-}
-
-.kpi-sub {
-    margin-top: 8px;
-    font-size: 11px;
-    color: var(--text-soft);
-    font-weight: 600;
-    line-height: 1.35;
-}
-
-.day-list {
-    display: grid;
-    gap: 10px;
-}
-
-.day-plan-card {
-    padding: 14px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.05);
-    border-radius: 16px;
-    cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.day-plan-card:active {
-    background: rgba(255,255,255,0.055);
-}
-
-.card.day-plan-card {
-    background: var(--card-bg);
-}
-
-.day-plan-left {
+.input-group {
+    position: relative;
     min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 12px;
 }
 
-.day-plan-icon {
-    width: 44px;
+.input-group input[type="number"] {
+    width: 100%;
     height: 44px;
-    border-radius: 14px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #fff;
+    padding: 0 36px 0 12px;
+    border-radius: 12px;
+    text-align: center;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 16px;
+    font-weight: 700;
+    outline: none;
+    appearance: textfield;
+    -moz-appearance: textfield;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.input-group input[type="number"]:focus {
+    border-color: rgba(96,165,250,0.55);
+    background: rgba(59,130,246,0.08);
+}
+
+.input-group input[type="number"]::-webkit-outer-spin-button,
+.input-group input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.input-group span {
+    position: absolute;
+    right: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: var(--text-dim);
+    font-weight: 800;
+    pointer-events: none;
+    letter-spacing: 0.04em;
+}
+
+.btn-check {
+    height: 42px;
+    width: 42px;
+    border-radius: 999px;
+    background: transparent;
+    border: 2px solid rgba(148,163,184,0.45);
+    color: rgba(148,163,184,0.7);
+    font-size: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(59,130,246,0.12);
-    font-size: 20px;
-    flex-shrink: 0;
+    transition: all 0.18s ease;
 }
 
-.day-plan-title {
-    font-size: 16px;
-    font-weight: 900;
-    letter-spacing: -0.01em;
+.btn-check.done {
+    background: #22c55e;
+    border-color: #22c55e;
+    color: white;
+    box-shadow: 0 6px 16px rgba(34,197,94,0.28);
 }
 
-.day-plan-sub {
-    margin-top: 2px;
+.set-bottom-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    padding-left: 46px;
+    gap: 10px;
+    min-height: 16px;
+}
+
+.prev-label {
     font-size: 12px;
     color: var(--text-dim);
     font-weight: 600;
+    font-family: "JetBrains Mono", monospace;
 }
 
-.day-plan-right {
+.trend-badge {
+    min-width: 72px;
     text-align: right;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 2px;
-}
-
-.day-plan-progress {
-    font-size: 13px;
-    color: var(--accent-2);
+    font-size: 11px;
     font-weight: 800;
-    font-variant-numeric: tabular-nums;
-}
-
-.day-plan-arrow {
-    font-size: 18px;
-    color: var(--text-dim);
-    line-height: 1;
-    font-weight: 300;
-}
-
-.link-full-plan {
-    display: block;
-    width: 100%;
-    margin-top: 14px;
-    padding: 10px 0 2px;
-    text-align: center;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--accent-2);
-    background: none;
-    border: none;
-    cursor: pointer;
-}
-
-.link-full-plan:active {
-    opacity: 0.75;
+    white-space: nowrap;
 }
 
 .t-up { color: var(--success); }
