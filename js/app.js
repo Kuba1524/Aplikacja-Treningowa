@@ -598,7 +598,6 @@ const logBodyWeight = (rawKg) => {
     today.setHours(0, 0, 0, 0);
     const ts = today.getTime();
 
-    // jeden wpis na dzień – nadpisz dzisiejszy
     const idx = state.bodyWeight.findIndex((x) => {
         const d = new Date(x.ts);
         d.setHours(0, 0, 0, 0);
