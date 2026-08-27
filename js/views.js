@@ -40,11 +40,11 @@ window.Views = (() => {
                     ${todayPlan ? `
                         <div class="today-card">
                             <div class="today-card-left">
-                                <div class="today-icon">${todayPlan.icon}</div>
+                                <div class="today-icon" style="background:${todayPlan.color}22;color:${todayPlan.color};box-shadow:0 0 0 1px ${todayPlan.color}33;">${todayPlan.icon}</div>
                                 <div class="today-meta">
-                                    <div class="today-kicker">Dzisiaj</div>
+                                    <div class="today-kicker">DZISIAJ</div>
                                     <div class="today-title">${todayPlan.label}</div>
-                                    <div class="today-sub">${todayPlan.name} • ${todayPlan.exercises.length} ćwiczeń</div>
+                                    <div class="today-sub">${todayPlan.name} · ${todayPlan.exercises.length} ćwiczeń</div>
                                 </div>
                             </div>
                             <button class="btn-start" onclick="openDay(${todayPlan.id})">Start</button>
@@ -52,9 +52,9 @@ window.Views = (() => {
                     ` : `
                         <div class="today-card">
                             <div class="today-card-left">
-                                <div class="today-icon">✓</div>
+                                <div class="today-icon today-icon-rest">✓</div>
                                 <div class="today-meta">
-                                    <div class="today-kicker">Dzisiaj</div>
+                                    <div class="today-kicker">DZISIAJ</div>
                                     <div class="today-title">Rest Day</div>
                                     <div class="today-sub">Dziś nie ma zaplanowanego treningu</div>
                                 </div>
@@ -106,20 +106,21 @@ window.Views = (() => {
                                     return `
                                         <div class="day-plan-card" onclick="openDay(${day.id})">
                                             <div class="day-plan-left">
-                                                <div class="day-plan-icon">${day.icon}</div>
+                                                <div class="day-plan-icon" style="background:${day.color}22;color:${day.color};box-shadow:0 0 0 1px ${day.color}33;">${day.icon}</div>
                                                 <div>
                                                     <div class="day-plan-title">${day.label}</div>
-                                                    <div class="day-plan-sub">${day.name} • ${day.exercises.length} ćwiczeń</div>
+                                                    <div class="day-plan-sub">${day.name} · ${day.exercises.length} ćwiczeń</div>
                                                 </div>
                                             </div>
                                             <div class="day-plan-right">
                                                 <div class="day-plan-progress">${progress.done}/${progress.total}</div>
-                                                <div class="day-plan-arrow">→</div>
+                                                <div class="day-plan-arrow">›</div>
                                             </div>
                                         </div>
                                     `;
                                 }).join("")}
                             </div>
+                            <button class="link-full-plan" onclick="navigateTo('plan')">Otwórz pełny plan</button>
                         </div>
                     </div>
                 </div>
