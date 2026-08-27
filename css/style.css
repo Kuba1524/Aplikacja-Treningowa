@@ -1513,3 +1513,23 @@ button {
 }
 
 
+
+html[data-theme="proton"] {
+    --bg: #120E2E;
+    --bg-soft: #1B1340;
+    --card-bg: #1a1538;
+    --card-2: #221c45;
+    --card-3: #2a2450;
+    --card-inner: #16122f;
+    --accent: #6D4AFF;
+    --accent-2: #8B7CFF;
+    --success: #22c55e;
+    --danger: #FF2E93;     
+    --warning: #f59e0b;
+    --text-main: #FFFFFF;
+    --text-dim: #8A90C7;
+    --text-soft: #9AA0D4;
+    --border: rgba(138, 144, 199, 0.15);
+    --shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
+}
+
