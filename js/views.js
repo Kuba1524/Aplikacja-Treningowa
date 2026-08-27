@@ -104,7 +104,7 @@ window.Views = (() => {
                                 ${DAYS.map((day) => {
                                     const progress = getDayProgress(day.id);
                                     return `
-                                        <div class="day-plan-card" onclick="openDay(${day.id})">
+                                        <div class="card day-plan-card" onclick="openDay(${day.id})">
                                             <div class="day-plan-left">
                                                 <div class="day-plan-icon" style="background:${day.color}22;color:${day.color};box-shadow:0 0 0 1px ${day.color}33;">${day.icon}</div>
                                                 <div>
@@ -113,7 +113,7 @@ window.Views = (() => {
                                                 </div>
                                             </div>
                                             <div class="day-plan-right">
-                                                <div class="day-plan-progress">${progress.done}/${progress.total}</div>
+                                                <div class="day-plan-progress">${progress.done}/${progress.total} · ${progress.pct}%</div>
                                                 <div class="day-plan-arrow">›</div>
                                             </div>
                                         </div>
