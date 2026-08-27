@@ -613,7 +613,35 @@ const logBodyWeight = (rawKg) => {
     if (currentView === "stats") renderCurrentView();
 };
 
+const THEME_KEY = "app_theme";
+
+const applyTheme = (theme) => {
+    const next = theme === "proton" ? "proton" : "blue";
+
+    if (next === "proton") {
+        document.documentElement.setAttribute("data-theme", "proton");
+        document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#120E2E");
+    } else {
+        document.documentElement.removeAttribute("data-theme");
+        document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#0b0e14");
+    }
+
+    localStorage.setItem(THEME_KEY, next);
+};
+
+const initTheme = () => {
+    const saved = localStorage.getItem(THEME_KEY);
+    applyTheme(saved === "proton" ? "proton" : "blue");
+};
+
+const toggleTheme = () => {
+    const current = localStorage.getItem(THEME_KEY) || "blue";
+    applyTheme(current === "proton" ? "blue" : "proton");
+};
+
 window.logBodyWeight = logBodyWeight;
+window.applyTheme = applyTheme;
+window.toggleTheme = toggleTheme;
 
 window.selectProfile = selectProfile;
 window.navigateTo = navigateTo;
@@ -627,4 +655,5 @@ window.updateSet = updateSet;
 window.toggleSet = toggleSet;
 window.resetWorkout = resetWorkout;
 
+initTheme();
 initApp();
