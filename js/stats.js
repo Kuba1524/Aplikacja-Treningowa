@@ -287,32 +287,41 @@ window.StatsModule = (() => {
         const trainDays = (DAYS || []).filter((d) => d && typeof d.weekday === "number");
         const dayNames = ["ND", "PN", "WT", "ŚR", "CZ", "PT", "SB"];
         const monthShort = ["Sty", "Lut", "Mar", "Kwi", "Maj", "Cze", "Lip", "Sie", "Wrz", "Paź", "Lis", "Gru"];
-
-        const labels = trainDays.map((d) => dayNames[d.weekday] || d.label || "?");
-
-        const colMeta = weeks.map((_, wi) => {
-            let date = null;
-            if (state.startSunday) {
-                date = new Date(state.startSunday + wi * 7 * 24 * 60 * 60 * 1000);
-            }
-            return {
-                weekIndex: wi,
-                month: date ? date.getMonth() : null,
-                monthLabel: date ? monthShort[date.getMonth()] : "",
-                year: date ? date.getFullYear() : null
-            };
+    
+        const maxCols = 28;
+        const startIdx = Math.max(0, weeks.length - maxCols);
+        const slice = weeks.slice(startIdx);
+        const cols = slice.length;
+    
+        const labels = trainDays.map((d) => dayNames[d.weekday] || "?");
+    
+        const colDates = slice.map((_, i) => {
+            const wi = startIdx + i;
+            if (!state.startSunday) return null;
+            return new Date(state.startSunday + wi * 7 * 24 * 60 * 60 * 1000);
         });
-
-        const monthHeaders = colMeta.map((c, i) => {
-            if (c.month == null) return "";
-            if (i === 0) return c.monthLabel;
-            const prev = colMeta[i - 1];
-            if (prev.month !== c.month || prev.year !== c.year) return c.monthLabel;
+    
+        const monthHeaders = colDates.map((d, i) => {
+            if (!d) return "";
+            if (i === 0) return monthShort[d.getMonth()];
+            const prev = colDates[i - 1];
+            if (!prev) return monthShort[d.getMonth()];
+            if (prev.getMonth() !== d.getMonth() || prev.getFullYear() !== d.getFullYear()) {
+                return monthShort[d.getMonth()];
+            }
             return "";
         });
-
+    
+        const levelFromDone = (done) => {
+            if (done <= 0) return 0;
+            if (done <= 4) return 1;
+            if (done <= 10) return 2;
+            if (done <= 18) return 3;
+            return 4;
+        };
+    
         const rows = trainDays.map((day) => {
-            return weeks.map((weekData) => {
+            return slice.map((weekData) => {
                 if (!weekData || typeof weekData !== "object") return 0;
                 let done = 0;
                 (day.exercises || []).forEach((ex, ei) => {
@@ -320,23 +329,22 @@ window.StatsModule = (() => {
                     const sets = weekData[key] || [];
                     done += sets.filter((s) => s && s.done).length;
                 });
-                if (done <= 0) return 0;
-                if (done <= 4) return 1;
-                if (done <= 10) return 2;
-                if (done <= 18) return 3;
-                return 4;
+                return levelFromDone(done);
             });
         });
-
+    
+        const currentCol = Math.min(
+            Math.max((state.currentWeekIndex || 0) - startIdx, 0),
+            Math.max(cols - 1, 0)
+        );
+    
         return {
             labels,
             rows,
-            cols: weeks.length,
+            cols,
             monthHeaders,
-            currentCol: Math.min(
-                typeof state.currentWeekIndex === "number" ? state.currentWeekIndex : 0,
-                Math.max(weeks.length - 1, 0)
-            )
+            currentCol,
+            startIdx
         };
     };
 
