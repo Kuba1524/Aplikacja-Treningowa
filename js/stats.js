@@ -236,48 +236,53 @@ window.StatsModule = (() => {
     };
 
     const createSparklineSVG = (values, color = "#60a5fa") => {
-        const width = 220;
-        const height = 52;
-        const padding = 4;
-
-        if (!values.length) {
+        const width = 280;
+        const height = 64;
+        const padX = 6;
+        const padY = 8;
+    
+        if (!values || !values.length) {
             return `<svg class="pr-sparkline" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none"></svg>`;
         }
-
-        const min = Math.min(...values);
-        const max = Math.max(...values);
+    
+        const nums = values.map((v) => Number(v) || 0);
+        const min = Math.min(...nums);
+        const max = Math.max(...nums);
         const range = max - min || 1;
-
-        const points = values.map((v, i) => {
-            const x = padding + (i * (width - padding * 2)) / Math.max(values.length - 1, 1);
-            const y = height - padding - ((v - min) / range) * (height - padding * 2);
+    
+        const pts = nums.map((v, i) => {
+            const x = padX + (i * (width - padX * 2)) / Math.max(nums.length - 1, 1);
+            const y = height - padY - ((v - min) / range) * (height - padY * 2);
             return [x, y];
         });
-
-        const line = points.map((p) => p.join(",")).join(" ");
-
+    
+        const line = pts.map((p) => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
+        const area =
+            padX + "," + (height - padY) + " " +
+            line + " " +
+            (width - padX) + "," + (height - padY);
+    
+        const last = pts[pts.length - 1];
+    
         return `
             <svg class="pr-sparkline" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+                <defs>
+                    <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="${color}" stop-opacity="0.35"/>
+                        <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+                    </linearGradient>
+                </defs>
+                <polygon fill="url(#sparkFill)" points="${area}"></polygon>
                 <polyline
                     fill="none"
                     stroke="${color}"
-                    stroke-width="3"
+                    stroke-width="2.5"
                     stroke-linecap="round"
                     stroke-linejoin="round"
                     points="${line}"
                 ></polyline>
-
-                ${points.map((p, idx) => {
-                    const last = idx === points.length - 1;
-                    return `
-                        <circle
-                            cx="${p[0]}"
-                            cy="${p[1]}"
-                            r="${last ? 3.6 : 2.2}"
-                            fill="${last ? color : "#94a3b8"}"
-                        ></circle>
-                    `;
-                }).join("")}
+                <circle cx="${last[0]}" cy="${last[1]}" r="4" fill="${color}"></circle>
+                <circle cx="${last[0]}" cy="${last[1]}" r="7" fill="${color}" fill-opacity="0.25"></circle>
             </svg>
         `;
     };
