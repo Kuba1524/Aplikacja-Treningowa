@@ -2,9 +2,12 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8" />
+    <meta name="x-app-build" content="v48" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0e14" />
     <title>Kuba Training</title>
+
+    <link rel="manifest" href="manifest.json" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -156,5 +159,10 @@
     <script src="js/exercises-lib.js"></script>
     <script src="js/views.js"></script>
     <script src="js/app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
 </body>
 </html>

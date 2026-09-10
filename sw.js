@@ -1,37 +1,32 @@
-const CACHE_NAME = "kubagym-v1";
+const CACHE_NAME = "kubagym-v48";
 const urlsToCache = [
-    "/",
-    "/index.html",
-    "/src/styles/index.css",
-    "/src/js/app.js",
-    "/src/js/main.js",
-    "/src/js/views.js",
-    "/src/js/constants.js",
-    "/src/js/utils.js",
-    "/manifest.json",
+    "/Aplikacja-Treningowa/",
+    "/Aplikacja-Treningowa/index.html",
+    "/Aplikacja-Treningowa/css/style.css",
+    "/Aplikacja-Treningowa/js/utils.js",
+    "/Aplikacja-Treningowa/js/storage.js",
+    "/Aplikacja-Treningowa/js/stats.js",
+    "/Aplikacja-Treningowa/js/exercises-lib.js",
+    "/Aplikacja-Treningowa/js/views.js",
+    "/Aplikacja-Treningowa/js/app.js",
+    "/Aplikacja-Treningowa/manifest.json"
 ];
 
-// Install event
 self.addEventListener("install", (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(urlsToCache).catch((err) => {
-                console.log("Cache addAll error:", err);
-            });
+            return cache.addAll(urlsToCache).catch(() => {});
         })
     );
     self.skipWaiting();
 });
 
-// Activate event
 self.addEventListener("activate", (event) => {
     event.waitUntil(
-        caches.keys().then((cacheNames) => {
+        caches.keys().then((names) => {
             return Promise.all(
-                cacheNames.map((cacheName) => {
-                    if (cacheName !== CACHE_NAME) {
-                        return caches.delete(cacheName);
-                    }
+                names.map((n) => {
+                    if (n !== CACHE_NAME) return caches.delete(n);
                 })
             );
         })
@@ -39,11 +34,8 @@ self.addEventListener("activate", (event) => {
     self.clients.claim();
 });
 
-// Fetch event - Network first, fallback to cache
 self.addEventListener("fetch", (event) => {
-    if (event.request.method !== "GET") {
-        return;
-    }
+    if (event.request.method !== "GET") return;
 
     event.respondWith(
         fetch(event.request)
@@ -51,16 +43,10 @@ self.addEventListener("fetch", (event) => {
                 if (!response || response.status !== 200 || response.type !== "basic") {
                     return response;
                 }
-                const responseToCache = response.clone();
-                caches.open(CACHE_NAME).then((cache) => {
-                    cache.put(event.request, responseToCache);
-                });
+                const clone = response.clone();
+                caches.open(CACHE_NAME).then((c) => c.put(event.request, clone));
                 return response;
             })
-            .catch(() => {
-                return caches.match(event.request).then((response) => {
-                    return response || new Response("Offline - cache empty", { status: 503 });
-                });
-            })
+            .catch(() => caches.match(event.request).then((r) => r || Response("Offline", { status: 503 })))
     );
 });
