@@ -287,14 +287,14 @@ window.StatsModule = (() => {
         `;
     };
 
-    const getActivityCalendar = (state, DAYS, getExerciseKey, getDayTimestampKey) => {
+    const getActivityCalendar = (state, DAYS, getExerciseKey, getDayTimestampKey, maxCols = 28) => {
         const weeks = Array.isArray(state.weeks) ? state.weeks : [];
         const trainDays = (DAYS || []).filter((d) => d && typeof d.weekday === "number");
         const dayNames = ["ND", "PN", "WT", "ŚR", "CZ", "PT", "SB"];
         const monthShort = ["Sty", "Lut", "Mar", "Kwi", "Maj", "Cze", "Lip", "Sie", "Wrz", "Paź", "Lis", "Gru"];
     
-        const maxCols = 28;
-        const startIdx = Math.max(0, weeks.length - maxCols);
+        const colsLimit = Math.max(4, Math.min(28, Number(maxCols) || 28));
+        const startIdx = Math.max(0, weeks.length - colsLimit);
         const slice = weeks.slice(startIdx);
         const cols = slice.length;
     

@@ -82,6 +82,8 @@ let saveTimeout = null;
 let noteSaveTimeout = null;
 let isLoaded = false;
 let currentUserId = null;
+let statsMaxCols = 12;
+let planCompactMode = false;
 
 const getDayDateKey = (dayId) => `day_${dayId}_date`;
 const getDayTimestampKey = (dayId) => `day_${dayId}_ts`;
@@ -311,6 +313,8 @@ const renderCurrentView = () => {
         DAYS,
         currentWeekIndex: state.currentWeekIndex,
         currentDayId,
+        statsMaxCols,
+        planCompactMode,
         getDayDateKey,
         getDayTimestampKey,
         getExerciseKey,
@@ -328,6 +332,20 @@ const renderCurrentView = () => {
         if (currentView === "home") window.Views.renderHome(ctx);
         if (currentView === "plan") window.Views.renderPlan(ctx);
         if (currentView === "stats") window.Views.renderStats(ctx);
+        if (currentView === "library") {
+            window.Views.renderLibrary(ctx);
+            if (!window.ExerciseLib.isReady() && !window.ExerciseLib.getError()) {
+                window.ExerciseLib.loadLibrary()
+                    .then(() => {
+                        window.Views.setLibraryLoaded(true, false);
+                        if (currentView === "library") renderCurrentView();
+                    })
+                    .catch(() => {
+                        window.Views.setLibraryLoaded(false, true);
+                        if (currentView === "library") renderCurrentView();
+                    });
+            }
+        }
         if (currentView === "workout") {
             window.Views.renderWorkout(ctx);
             updateSummary();
@@ -350,7 +368,8 @@ const updateVisibleScreen = () => {
         home: document.getElementById("screen-home"),
         plan: document.getElementById("screen-plan"),
         stats: document.getElementById("screen-stats"),
-        workout: document.getElementById("screen-workout")
+        workout: document.getElementById("screen-workout"),
+        library: document.getElementById("screen-library")
     };
 
     Object.entries(screens).forEach(([key, el]) => {
@@ -370,6 +389,7 @@ const updateBottomNav = () => {
         if (currentView === "home" && view === "home") btn.classList.add("active");
         if (currentView === "plan" && view === "plan") btn.classList.add("active");
         if (currentView === "stats" && view === "stats") btn.classList.add("active");
+        if (currentView === "library" && view === "library") btn.classList.add("active");
     });
 };
 
@@ -400,6 +420,16 @@ const setWeek = (w) => {
     state.currentWeekIndex = w;
     persistState();
     renderCurrentView();
+};
+
+const setPlanMode = (fullPlan) => {
+    planCompactMode = !fullPlan;
+    renderCurrentView();
+};
+
+const openFullPlan = () => {
+    planCompactMode = false;
+    navigateTo("plan");
 };
 
 const openDay = (id) => {
@@ -455,7 +485,7 @@ const updateNote = (ei, val) => {
     const btn = document.getElementById(`note-toggle-${ei}`);
     if (btn) {
         btn.classList.toggle("active", !!val.trim());
-        btn.textContent = val.trim() ? "💬 Edytuj notatkę" : "💬 Dodaj notatkę";
+        btn.textContent = window.renderNoteBtnLabel(!!val.trim());
     }
 };
 
@@ -614,40 +644,103 @@ const logBodyWeight = (rawKg) => {
 
 const THEME_KEY = "app_theme";
 
-const applyTheme = (theme) => {
-    const next = theme === "proton" ? "proton" : "blue";
+const THEMES = [
+    { id: "blue", label: "Klasyczny", swatch: "#3b82f6", meta: "#0b0e14" },
+    { id: "proton", label: "Proton", swatch: "#6D4AFF", meta: "#120E2E" },
+    { id: "aurora", label: "Aurora", swatch: "#14b8a6", meta: "#031318" },
+    { id: "sunset", label: "Zachód", swatch: "#fb923c", meta: "#170910" },
+    { id: "graphite", label: "Grafit", swatch: "#22d3ee", meta: "#0a0d11" }
+];
 
-    if (next === "proton") {
-        document.documentElement.setAttribute("data-theme", "proton");
-        document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#120E2E");
-    } else {
+const applyTheme = (theme) => {
+    const valid = THEMES.some((t) => t.id === theme) ? theme : "blue";
+
+    if (valid === "blue") {
         document.documentElement.removeAttribute("data-theme");
-        document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#0b0e14");
+    } else {
+        document.documentElement.setAttribute("data-theme", valid);
     }
 
-    localStorage.setItem(THEME_KEY, next);
+    const t = THEMES.find((x) => x.id === valid);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", t.meta);
+    localStorage.setItem(THEME_KEY, valid);
 };
 
 const initTheme = () => {
     const saved = localStorage.getItem(THEME_KEY);
-    applyTheme(saved === "proton" ? "proton" : "blue");
+    applyTheme(THEMES.some((t) => t.id === saved) ? saved : "blue");
+};
+
+const setTheme = (theme) => {
+    applyTheme(theme);
+    renderCurrentView();
 };
 
 const toggleTheme = () => {
     const current = localStorage.getItem(THEME_KEY) || "blue";
-    applyTheme(current === "proton" ? "blue" : "proton");
+    const idx = THEMES.findIndex((t) => t.id === current);
+    const next = THEMES[(idx + 1) % THEMES.length].id;
+    applyTheme(next);
+    renderCurrentView();
 };
+
+window.getThemes = () => THEMES.map((t) => ({ ...t }));
+window.getCurrentTheme = () => localStorage.getItem(THEME_KEY) || "blue";
 
 window.logBodyWeight = logBodyWeight;
 window.applyTheme = applyTheme;
 window.toggleTheme = toggleTheme;
+window.setTheme = setTheme;
+window.setStatsRange = (cols) => {
+    statsMaxCols = Math.max(4, Math.min(28, Number(cols) || 12));
+    renderCurrentView();
+};
 
 window.selectProfile = selectProfile;
 window.navigateTo = navigateTo;
 window.navigateToWorkoutFromNav = navigateToWorkoutFromNav;
 window.setWeek = setWeek;
+window.setPlanMode = setPlanMode;
+window.openFullPlan = openFullPlan;
 window.openDay = openDay;
 window.goBackFromWorkout = goBackFromWorkout;
+window.setLibQuery = (v) => {
+    window.Views.setLibQuery(v);
+    renderCurrentView();
+};
+window.setLibCategory = (c) => {
+    window.Views.setLibCategory(c);
+    renderCurrentView();
+};
+window.showMoreLib = () => {
+    window.Views.showMoreLib();
+    renderCurrentView();
+};
+window.openLibraryExercise = (id) => {
+    window.Views.openLibraryExercise(id);
+    renderCurrentView();
+};
+window.closeLibraryExercise = () => {
+    window.Views.closeLibraryExercise();
+    renderCurrentView();
+};
+window.toggleLibMedia = () => {
+    window.Views.toggleLibMedia();
+    renderCurrentView();
+};
+window.retryLoadLibrary = () => {
+    window.Views.retryLoadLibrary();
+    renderCurrentView();
+    window.ExerciseLib.loadLibrary()
+        .then(() => {
+            window.Views.setLibraryLoaded(true, false);
+            if (currentView === "library") renderCurrentView();
+        })
+        .catch(() => {
+            window.Views.setLibraryLoaded(false, true);
+            if (currentView === "library") renderCurrentView();
+        });
+};
 window.toggleNoteBox = toggleNoteBox;
 window.updateNote = updateNote;
 window.updateSet = updateSet;

@@ -78,6 +78,7 @@
             <section id="screen-home" class="screen"></section>
             <section id="screen-plan" class="screen hidden"></section>
             <section id="screen-stats" class="screen hidden"></section>
+            <section id="screen-library" class="screen hidden"></section>
             <section id="screen-workout" class="screen hidden"></section>
         </main>
 
@@ -120,14 +121,16 @@
                 <span class="nav-lab">Stats</span>
             </button>
 
-            <button class="nav-btn" data-view="more" onclick="navigateTo('plan')">
+            <button class="nav-btn" data-view="library" onclick="navigateTo('library')">
                 <span class="nav-ico" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M5 7h14M5 12h14M5 17h10"/>
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
                     </svg>
                 </span>
-                <span class="nav-lab">More</span>
+                <span class="nav-lab">Ćwiczenia</span>
             </button>
+
         </nav>
     </div>
 
@@ -150,6 +153,7 @@
     <script src="js/utils.js"></script>
     <script src="js/storage.js"></script>
     <script src="js/stats.js"></script>
+    <script src="js/exercises-lib.js"></script>
     <script src="js/views.js"></script>
     <script src="js/app.js"></script>
 </body>
