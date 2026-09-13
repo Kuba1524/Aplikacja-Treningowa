@@ -7,13 +7,14 @@ const DAYS = [
         icon: "🔥",
         color: "#ff3b30",
         exercises: [
-            { name: "Incline Dumbbell Press", sets: 4, reps: "6-10", tag: "CHEST" },
+            { name: "Incline Smith Machine Press", sets: 3, reps: "6-8
+                ", tag: "CHEST" },
             { name: "Seated Dumbbell OHP", sets: 3, reps: "6-10", tag: "SHOULDER" },
-            { name: "Machine Chest Press", sets: 3, reps: "6-10", tag: "CHEST" },
+            { name: "Machine Chest Press", sets: 3, reps: "8-10", tag: "CHEST" },
             { name: "Chest Dips", sets: 3, reps: "6-10", tag: "CHEST" },
             { name: "Dumbbell Lateral Raises", sets: 4, reps: "8-12", tag: "DELTS" },
             { name: "Ab Wheel", sets: 3, reps: "8-12", tag: "CORE" },
-            { name: "Pallof Press", sets: 3, reps: "8-12", tag: "CORE" }
+            { name: "Decline Oblique Crunches", sets: 3, reps: "8-12", tag: "CORE" }
         ]
     },
     {
