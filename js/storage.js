@@ -42,7 +42,6 @@ window.StorageModule = (() => {
     const getSelectedProfileId = () => {
         const id = localStorage.getItem(PROFILE_KEY);
         if (!isValidUserId(id)) return null;
-        if (!PROFILES.some((p) => p.id === id)) return null;
         return id;
     };
 
@@ -80,11 +79,17 @@ window.StorageModule = (() => {
                 return data.state || fallbackState;
             }
             const local = safeParse(localStorage.getItem(storageKeyFor(userId)));
-            return local || fallbackState;
+            if (local) return local;
+            const legacy = safeParse(localStorage.getItem("kuba_v11"));
+            if (legacy) return legacy;
+            return fallbackState;
         } catch (error) {
             console.error("Błąd wczytywania:", error);
             const local = safeParse(localStorage.getItem(storageKeyFor(userId)));
-            return local || fallbackState;
+            if (local) return local;
+            const legacy = safeParse(localStorage.getItem("kuba_v11"));
+            if (legacy) return legacy;
+            return fallbackState;
         }
     };
 

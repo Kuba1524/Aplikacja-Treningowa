@@ -655,6 +655,24 @@ const completeLogin = async (firebaseUser, username, profileName) => {
     await bootWithUser(resolved.id, resolved.plan, profileName || resolved.name);
 };
 
+const bootWithUser = async (storageKey, planKey = "bartek", profileName = "") => {
+    currentUserId = storageKey;
+    currentProfileName = profileName || "Użytkownik";
+    DAYS = getPlanByKey(planKey);
+
+    const empty = { currentWeekIndex: 0, weeks: [{}], startSunday: 0 };
+    const loaded = await window.StorageModule.load(storageKey, empty);
+    state = loaded || empty;
+
+    ensureStateShape();
+    isLoaded = true;
+    updateTimeline();
+
+    currentView = "home";
+    currentDayId = null;
+    renderCurrentView();
+};
+
 const logoutUser = async () => {
     try {
         await window.AuthModule.logout();
