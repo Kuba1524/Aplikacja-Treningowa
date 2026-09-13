@@ -12,6 +12,28 @@ window.StorageModule = (() => {
         }
     ];
 
+    const KNOWN_USERS = {
+        kuba: {
+            id: "user_rt8zi8glg_1787597563228",
+            name: "Kuba",
+            plan: "kuba"
+        },
+        bartek: {
+            id: "user_u2x8glbug_1787607478584",
+            name: "Bartek",
+            plan: "bartek"
+        }
+    };
+
+    const resolveUser = (username, fallbackId) => {
+        const un = String(username || "").trim().toLowerCase();
+        const known = KNOWN_USERS[un];
+        if (known) {
+            return { id: known.id, name: known.name, plan: known.plan };
+        }
+        return { id: fallbackId, name: un || "Użytkownik", plan: "bartek" };
+    };
+
     const PROFILE_KEY = "selected_profile_id";
 
     const isValidUserId = (userId) =>
@@ -87,6 +109,7 @@ window.StorageModule = (() => {
 
     return {
         PROFILES: PROFILES,
+        resolveUser: resolveUser,
         getSelectedProfileId: getSelectedProfileId,
         setSelectedProfileId: setSelectedProfileId,
         clearSelectedProfile: clearSelectedProfile,

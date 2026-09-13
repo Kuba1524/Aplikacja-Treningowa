@@ -1,10 +1,11 @@
-const CACHE_NAME = "kubagym-v48";
+const CACHE_NAME = "kubagym-v49";
 const urlsToCache = [
     "/Aplikacja-Treningowa/",
     "/Aplikacja-Treningowa/index.html",
     "/Aplikacja-Treningowa/css/style.css",
     "/Aplikacja-Treningowa/js/utils.js",
     "/Aplikacja-Treningowa/js/storage.js",
+    "/Aplikacja-Treningowa/js/auth.js",
     "/Aplikacja-Treningowa/js/stats.js",
     "/Aplikacja-Treningowa/js/exercises-lib.js",
     "/Aplikacja-Treningowa/js/views.js",

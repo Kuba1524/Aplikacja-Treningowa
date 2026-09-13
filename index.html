@@ -65,14 +65,98 @@
         .profile-btn:active { transform: scale(0.98); }
         .profile-btn .emoji { font-size: 1.7rem; }
         .profile-btn .name { flex: 1; text-align: left; }
+
+        #auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .auth-input {
+            width: 100%;
+            padding: 16px 18px;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: #121722;
+            color: #f0f6fc;
+            font-size: 1rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.15s ease;
+        }
+        .auth-input:focus { border-color: #58a6ff; }
+        .auth-input::placeholder { color: #6e7681; }
+        .auth-wrap { display: flex; }
+        #auth-submit {
+            justify-content: center;
+            background: linear-gradient(135deg, #58a6ff, #3b82f6);
+            border: none;
+            margin-top: 2px;
+        }
+        #auth-submit:disabled { opacity: 0.6; cursor: default; }
+        .auth-toggle {
+            width: 100%;
+            background: none;
+            border: none;
+            color: #8b949e;
+            font-size: 0.9rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            padding: 10px;
+        }
+        .auth-toggle:active { color: #f0f6fc; }
+        .auth-error {
+            background: rgba(248,81,73,0.12);
+            border: 1px solid rgba(248,81,73,0.35);
+            color: #ffa198;
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        .auth-error.hidden { display: none; }
     </style>
 </head>
 <body>
-    <div id="profile-gate" class="profile-gate hidden">
+    <div id="profile-gate" class="profile-gate">
         <div class="profile-gate-inner">
-            <h1>Kto trenuje?</h1>
-            <p>Wybierz raz — zapamiętamy na tym urządzeniu</p>
-            <div id="profile-list" class="profile-list"></div>
+            <h1>Kuba<span>Gym</span></h1>
+            <p id="auth-subtitle">Zaloguj się na swoje konto</p>
+
+            <form id="auth-form" autocomplete="on">
+                <input
+                    id="auth-username"
+                    class="auth-input"
+                    type="text"
+                    placeholder="Nazwa użytkownika"
+                    autocomplete="username"
+                    required
+                />
+                <input
+                    id="auth-password"
+                    class="auth-input"
+                    type="password"
+                    placeholder="Hasło"
+                    autocomplete="current-password"
+                    required
+                />
+                <div id="auth-register-name-wrap" class="auth-wrap hidden">
+                    <input
+                        id="auth-register-name"
+                        class="auth-input"
+                        type="text"
+                        placeholder="Jak się do Ciebie zwracać? (np. Kuba)"
+                        autocomplete="name"
+                    />
+                </div>
+                <button id="auth-submit" class="profile-btn" type="submit">Zaloguj się</button>
+            </form>
+
+            <div id="auth-error" class="auth-error hidden"></div>
+
+            <button id="auth-toggle" class="auth-toggle" type="button" onclick="toggleAuthMode()">Nie masz konta? Zarejestruj się</button>
         </div>
     </div>
 
@@ -138,6 +222,7 @@
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script>
         const firebaseConfig = {
@@ -155,6 +240,7 @@
 
     <script src="js/utils.js"></script>
     <script src="js/storage.js"></script>
+    <script src="js/auth.js"></script>
     <script src="js/stats.js"></script>
     <script src="js/exercises-lib.js"></script>
     <script src="js/views.js"></script>

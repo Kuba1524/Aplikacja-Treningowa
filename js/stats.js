@@ -184,6 +184,7 @@ window.StatsModule = (() => {
             "Hip Thrust",
             "RDL",
             "Incline Dumbbell Press",
+            "Incline Smith Machine Press",
             "Hack Squat / Leg Press"
         ];
 

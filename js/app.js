@@ -1,4 +1,4 @@
-const DAYS = [
+const PLAN_BARTEK = [
     {
         id: 0,
         weekday: 0,
@@ -7,8 +7,7 @@ const DAYS = [
         icon: "🔥",
         color: "#ff3b30",
         exercises: [
-            { name: "Incline Smith Machine Press", sets: 3, reps: "6-8
-                ", tag: "CHEST" },
+            { name: "Incline Dumbbell Press", sets: 4, reps: "6-10", tag: "CHEST" },
             { name: "Seated Dumbbell OHP", sets: 3, reps: "6-10", tag: "SHOULDER" },
             { name: "Machine Chest Press", sets: 3, reps: "8-10", tag: "CHEST" },
             { name: "Chest Dips", sets: 3, reps: "6-10", tag: "CHEST" },
@@ -71,6 +70,20 @@ const DAYS = [
     }
 ];
 
+const PLAN_KUBA = PLAN_BARTEK.map((day) => ({
+    ...day,
+    exercises: day.exercises.map((ex) => ({ ...ex }))
+}));
+const kubaIncline = PLAN_KUBA[0].exercises[0];
+kubaIncline.name = "Incline Smith Machine Press";
+kubaIncline.sets = 3;
+kubaIncline.reps = "6-8";
+
+let DAYS = PLAN_BARTEK;
+
+const getPlanByKey = (planKey) =>
+    planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
+
 let state = {
     currentWeekIndex: 0,
     weeks: [{}],
@@ -83,6 +96,7 @@ let saveTimeout = null;
 let noteSaveTimeout = null;
 let isLoaded = false;
 let currentUserId = null;
+let currentProfileName = "Użytkownik";
 let statsMaxCols = 12;
 let planCompactMode = false;
 
@@ -552,68 +566,122 @@ const resetWorkout = () => {
     openDay(currentDayId);
 };
 
-const showProfileGate = () => {
+const showAuthGate = () => {
     const gate = document.getElementById("profile-gate");
-    const list = document.getElementById("profile-list");
-    if (!gate || !list) {
-        console.error("Brak #profile-gate w HTML");
+    if (gate) gate.classList.remove("hidden");
+};
+
+let authRegisterMode = false;
+
+const setAuthMode = (registerMode) => {
+    authRegisterMode = registerMode;
+    const subtitle = document.getElementById("auth-subtitle");
+    const submit = document.getElementById("auth-submit");
+    const toggle = document.getElementById("auth-toggle");
+    const nameWrap = document.getElementById("auth-register-name-wrap");
+    const password = document.getElementById("auth-password");
+    const error = document.getElementById("auth-error");
+    if (subtitle) subtitle.textContent = registerMode ? "Zarejestruj nowe konto" : "Zaloguj się na swoje konto";
+    if (submit) submit.textContent = registerMode ? "Zarejestruj się" : "Zaloguj się";
+    if (toggle) toggle.textContent = registerMode ? "Masz już konto? Zaloguj się" : "Nie masz konta? Zarejestruj się";
+    if (nameWrap) nameWrap.classList.toggle("hidden", !registerMode);
+    if (password) password.autocomplete = registerMode ? "new-password" : "current-password";
+    if (error) error.classList.add("hidden");
+};
+
+const toggleAuthMode = () => {
+    const newMode = !authRegisterMode;
+    setAuthMode(newMode);
+    const username = document.getElementById("auth-username");
+    if (username) username.focus();
+};
+
+const authSubmit = async () => {
+    const username = document.getElementById("auth-username").value.trim();
+    const password = document.getElementById("auth-password").value;
+    const errorEl = document.getElementById("auth-error");
+    const submitBtn = document.getElementById("auth-submit");
+
+    const showError = (msg) => {
+        if (errorEl) {
+            errorEl.textContent = msg;
+            errorEl.classList.remove("hidden");
+        }
+    };
+
+    if (!username || !password) {
+        showError("Podaj nazwę użytkownika i hasło");
         return;
     }
 
-    list.innerHTML = "";
-    window.StorageModule.PROFILES.forEach((p) => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "profile-btn";
-        btn.innerHTML =
-            '<span class="emoji">' +
-            p.emoji +
-            '</span><span class="name">' +
-            p.name +
-            "</span>";
-        btn.onclick = function () {
-            selectProfile(p.id);
-        };
-        list.appendChild(btn);
-    });
+    try {
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = authRegisterMode ? "Rejestracja…" : "Logowanie…";
+        }
 
-    gate.classList.remove("hidden");
+        const user = authRegisterMode
+            ? await window.AuthModule.register(username, password)
+            : await window.AuthModule.login(username, password);
+
+        const profileName = authRegisterMode
+            ? (document.getElementById("auth-register-name").value.trim() || username)
+            : "";
+
+        await completeLogin(user, username, profileName);
+    } catch (err) {
+        const msg =
+            (err && err.message) ||
+            "Nie udało się zalogować. Sprawdź dane i połączenie z internetem.";
+        showError(msg);
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            const mode = authRegisterMode ? "Zarejestruj się" : "Zaloguj się";
+            submitBtn.textContent = mode;
+        }
+    }
 };
 
-const selectProfile = async (profileId) => {
-    window.StorageModule.setSelectedProfileId(profileId);
+const completeLogin = async (firebaseUser, username, profileName) => {
+    const fallbackId = firebaseUser ? firebaseUser.uid : username;
+    const resolved = window.StorageModule.resolveUser(username, fallbackId);
+
+    window.StorageModule.setSelectedProfileId(resolved.id);
+
     const gate = document.getElementById("profile-gate");
     if (gate) gate.classList.add("hidden");
-    await bootWithUser(profileId);
+
+    await bootWithUser(resolved.id, resolved.plan, profileName || resolved.name);
 };
 
-const bootWithUser = async (userId) => {
-    currentUserId = userId;
-
-    const empty = { currentWeekIndex: 0, weeks: [{}], startSunday: 0 };
-    const loaded = await window.StorageModule.load(userId, empty);
-    state = loaded || empty;
-
-    ensureStateShape();
-    isLoaded = true;
-    updateTimeline();
-
+const logoutUser = async () => {
+    try {
+        await window.AuthModule.logout();
+    } catch (e) {
+        /* ignore */
+    }
+    window.StorageModule.clearSelectedProfile();
+    currentUserId = null;
+    currentProfileName = "Użytkownik";
     currentView = "home";
-    currentDayId = null;
-    renderCurrentView();
+    isLoaded = false;
+    state = { currentWeekIndex: 0, weeks: [{}], startSunday: 0 };
+    showAuthGate();
 };
 
 const initApp = async () => {
     try {
-        const existing = window.StorageModule.getSelectedProfileId();
-        if (!existing) {
-            showProfileGate();
+        const user = await window.AuthModule.onReady();
+        if (!user) {
+            showAuthGate();
             return;
         }
-        await bootWithUser(existing);
+        const username = (user.email || "").split("@")[0];
+        await completeLogin(user, username, "");
     } catch (e) {
         console.error("initApp error:", e);
-        showProfileGate();
+        showAuthGate();
     }
 };
 
@@ -697,7 +765,7 @@ window.setStatsRange = (cols) => {
     renderCurrentView();
 };
 
-window.selectProfile = selectProfile;
+window.selectProfile = null;
 window.navigateTo = navigateTo;
 window.navigateToWorkoutFromNav = navigateToWorkoutFromNav;
 window.setWeek = setWeek;
@@ -747,6 +815,19 @@ window.updateNote = updateNote;
 window.updateSet = updateSet;
 window.toggleSet = toggleSet;
 window.resetWorkout = resetWorkout;
+window.authSubmit = authSubmit;
+window.toggleAuthMode = toggleAuthMode;
+window.logoutUser = logoutUser;
+
+document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById("auth-form");
+    if (form) {
+        form.addEventListener("submit", (e) => {
+            e.preventDefault();
+            authSubmit();
+        });
+    }
+});
 
 initTheme();
 initApp();
