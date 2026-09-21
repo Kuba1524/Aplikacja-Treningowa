@@ -895,7 +895,10 @@ window.Views = (() => {
                                         <div class="set-row ">
                                             <div class="set-top-row">
                                                 <span class="set-pill ">S${i + 1}</span>
-                                                ${goalReps ? `<span class="set-goal" title="Cel na dziś: ${goalReps} powtórzeń w serii">→ ${goalReps}</span>` : ""}
+                                                ${goalReps ? `<span class="set-goal" title="Cel na dziś: ${goalReps} powtórzeń w serii">→ ${goalReps}</span>`
+                                            : (prev && prev.done && prog && prog.targets && prog.targets[i] === null
+                                                ? `<span class="set-goal hold" title="Ta seria jest już na górze zakresu (${prev.reps} powt.) — po prostu utrzymaj ten wynik.">utrzymaj</span>`
+                                                : "")}
 
                                                 <div class="input-group">
                                                     <input

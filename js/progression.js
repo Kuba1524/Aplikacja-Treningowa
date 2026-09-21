@@ -29,12 +29,14 @@ window.Progression = (() => {
         return Math.max(...done.map((s) => Number(s.kg)));
     };
 
-    // Dla każdej serii poprzedniego tygodnia mówi, ile powtórzeń dziś zrobić.
-    // Cel "o 1 powtórzenie więcej", nigdy nie przekracza górnej granicy.
+    // Ile powtórzeń dziś zrobić w danej serii. Cel to ASPIRACJA, nie wymóg.
+    // null = seria już osiągnęła (lub pobiła) górną granicę -> "utrzymaj",
+    //        NIE pokazujemy celu liczbowego niższego niż faktyczny wynik.
     const targetRepsForSet = (prevSet, range, tier) => {
         if (tier === "increase") return range.min;
         if (tier === "first") return range.min;
         if (isDoneSet(prevSet)) {
+            if (Number(prevSet.reps) >= range.max) return null; // już na górze — utrzymaj
             return Math.min(range.max, Math.max(range.min, Number(prevSet.reps) + 1));
         }
         return range.min;
@@ -90,9 +92,9 @@ window.Progression = (() => {
             ? Math.min(...prevDone.map((s) => Number(s.reps)))
             : range.min;
         const reason =
-            "Dogrywasz powtórzenia przy tym samym ciężarze (" + working + " kg) " +
-            "aż wszystkie serie dojdą do " + range.max + ". Najsłabiej było: " + weakest + " powt. " +
-            "Dziś: o 1 powtórzenie więcej w każdej serii.";
+            "Spróbuj dobić do " + range.max + " powtórzeń przy tym samym ciężarze (" + working + " kg). " +
+            "Najsłabiej szło: " + weakest + " powt. Seria, która już jest na górze — po prostu utrzymaj. " +
+            "Jeśli nie uda się dziś w każdej serii, to zupełnie normalne — cel zostaje na następny raz.";
         return mk("catch-up", working, working, reason, targets);
     };
 
