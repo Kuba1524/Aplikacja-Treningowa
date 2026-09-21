@@ -134,9 +134,9 @@ window.Views = (() => {
                             <div class="stat-card-top">
                                 <div>
                                     <div class="stat-label">Postęp tygodnia</div>
-                                    <div class="stat-value">${weekSummary.pct}%</div>
+                                    <div class="stat-value stat-fraction">${weekSummary.done}<span class="stat-den">/${weekSummary.total}</span></div>
                                 </div>
-                                <div class="stat-inline">${weekSummary.done}/${weekSummary.total}</div>
+                                <div class="stat-inline">${weekSummary.pct}%</div>
                             </div>
                             <div class="stat-note">Ukończone serie w aktualnym tygodniu</div>
                         </div>
@@ -168,8 +168,9 @@ window.Views = (() => {
                             <div class="day-list">
                                 ${DAYS.map((day) => {
                                     const progress = getDayProgress(day.id);
+                                    const isToday = todayPlan && day.id === todayPlan.id;
                                     return `
-                                        <div class="card day-plan-card" onclick="openDay(${day.id})">
+                                        <div class="card day-plan-card ${isToday ? "day-today" : ""}" onclick="openDay(${day.id})">
                                             <div class="day-plan-left">
                                                 <div class="day-plan-icon">${iconFor(day.icon)}</div>
                                                 <div>
@@ -178,6 +179,7 @@ window.Views = (() => {
                                                 </div>
                                             </div>
                                             <div class="day-plan-right">
+                                                ${isToday ? '<div class="day-plan-badge">Dziś</div>' : ""}
                                                 <div class="day-plan-progress">${progress.done}/${progress.total} · ${progress.pct}%</div>
                                                 <div class="day-plan-arrow">›</div>
                                             </div>
@@ -189,8 +191,6 @@ window.Views = (() => {
                         </div>
                     </div>
                 </div>
-
-                ${renderThemePicker()}
             </div>
         `;
     };
@@ -201,7 +201,7 @@ window.Views = (() => {
         if (!themes.length) return "";
 
         return `
-            <div class="card theme-card">
+            <div class="theme-card">
                 <div class="theme-top">
                     <div>
                         <div class="section-title">Motyw</div>
@@ -728,6 +728,29 @@ window.Views = (() => {
         `;
     };
 
+    const buildProgUI = (prog) => {
+        if (!prog) return "";
+        const fmt = (n) => window.Utils.formatNumberPL(n);
+        let badge = "";
+        let detail = prog.reason;
+        if (prog.tier === "increase") {
+            badge = `<span class="prog-badge up">+2.5 kg</span>`;
+        } else if (prog.tier === "catch-up") {
+            badge = `<span class="prog-badge steady">więcej powt.</span>`;
+        } else {
+            badge = `<span class="prog-badge new">dobierz ciężar</span>`;
+        }
+        const working =
+            prog.workingKg != null ? `Ciężar roboczy: <b>${fmt(prog.workingKg)} kg</b>` : "Brak danych z poprzedniego tygodnia";
+        return `<div class="prog-card">
+                <div class="prog-top">
+                    ${badge}
+                    <span class="prog-working">${working}</span>
+                </div>
+                <div class="prog-detail">${detail}</div>
+            </div>`;
+    };
+
     const renderWorkout = (ctx) => {
         const {
             currentDayId,
@@ -791,6 +814,11 @@ window.Views = (() => {
                     const exDone = sets.filter((s) => s.done).length;
                     const exPct = ex.sets ? Math.round((exDone / ex.sets) * 100) : 0;
 
+                    const prog = window.Progression && window.Progression.computeExercisePlan
+                        ? window.Progression.computeExercisePlan(ex, prevSets)
+                        : null;
+                    const progUI = buildProgUI(prog);
+
                     return `
                         <div class="exercise-card ${exDone === ex.sets ? "complete" : ""}">
                             <div class="exercise-header">
@@ -811,6 +839,8 @@ window.Views = (() => {
                                 <div class="ex-progress-fill" style="width:${exPct}%"></div>
                             </div>
 
+                            ${progUI}
+
                             ${prevNote && prevNote.trim() ? `
                                 <div class="history-note">
                                     <div class="history-note-label">Notatka z poprzedniego tygodnia</div>
@@ -822,14 +852,15 @@ window.Views = (() => {
                                 ${window.renderNoteBtnLabel(!!currentNote)}
                             </button>
 
-                            <div id="note-box-${ei}" class="note-box ${currentNote ? "" : "hidden"}">
+                            <div id="note-box-${ei}" class="note-box">
                                 <textarea
                                     class="note-input"
                                     rows="2"
-                                    placeholder="Dodaj komentarz do ćwiczenia..."
+                                    placeholder="Notatka do ćwiczenia (ból, wyniki, tempo, uwagi)..."
                                     oninput="updateNote(${ei}, this.value)"
-                                >${window.Utils.escapeHtml(currentNote)}</textarea>
+                                >${window.Utils.escapeHtml(currentNote || "")}</textarea>
                             </div>
+
 
                             <div class="sets-list">
                                 ${sets.map((s, i) => {
@@ -840,17 +871,38 @@ window.Views = (() => {
                                     const prevKg = prev && prev.done && prev.kg ? prev.kg : "";
                                     const prevReps = prev && prev.done && prev.reps ? prev.reps : "";
 
+                                    const goalReps = prog && prog.targets && prog.targets[i] ? prog.targets[i] : "";
+                                    const kgPh = prog && prog.tier === "increase" && prog.nextKg != null
+                                        ? window.Utils.formatNumberPL(prog.nextKg)
+                                        : (prevKg || "");
+                                    const repsPh = prog && goalReps ? goalReps : (prevReps || "");
+
+                                    if (s.done) {
+                                        return `
+                                            <div class="set-row done collapsed" onclick="toggleSet(${ei}, ${i})" title="Naciśnij, aby wrócić do edycji">
+                                                <div class="set-summary">
+                                                    <span class="set-pill done">S${i + 1}</span>
+                                                    <span class="set-summary-val">${s.kg ? window.Utils.formatNumberPL(parseFloat(s.kg)) : "—"} kg × ${s.reps || "—"}</span>
+                                                    <span class="trend-badge">${ctx.getTrendUI(s, prev)}</span>
+                                                    <span class="set-summary-check">✓</span>
+                                                </div>
+                                                ${prevTxt ? `<div class="set-summary-sub">↺ ${prevTxt}</div>` : ""}
+                                            </div>
+                                        `;
+                                    }
+
                                     return `
-                                        <div class="set-row ${s.done ? "done" : ""}">
+                                        <div class="set-row ">
                                             <div class="set-top-row">
-                                                <span class="set-pill ${s.done ? "done" : ""}">S${i + 1}</span>
+                                                <span class="set-pill ">S${i + 1}</span>
+                                                ${goalReps ? `<span class="set-goal" title="Cel na dziś: ${goalReps} powtórzeń w serii">→ ${goalReps}</span>` : ""}
 
                                                 <div class="input-group">
                                                     <input
                                                         type="number"
                                                         step="0.1"
                                                         value="${s.kg || ""}"
-                                                        placeholder="${prevKg || "0"}"
+                                                        placeholder="${kgPh || "0"}"
                                                         oninput="updateSet(${ei}, ${i}, 'kg', this.value)"
                                                     >
                                                     <span>KG</span>
@@ -861,13 +913,13 @@ window.Views = (() => {
                                                         type="number"
                                                         step="1"
                                                         value="${s.reps || ""}"
-                                                        placeholder="${prevReps || "0"}"
+                                                        placeholder="${repsPh || "0"}"
                                                         oninput="updateSet(${ei}, ${i}, 'reps', this.value)"
                                                     >
                                                     <span>POW</span>
                                                 </div>
 
-                                                <button class="btn-check ${s.done ? "done" : ""}" onclick="toggleSet(${ei}, ${i})">✓</button>
+                                                <button class="btn-check " onclick="toggleSet(${ei}, ${i})">✓</button>
                                             </div>
 
                                             <div class="set-bottom-row">
@@ -1200,6 +1252,128 @@ window.Views = (() => {
         libMediaPlaying = !libMediaPlaying;
     };
 
+    const TAG_OPTIONS = [
+        "CORE", "CHEST", "BACK", "SHOULDER", "DELTS", "BICEPS", "TRICEPS",
+        "LEGS", "QUADS", "HAM", "GLUTES", "CALVES", "TRAPS", "REAR", "FOREARMS"
+    ];
+
+    const DAY_COLORS = ["#ff3b30", "#ff9500", "#f5c518", "#2ec4b6", "#00b4d8", "#3b82f6", "#5e5ce6", "#9d4edd", "#ee5d9c", "#a2845e"];
+    const DAY_ICONS = ["🔥", "💪", "🦵", "⚡"];
+
+    const renderManage = (ctx) => {
+        const screen = document.getElementById("screen-manage");
+        if (!screen) return;
+        const plan = (ctx && ctx.getManagePlan ? ctx.getManagePlan() : null);
+        if (!plan || !plan.length) {
+            screen.innerHTML = "";
+            return;
+        }
+
+        const U = window.Utils;
+        const profileLabel = (ctx && ctx.currentProfileName) || "Użytkownik";
+        const daysHtml = plan.map((day, di) => {
+            const exRows = day.exercises
+                .map((ex, ei) => {
+                    const tagOptions = TAG_OPTIONS.map(
+                        (t) =>
+                            `<option value="${t}" ${t === ex.tag ? "selected" : ""}>${t}</option>`
+                    ).join("");
+
+                    return `
+                        <div class="mg-ex-row">
+                            <div class="mg-ex-main">
+                                <input
+                                    class="mg-input mg-name"
+                                    type="text"
+                                    value="${U.escapeHtml(ex.name)}"
+                                    aria-label="Nazwa ćwiczenia"
+                                    oninput="manageEditField(${di}, ${ei}, 'name', this.value)"
+                                />
+                                <div class="mg-ex-meta">
+                                    <span class="mg-meta-block">
+                                        <input
+                                            class="mg-input mg-num"
+                                            type="number"
+                                            min="1"
+                                            max="30"
+                                            value="${ex.sets}"
+                                            oninput="manageEditField(${di}, ${ei}, 'sets', this.value)"
+                                        />
+                                        <span class="mg-meta-lab">serie</span>
+                                    </span>
+                                    <span class="mg-meta-block">
+                                        <input
+                                            class="mg-input mg-num"
+                                            type="text"
+                                            value="${U.escapeHtml(ex.reps)}"
+                                            placeholder="8-12"
+                                            oninput="manageEditField(${di}, ${ei}, 'reps', this.value)"
+                                        />
+                                        <span class="mg-meta-lab">powt.</span>
+                                    </span>
+                                    <select
+                                        class="mg-input mg-tag"
+                                        onchange="manageEditField(${di}, ${ei}, 'tag', this.value)"
+                                    >${tagOptions}</select>
+                                </div>
+                            </div>
+                            <div class="mg-ex-actions">
+                                <button type="button" class="mg-icon-btn" onclick="manageMoveExercise(${di}, ${ei}, -1)" title="W górę">↑</button>
+                                <button type="button" class="mg-icon-btn" onclick="manageMoveExercise(${di}, ${ei}, 1)" title="W dół">↓</button>
+                                <button type="button" class="mg-icon-btn danger" onclick="manageRemoveExercise(${di}, ${ei})" title="Usuń">✕</button>
+                            </div>
+                        </div>
+                    `;
+                })
+                .join("");
+
+            return `
+                <div class="card mg-day-card">
+                    <div class="mg-day-header" style="--day-color:${day.color}">
+                        <span class="mg-day-icon">${day.icon}</span>
+                        <span class="mg-day-title">${day.name} · ${day.label}</span>
+                        <span class="mg-day-count">${day.exercises.length} ćw.</span>
+                    </div>
+                    <div class="mg-day-style">
+                        <div class="mg-style-row">
+                            <span class="mg-style-lab">Kolor</span>
+                            <div class="mg-color-list">
+                                ${DAY_COLORS.map((c) =>
+                                    `<button type="button" class="mg-color-swatch ${c === day.color ? "active" : ""}" style="background:${c}" onclick="manageEditDay(${di}, 'color', '${c}')" aria-label="Kolor ${c}"></button>`
+                                ).join("")}
+                            </div>
+                        </div>
+                        <div class="mg-style-row">
+                            <span class="mg-style-lab">Ikona</span>
+                            <div class="mg-icon-list">
+                                ${DAY_ICONS.map((ic) =>
+                                    `<button type="button" class="mg-icon-chip ${ic === day.icon ? "active" : ""}" onclick="manageEditDay(${di}, 'icon', '${ic}')" aria-label="Ikona ${ic}">${ic}</button>`
+                                ).join("")}
+                            </div>
+                        </div>
+                    </div>
+                    ${exRows}
+                    <button type="button" class="mg-add-btn" onclick="manageAddExercise(${di})">＋ Dodaj ćwiczenie</button>
+                </div>
+            `;
+        }).join("");
+
+        screen.innerHTML = `
+            <div class="container mg-page">
+                <div class="header-block">
+                    <div class="header-title">Zarządzaj ćwiczeniami</div>
+                    <div class="header-sub">Edycja dotyczy Twojego profilu (${profileLabel})</div>
+                </div>
+                ${daysHtml}
+                <div class="mg-actions">
+                    <button type="button" class="mg-btn ghost" onclick="manageResetPlan()">Przywróć domyślny plan</button>
+                    <button type="button" class="mg-btn ghost" onclick="manageCancel()">Anuluj</button>
+                    <button type="button" class="mg-btn primary" onclick="manageSave()">Zapisz</button>
+                </div>
+            </div>
+        `;
+    };
+
     const setLibraryLoaded = (ready, error) => {
         libReady = ready;
         libError = !!error;
@@ -1215,6 +1389,8 @@ window.Views = (() => {
         renderStats,
         renderWorkout,
         renderLibrary,
+        renderManage,
+        themePickerHTML: renderThemePicker,
         setLibQuery,
         setLibCategory,
         showMoreLib,

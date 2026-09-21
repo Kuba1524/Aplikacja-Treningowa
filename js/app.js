@@ -84,6 +84,43 @@ let DAYS = PLAN_BARTEK;
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
 
+const copyPlan = (plan) =>
+    (plan || []).map((day) => ({
+        ...day,
+        exercises: (day.exercises || []).map((ex) => ({ ...ex }))
+    }));
+
+const applyCustomPlan = () => {
+    const overrides = state && state.customPlan;
+    if (overrides && typeof overrides === "object") {
+        DAYS.forEach((day) => {
+            const custom = overrides[day.id];
+            if (!Array.isArray(custom)) return;
+            const cleaned = custom
+                .map((ex) => ({
+                    name: String(ex && ex.name || "").trim(),
+                    sets: Math.max(1, Math.min(30, Number(ex && ex.sets) || 1)),
+                    reps: String(ex && ex.reps || "").trim(),
+                    tag: String(ex && ex.tag || "CORE").trim().toUpperCase() || "CORE"
+                }))
+                .filter((ex) => ex.name);
+            if (cleaned.length) {
+                day.exercises = cleaned;
+            }
+        });
+    }
+
+    const meta = state && state.customPlanMeta;
+    if (meta && typeof meta === "object") {
+        DAYS.forEach((day) => {
+            const m = meta[day.id];
+            if (!m || typeof m !== "object") return;
+            if (typeof m.color === "string" && /^#[0-9a-fA-F]{6}$/.test(m.color)) day.color = m.color;
+            if (typeof m.icon === "string" && m.icon) day.icon = m.icon;
+        });
+    }
+};
+
 let state = {
     currentWeekIndex: 0,
     weeks: [{}],
@@ -181,6 +218,26 @@ const cloneWeekData = (prevWeek = {}) => {
     return newWeek;
 };
 
+const planSetLimits = () => {
+    const limits = {};
+    DAYS.forEach((day) => {
+        day.exercises.forEach((ex, ei) => {
+            limits[getExerciseKey(day.id, ei)] = ex.sets;
+        });
+    });
+    return limits;
+};
+
+const trimWeekToPlan = (week, limits) => {
+    Object.keys(week).forEach((key) => {
+        const limit = limits[key];
+        if (limit && Array.isArray(week[key]) && week[key].length > limit) {
+            week[key] = week[key].slice(0, limit);
+        }
+    });
+    return week;
+};
+
 const persistState = () => {
     if (!isLoaded || !currentUserId) return;
 
@@ -208,7 +265,8 @@ const updateTimeline = () => {
 
         while (state.weeks.length <= elapsedWeeks) {
             const prevWeek = state.weeks[state.weeks.length - 1] || {};
-            state.weeks.push(cloneWeekData(prevWeek));
+            const newWeek = trimWeekToPlan(cloneWeekData(prevWeek), planSetLimits());
+            state.weeks.push(newWeek);
         }
 
         state.currentWeekIndex = Math.min(elapsedWeeks, state.weeks.length - 1);
@@ -271,6 +329,7 @@ const getWeekDaysUI = () => {
     const weekday = now.getDay();
     const sunday = window.Utils.getCurrentSunday();
     const labels = ["ND", "PN", "WT", "ŚR", "CZ", "PT", "SB"];
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     return labels.map((lab, i) => {
         const date = new Date(sunday);
@@ -280,9 +339,18 @@ const getWeekDaysUI = () => {
         const progress = linkedDay ? getDayProgress(linkedDay.id) : null;
         const active = i === weekday;
         const done = progress ? progress.done > 0 : false;
+        const isPast = date.getTime() < todayStart.getTime();
+        const stateClass = !linkedDay ? "" : done ? " done" : isPast ? " skip" : " empty";
+        const stateTitle = !linkedDay
+            ? "Dzień bez treningu"
+            : done
+                ? "Trening zrobiony"
+                : isPast
+                    ? "Trening pominięty"
+                    : "Zaplanowany trening";
 
         return `
-            <div class="week-day ${active ? "active" : ""} ${done ? "done" : ""}">
+            <div class="week-day ${active ? "active" : ""}${stateClass}" title="${stateTitle}">
                 <div class="week-day-lab">${lab}</div>
                 <div class="week-day-num">${date.getDate()}</div>
                 <div class="week-day-dot"></div>
@@ -295,12 +363,13 @@ const ensureWorkoutDataExists = (dayId, exerciseIndex, setsCount) => {
     const weekData = state.weeks[state.currentWeekIndex];
     const key = getExerciseKey(dayId, exerciseIndex);
 
-    if (!weekData[key]) {
-        weekData[key] = Array.from({ length: setsCount }, () => ({
-            kg: 0,
-            reps: 0,
-            done: false
-        }));
+    if (!weekData[key]) weekData[key] = [];
+    const arr = weekData[key];
+    while (arr.length < setsCount) {
+        arr.push({ kg: 0, reps: 0, done: false });
+    }
+    if (arr.length > setsCount) {
+        arr.length = setsCount;
     }
 };
 
@@ -340,7 +409,9 @@ const renderCurrentView = () => {
         getWeekDaysUI,
         ensureWorkoutDataExists,
         logBodyWeight,
-        getTrendUI
+        getTrendUI,
+        currentProfileName,
+        getManagePlan: () => managePlan
     };
 
     try {
@@ -365,6 +436,9 @@ const renderCurrentView = () => {
             window.Views.renderWorkout(ctx);
             updateSummary();
         }
+        if (currentView === "manage") {
+            window.Views.renderManage(ctx);
+        }
     } catch (err) {
         console.error("Błąd renderowania widoku:", currentView, err);
         const screen = document.getElementById("screen-" + currentView);
@@ -384,7 +458,8 @@ const updateVisibleScreen = () => {
         plan: document.getElementById("screen-plan"),
         stats: document.getElementById("screen-stats"),
         workout: document.getElementById("screen-workout"),
-        library: document.getElementById("screen-library")
+        library: document.getElementById("screen-library"),
+        manage: document.getElementById("screen-manage")
     };
 
     Object.entries(screens).forEach(([key, el]) => {
@@ -404,12 +479,12 @@ const updateBottomNav = () => {
         if (currentView === "home" && view === "home") btn.classList.add("active");
         if (currentView === "plan" && view === "plan") btn.classList.add("active");
         if (currentView === "stats" && view === "stats") btn.classList.add("active");
-        if (currentView === "library" && view === "library") btn.classList.add("active");
     });
 };
 
 const navigateTo = (view) => {
     currentView = view;
+    closeMoreSheet();
     renderCurrentView();
 };
 
@@ -514,12 +589,71 @@ const updateSet = (ei, i, field, val) => {
     persistState();
 };
 
+/* ---- Timer odpoczynku między seriami ---- */
+const restTimer = { duration: 0, remaining: 0, interval: null, bar: null };
+
+const formatRestTime = (s) => {
+    const sec = Math.max(0, Math.ceil(s));
+    const m = Math.floor(sec / 60);
+    const r = sec % 60;
+    return `${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
+};
+
+const getRestTimerBar = () => {
+    if (restTimer.bar) return restTimer.bar;
+    restTimer.bar = document.getElementById("rest-timer-bar");
+    if (!restTimer.bar) return null;
+    restTimer.bar.querySelector(".rest-timer-plus").onclick = () => addRestRestTime(30);
+    restTimer.bar.querySelector(".rest-timer-skip").onclick = () => stopRestTimer();
+    return restTimer.bar;
+};
+
+const startRestTimer = (seconds) => {
+    const bar = getRestTimerBar();
+    if (!bar) return;
+    restTimer.duration = seconds;
+    restTimer.remaining = seconds;
+    if (restTimer.interval) { clearInterval(restTimer.interval); restTimer.interval = null; }
+    bar.classList.add("open");
+    updateRestTimerUI();
+    restTimer.interval = setInterval(() => {
+        restTimer.remaining--;
+        updateRestTimerUI();
+        if (restTimer.remaining <= 0) stopRestTimer(true);
+    }, 1000);
+};
+
+const addRestRestTime = (sec) => {
+    restTimer.remaining += sec;
+    updateRestTimerUI();
+};
+
+const updateRestTimerUI = () => {
+    const bar = getRestTimerBar();
+    if (!bar) return;
+    const time = bar.querySelector(".rest-timer-time");
+    time.textContent = formatRestTime(restTimer.remaining);
+    time.classList.toggle("done", restTimer.remaining <= 0);
+};
+
+const stopRestTimer = (finished) => {
+    if (restTimer.interval) { clearInterval(restTimer.interval); restTimer.interval = null; }
+    const bar = getRestTimerBar();
+    if (bar) {
+        bar.classList.remove("open");
+        const time = bar.querySelector(".rest-timer-time");
+        time.classList.remove("done");
+    }
+};
+
 const toggleSet = (ei, i) => {
     if (currentDayId === null) return;
 
     const key = getExerciseKey(currentDayId, ei);
     const set = state.weeks[state.currentWeekIndex][key][i];
     set.done = !set.done;
+
+    if (set.done && state.settings && state.settings.restEnabled !== false) startRestTimer(state.settings && state.settings.restSeconds ? state.settings.restSeconds : 90);
 
     persistState();
     renderCurrentView();
@@ -596,6 +730,19 @@ const toggleAuthMode = () => {
     if (username) username.focus();
 };
 
+const togglePasswordVisibility = () => {
+    const input = document.getElementById("auth-password");
+    const btn = document.getElementById("auth-pass-toggle");
+    if (!input || !btn) return;
+    const show = input.type === "password";
+    input.type = show ? "text" : "password";
+    btn.setAttribute("aria-pressed", String(show));
+    btn.setAttribute("aria-label", show ? "Ukryj hasło" : "Pokaż hasło");
+    btn.innerHTML = show
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+};
+
 const authSubmit = async () => {
     const username = document.getElementById("auth-username").value.trim();
     const password = document.getElementById("auth-password").value;
@@ -614,6 +761,17 @@ const authSubmit = async () => {
         return;
     }
 
+    const registerName = authRegisterMode
+        ? (document.getElementById("auth-register-name").value.trim() || "")
+        : "";
+
+    if (authRegisterMode && !registerName) {
+        showError("Podaj, jak się do Ciebie zwracać (np. Kuba)");
+        const nameInput = document.getElementById("auth-register-name");
+        if (nameInput) nameInput.focus();
+        return;
+    }
+
     try {
         if (submitBtn) {
             submitBtn.disabled = true;
@@ -624,9 +782,7 @@ const authSubmit = async () => {
             ? await window.AuthModule.register(username, password)
             : await window.AuthModule.login(username, password);
 
-        const profileName = authRegisterMode
-            ? (document.getElementById("auth-register-name").value.trim() || username)
-            : "";
+        const profileName = authRegisterMode ? registerName : "";
 
         await completeLogin(user, username, profileName);
     } catch (err) {
@@ -658,15 +814,21 @@ const completeLogin = async (firebaseUser, username, profileName) => {
 const bootWithUser = async (storageKey, planKey = "bartek", profileName = "") => {
     currentUserId = storageKey;
     currentProfileName = profileName || "Użytkownik";
-    DAYS = getPlanByKey(planKey);
+    DAYS = copyPlan(getPlanByKey(planKey));
 
     const empty = { currentWeekIndex: 0, weeks: [{}], startSunday: 0 };
     const loaded = await window.StorageModule.load(storageKey, empty);
     state = loaded || empty;
 
     ensureStateShape();
+    if (!state.customPlan || typeof state.customPlan !== "object") {
+        state.customPlan = {};
+    }
+    applyCustomPlan();
     isLoaded = true;
     updateTimeline();
+    trimWeekToPlan(state.weeks[state.currentWeekIndex] || {}, planSetLimits());
+    persistState();
 
     currentView = "home";
     currentDayId = null;
@@ -680,12 +842,284 @@ const logoutUser = async () => {
         /* ignore */
     }
     window.StorageModule.clearSelectedProfile();
+    closeMoreSheet();
+    managePlan = null;
     currentUserId = null;
     currentProfileName = "Użytkownik";
     currentView = "home";
     isLoaded = false;
     state = { currentWeekIndex: 0, weeks: [{}], startSunday: 0 };
     showAuthGate();
+};
+
+const populateThemeSection = () => {
+    const box = document.getElementById("more-theme-section");
+    if (!box || !window.Views || !window.Views.themePickerHTML) return;
+    box.innerHTML = window.Views.themePickerHTML();
+};
+
+const toggleThemeSection = () => {
+    const box = document.getElementById("more-theme-section");
+    const item = document.getElementById("more-theme-item");
+    if (!box) return;
+    if (box.classList.contains("hidden")) {
+        populateThemeSection();
+        box.classList.remove("hidden");
+        if (item) item.classList.add("active");
+    } else {
+        box.classList.add("hidden");
+        if (item) item.classList.remove("active");
+    }
+};
+
+const openMoreSheet = () => {
+    const sheet = document.getElementById("more-sheet");
+    const backdrop = document.getElementById("more-backdrop");
+    const btn = document.getElementById("more-nav-btn");
+    if (sheet) sheet.classList.add("open");
+    if (backdrop) backdrop.classList.remove("hidden");
+    if (btn) btn.classList.add("active");
+    populateThemeSection();
+};
+
+const closeMoreSheet = () => {
+    const sheet = document.getElementById("more-sheet");
+    const backdrop = document.getElementById("more-backdrop");
+    const btn = document.getElementById("more-nav-btn");
+    if (sheet) sheet.classList.remove("open");
+    if (backdrop) backdrop.classList.add("hidden");
+    if (btn) btn.classList.remove("active");
+};
+
+const toggleMoreSheet = () => {
+    const sheet = document.getElementById("more-sheet");
+    if (sheet && sheet.classList.contains("open")) {
+        closeMoreSheet();
+    } else {
+        openMoreSheet();
+    }
+};
+
+const showToast = (msg) => {
+    let toast = document.getElementById("toast");
+    if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "toast";
+        toast.className = "toast";
+        document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove("show"), 2200);
+};
+
+const toggleBackupSection = () => {
+    const box = document.getElementById("more-backup-section");
+    const item = document.getElementById("more-backup-item");
+    if (!box) return;
+    if (box.classList.contains("hidden")) {
+        box.classList.remove("hidden");
+        if (item) item.classList.add("active");
+    } else {
+        box.classList.add("hidden");
+        if (item) item.classList.remove("active");
+    }
+};
+
+const sanitizeBackupState = (incoming) => {
+    const clean = { currentWeekIndex: 0, weeks: [{}], startSunday: 0 };
+    if (incoming && Array.isArray(incoming.weeks) && incoming.weeks.length) {
+        clean.weeks = incoming.weeks.map((w) => (w && typeof w === "object" ? w : {}));
+        clean.currentWeekIndex = Math.max(0, Math.min(clean.weeks.length - 1, Number(incoming.currentWeekIndex) || 0));
+    }
+    if (incoming && typeof incoming.startSunday === "number") clean.startSunday = incoming.startSunday;
+    if (incoming && typeof incoming.customPlan === "object") clean.customPlan = incoming.customPlan;
+    if (incoming && typeof incoming.customPlanMeta === "object") clean.customPlanMeta = incoming.customPlanMeta;
+    if (Array.isArray(incoming && incoming.bodyWeight)) clean.bodyWeight = incoming.bodyWeight;
+    return clean;
+};
+
+const downloadBackup = () => {
+    if (!state || !Array.isArray(state.weeks)) return;
+    const payload = {
+        app: "kuba-gym",
+        version: 3,
+        exportedAt: new Date().toISOString(),
+        state: {
+            currentWeekIndex: state.currentWeekIndex,
+            weeks: state.weeks,
+            startSunday: state.startSunday,
+            customPlan: state.customPlan || {},
+            customPlanMeta: state.customPlanMeta || {},
+            bodyWeight: Array.isArray(state.bodyWeight) ? state.bodyWeight : []
+        }
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const date = new Date();
+    const stamp = date.toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `kuba-gym-backup-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    closeMoreSheet();
+    showToast("Kopia zapasowa pobrana");
+};
+
+const handleBackupImport = () => {
+    const input = document.getElementById("backup-file");
+    const file = input && input.files && input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+        try {
+            const data = JSON.parse(String(reader.result));
+            if (data.app !== "kuba-gym" || !data.state || !Array.isArray(data.state.weeks)) {
+                showToast("Niepoprawny plik kopii");
+                return;
+            }
+            state = sanitizeBackupState(data.state);
+            applyCustomPlan();
+            persistState();
+            if (input) input.value = "";
+            closeMoreSheet();
+            navigateTo("plan");
+            showToast("Kopia przywrócona");
+        } catch (e) {
+            showToast("Nie udało się odczytać pliku");
+        }
+    };
+    reader.readAsText(file);
+};
+
+let managePlan = null;
+
+const openManage = () => {
+    closeMoreSheet();
+    managePlan = DAYS.map((day) => ({
+        dayId: day.id,
+        name: day.name,
+        label: day.label,
+        icon: day.icon,
+        color: day.color,
+        exercises: day.exercises.map((ex) => ({
+            name: ex.name,
+            sets: ex.sets,
+            reps: ex.reps,
+            tag: ex.tag
+        }))
+    }));
+    currentView = "manage";
+    renderCurrentView();
+};
+
+const manageEditField = (dayIdx, ei, field, value) => {
+    if (!managePlan || !managePlan[dayIdx] || !managePlan[dayIdx].exercises[ei]) return;
+    const ex = managePlan[dayIdx].exercises[ei];
+    if (field === "sets") {
+        ex.sets = Math.max(1, Math.min(30, parseInt(value, 10) || 1));
+    } else {
+        ex[field] = value;
+    }
+};
+
+const manageAddExercise = (dayIdx) => {
+    if (!managePlan || !managePlan[dayIdx]) return;
+    managePlan[dayIdx].exercises.push({
+        name: "Nowe ćwiczenie",
+        sets: 3,
+        reps: "8-12",
+        tag: "CORE"
+    });
+    renderCurrentView();
+    const inputs = document.querySelectorAll("#screen-manage .mg-ex-row input.mg-name");
+    const last = inputs[inputs.length - 1];
+    if (last) {
+        setTimeout(() => {
+            last.focus();
+            last.select();
+            last.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 60);
+    }
+};
+
+const manageRemoveExercise = (dayIdx, ei) => {
+    if (!managePlan || !managePlan[dayIdx]) return;
+    managePlan[dayIdx].exercises.splice(ei, 1);
+    renderCurrentView();
+};
+
+const manageMoveExercise = (dayIdx, ei, direction) => {
+    if (!managePlan || !managePlan[dayIdx]) return;
+    const list = managePlan[dayIdx].exercises;
+    const target = ei + direction;
+    if (target < 0 || target >= list.length) return;
+    const tmp = list[ei];
+    list[ei] = list[target];
+    list[target] = tmp;
+    renderCurrentView();
+};
+
+const manageSave = () => {
+    if (!managePlan) return;
+    const customPlan = {};
+    const customPlanMeta = {};
+    managePlan.forEach((day) => {
+        const cleaned = day.exercises
+            .map((ex) => ({
+                name: String(ex.name || "").trim(),
+                sets: ex.sets,
+                reps: String(ex.reps || "").trim(),
+                tag: String(ex.tag || "CORE").trim().toUpperCase() || "CORE"
+            }))
+            .filter((ex) => ex.name);
+        if (cleaned.length) customPlan[day.dayId] = cleaned;
+        customPlanMeta[day.dayId] = { color: day.color || "#3b82f6", icon: day.icon || "🔥" };
+    });
+    state.customPlan = customPlan;
+    state.customPlanMeta = customPlanMeta;
+    applyCustomPlan();
+    persistState();
+    managePlan = null;
+    navigateTo("plan");
+    showToast("Plan zapisany");
+};
+
+const manageEditDay = (dayIdx, field, value) => {
+    if (!managePlan || !managePlan[dayIdx]) return;
+    managePlan[dayIdx][field] = value;
+    renderCurrentView();
+};
+
+const manageResetPlan = () => {
+    state.customPlan = {};
+    state.customPlanMeta = {};
+    applyCustomPlan();
+    persistState();
+    managePlan = DAYS.map((day) => ({
+        dayId: day.id,
+        name: day.name,
+        label: day.label,
+        icon: day.icon,
+        color: day.color,
+        exercises: day.exercises.map((ex) => ({
+            name: ex.name,
+            sets: ex.sets,
+            reps: ex.reps,
+            tag: ex.tag
+        }))
+    }));
+    renderCurrentView();
+    showToast("Przywrócono domyślny plan");
+};
+
+const manageCancel = () => {
+    managePlan = null;
+    navigateTo("plan");
 };
 
 const initApp = async () => {
@@ -736,7 +1170,8 @@ const THEMES = [
     { id: "proton", label: "Proton", swatch: "#6D4AFF", meta: "#120E2E" },
     { id: "aurora", label: "Aurora", swatch: "#14b8a6", meta: "#031318" },
     { id: "sunset", label: "Zachód", swatch: "#fb923c", meta: "#170910" },
-    { id: "graphite", label: "Grafit", swatch: "#22d3ee", meta: "#0a0d11" }
+    { id: "graphite", label: "Grafit", swatch: "#22d3ee", meta: "#0a0d11" },
+    { id: "light", label: "Jasny", swatch: "#f2f5f9", meta: "#f2f5f9" }
 ];
 
 const applyTheme = (theme) => {
@@ -835,7 +1270,25 @@ window.toggleSet = toggleSet;
 window.resetWorkout = resetWorkout;
 window.authSubmit = authSubmit;
 window.toggleAuthMode = toggleAuthMode;
+window.togglePasswordVisibility = togglePasswordVisibility;
 window.logoutUser = logoutUser;
+window.openMoreSheet = openMoreSheet;
+window.closeMoreSheet = closeMoreSheet;
+window.toggleMoreSheet = toggleMoreSheet;
+window.toggleThemeSection = toggleThemeSection;
+window.toggleBackupSection = toggleBackupSection;
+window.downloadBackup = downloadBackup;
+window.handleBackupImport = handleBackupImport;
+window.showToast = showToast;
+window.openManage = openManage;
+window.manageEditDay = manageEditDay;
+window.manageEditField = manageEditField;
+window.manageAddExercise = manageAddExercise;
+window.manageRemoveExercise = manageRemoveExercise;
+window.manageMoveExercise = manageMoveExercise;
+window.manageSave = manageSave;
+window.manageResetPlan = manageResetPlan;
+window.manageCancel = manageCancel;
 
 document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("auth-form");
@@ -849,3 +1302,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 initTheme();
 initApp();
+
+window.addRestTime = addRestRestTime;
+window.addRestRestTime = addRestRestTime;
+window.startRestTimer = startRestTimer;
+window.stopRestTimer = stopRestTimer;

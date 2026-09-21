@@ -2,10 +2,12 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8" />
-    <meta name="x-app-build" content="v48" />
+    <meta name="x-app-build" content="v54" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0e14" />
-    <title>Kuba Training</title>
+    <meta name="apple-mobile-web-app-title" content="KubaGym" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <title>KubaGym – aplikacja treningowa</title>
 
     <link rel="manifest" href="manifest.json" />
 
@@ -19,7 +21,7 @@
             position: fixed;
             inset: 0;
             z-index: 9999;
-            background: #0b0e14;
+            background: var(--bg, #0b0e14);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -35,10 +37,10 @@
             font-size: 1.6rem;
             font-weight: 800;
             margin: 0 0 8px;
-            color: #f0f6fc;
+            color: var(--text-main, #f0f6fc);
         }
         .profile-gate p {
-            color: #8b949e;
+            color: var(--text-dim, #8b949e);
             margin: 0 0 28px;
             font-size: 0.95rem;
         }
@@ -54,9 +56,9 @@
             width: 100%;
             padding: 18px 20px;
             border-radius: 16px;
-            border: 1px solid rgba(255,255,255,0.1);
-            background: #151a23;
-            color: #f0f6fc;
+            border: 1px solid var(--border, rgba(255,255,255,0.1));
+            background: var(--card-bg, #151a23);
+            color: var(--text-main, #f0f6fc);
             font-size: 1.15rem;
             font-weight: 600;
             cursor: pointer;
@@ -76,17 +78,37 @@
             width: 100%;
             padding: 16px 18px;
             border-radius: 14px;
-            border: 1px solid rgba(255,255,255,0.12);
-            background: #121722;
-            color: #f0f6fc;
+            border: 1px solid var(--border, rgba(255,255,255,0.12));
+            background: var(--card-bg, #121722);
+            color: var(--text-main, #f0f6fc);
             font-size: 1rem;
             font-family: inherit;
             outline: none;
             transition: border-color 0.15s ease;
         }
         .auth-input:focus { border-color: #58a6ff; }
-        .auth-input::placeholder { color: #6e7681; }
+        .auth-input::placeholder { color: var(--text-dim, #6e7681); }
         .auth-wrap { display: flex; }
+        .auth-pass-wrap { position: relative; }
+        .auth-pass-wrap .auth-input { padding-right: 52px; }
+        .auth-pass-toggle {
+            position: absolute;
+            right: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: none;
+            color: var(--text-dim, #8b949e);
+            cursor: pointer;
+            border-radius: 10px;
+        }
+        .auth-pass-toggle svg { width: 20px; height: 20px; }
+        .auth-pass-toggle:active { color: var(--text-main, #f0f6fc); }
         #auth-submit {
             justify-content: center;
             background: linear-gradient(135deg, #58a6ff, #3b82f6);
@@ -98,14 +120,14 @@
             width: 100%;
             background: none;
             border: none;
-            color: #8b949e;
+            color: var(--text-dim, #8b949e);
             font-size: 0.9rem;
             font-weight: 600;
             font-family: inherit;
             cursor: pointer;
             padding: 10px;
         }
-        .auth-toggle:active { color: #f0f6fc; }
+        .auth-toggle:active { color: var(--text-main, #f0f6fc); }
         .auth-error {
             background: rgba(248,81,73,0.12);
             border: 1px solid rgba(248,81,73,0.35);
@@ -132,16 +154,27 @@
                     type="text"
                     placeholder="Nazwa użytkownika"
                     autocomplete="username"
+                    autocapitalize="off"
+                    autocorrect="off"
+                    spellcheck="false"
                     required
                 />
-                <input
-                    id="auth-password"
-                    class="auth-input"
-                    type="password"
-                    placeholder="Hasło"
-                    autocomplete="current-password"
-                    required
-                />
+                <div class="auth-pass-wrap">
+                    <input
+                        id="auth-password"
+                        class="auth-input"
+                        type="password"
+                        placeholder="Hasło"
+                        autocomplete="current-password"
+                        autocapitalize="off"
+                        autocorrect="off"
+                        spellcheck="false"
+                        required
+                    />
+                    <button type="button" id="auth-pass-toggle" class="auth-pass-toggle" aria-label="Pokaż hasło" aria-pressed="false" onclick="togglePasswordVisibility()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
                 <div id="auth-register-name-wrap" class="auth-wrap hidden">
                     <input
                         id="auth-register-name"
@@ -149,6 +182,8 @@
                         type="text"
                         placeholder="Jak się do Ciebie zwracać? (np. Kuba)"
                         autocomplete="name"
+                        autocapitalize="words"
+                        required
                     />
                 </div>
                 <button id="auth-submit" class="profile-btn" type="submit">Zaloguj się</button>
@@ -166,6 +201,7 @@
             <section id="screen-plan" class="screen hidden"></section>
             <section id="screen-stats" class="screen hidden"></section>
             <section id="screen-library" class="screen hidden"></section>
+            <section id="screen-manage" class="screen hidden"></section>
             <section id="screen-workout" class="screen hidden"></section>
         </main>
 
@@ -208,18 +244,56 @@
                 <span class="nav-lab">Stats</span>
             </button>
 
-            <button class="nav-btn" data-view="library" onclick="navigateTo('library')">
+            <button class="nav-btn" id="more-nav-btn" onclick="toggleMoreSheet()">
                 <span class="nav-ico" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                        <circle cx="12" cy="12" r="1"/>
+                        <circle cx="12" cy="5" r="1"/>
+                        <circle cx="12" cy="19" r="1"/>
                     </svg>
                 </span>
-                <span class="nav-lab">Ćwiczenia</span>
+                <span class="nav-lab">Więcej</span>
             </button>
 
         </nav>
     </div>
+
+    <div class="sheet-backdrop hidden" id="more-backdrop" onclick="closeMoreSheet()"></div>
+    <div class="sheet" id="more-sheet" role="dialog" aria-label="Więcej">
+        <div class="sheet-handle"></div>
+        <div class="sheet-title">Więcej</div>
+        <button type="button" class="sheet-item" onclick="openManage()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            <span>Zarządzaj ćwiczeniami</span>
+        </button>
+        <button type="button" class="sheet-item" id="more-theme-item" onclick="toggleThemeSection()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+            <span>Motywy (kolory)</span>
+        </button>
+        <div id="more-theme-section" class="more-theme-section hidden"></div>
+        <button type="button" class="sheet-item" id="more-backup-item" onclick="toggleBackupSection()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.375-9.375z"/></svg>
+            <span>Kopia zapasowa</span>
+        </button>
+        <div id="more-backup-section" class="more-theme-section hidden">
+            <div class="sheet-note">Pobierz lub przywróć cały postęp (historia, plan, waga).</div>
+            <div class="mg-actions backup-actions">
+                <button type="button" class="mg-btn ghost" onclick="downloadBackup()">Eksportuj</button>
+                <button type="button" class="mg-btn primary" onclick="document.getElementById('backup-file').click()">Importuj</button>
+                <input type="file" id="backup-file" accept="application/json,.json" class="hidden" onchange="handleBackupImport()" />
+            </div>
+        </div>
+        <button type="button" class="sheet-item" onclick="navigateTo('library')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            <span>Biblioteka ćwiczeń</span>
+        </button>
+        <button type="button" class="sheet-item sheet-danger" onclick="logoutUser()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+            <span>Wyloguj się</span>
+        </button>
+    </div>
+
+    <div id="toast" class="toast" role="status"></div>
 
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -243,6 +317,7 @@
     <script src="js/auth.js"></script>
     <script src="js/stats.js"></script>
     <script src="js/exercises-lib.js"></script>
+    <script src="js/progression.js"></script>
     <script src="js/views.js"></script>
     <script src="js/app.js"></script>
     <script>
@@ -250,5 +325,8 @@
             navigator.serviceWorker.register('sw.js');
         }
     </script>
+
+<!-- Pasek odpoczynku (timer miedzy seriami) -->
+<div id="rest-timer-bar" class="rest-timer-bar"><div class="rest-timer-inner"><span class="rest-timer-label">Odpoczynek</span><span id="rest-timer-time" class="rest-timer-time">00:00</span><div class="rest-timer-actions"><button class="rest-timer-btn" onclick="addRestTime(30)" title="Dodaj 30 s">+30 s</button><button class="rest-timer-btn" onclick="stopRestTimer(true)" title="Pomin">Pomin</button></div></div></div>
 </body>
 </html>
