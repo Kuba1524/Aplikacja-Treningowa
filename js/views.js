@@ -1,9 +1,4 @@
 window.Views = (() => {
-    const PL_MONTHS = [
-        "stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca",
-        "lipca", "sierpnia", "września", "października", "listopada", "grudnia"
-    ];
-
     const PL_MONTHS_LOCATIVE = [
         "styczniu", "lutym", "marcu", "kwietniu", "maju", "czerwcu",
         "lipcu", "sierpniu", "wrześniu", "październiku", "listopadzie", "grudniu"
@@ -490,7 +485,7 @@ window.Views = (() => {
             const dir = bw.delta > 0 ? "up" : "down";
             const arrow = bw.delta > 0 ? "▲" : "▼";
             lastChip = `<span class="chip ${dir}">${arrow} ${U.formatNumberPL(Math.abs(bw.delta))} kg</span>`;
-        } else if (bw.last != null) {
+        } else if (bw.last !== null) {
             lastChip = '<span class="chip flat">bez zmian</span>';
         }
 
@@ -693,7 +688,7 @@ window.Views = (() => {
                                 <div class="stats-section-title">Waga ciała</div>
                                 <div class="stats-section-sub">${lastDate ? `Ostatni pomiar: ${lastDate}` : "Zapisz wagę, aby śledzić zmiany"}</div>
                             </div>
-                            ${bw.last != null ? `
+                            ${bw.last !== null ? `
                                 <div class="bw-big-sm">
                                     <span class="bw-num-sm">${U.formatNumberPL(bw.last)}</span>
                                     <span class="bw-unit">kg</span>
@@ -703,7 +698,7 @@ window.Views = (() => {
                         <div class="bw-chips-mini">${lastChip}${d30Chip}</div>
                         ${bwSpark || '<div class="bw-empty">Zapisz kilka pomiarów, aby zobaczyć wykres.</div>'}
                         <div class="bw-log-row">
-                            <button type="button" class="btn-secondary" onclick="document.getElementById('bw-form').classList.toggle('open');this.classList.toggle('open')">${bw.last != null ? "✎ Edytuj wagę" : "＋ Zapisz wagę"}</button>
+                            <button type="button" class="btn-secondary" onclick="document.getElementById('bw-form').classList.toggle('open');this.classList.toggle('open')">${bw.last !== null ? "✎ Edytuj wagę" : "＋ Zapisz wagę"}</button>
                         </div>
                         <div id="bw-form" class="bw-form">
                             <input id="bw-input" class="bw-input" type="number" step="0.1" min="30" max="300" placeholder="np. 78,5" inputmode="decimal" />
@@ -732,7 +727,7 @@ window.Views = (() => {
         if (!prog) return "";
         const fmt = (n) => window.Utils.formatNumberPL(n);
         let badge = "";
-        let detail = prog.reason;
+        const detail = prog.reason;
         if (prog.tier === "increase") {
             badge = `<span class="prog-badge up">+2.5 kg</span>`;
         } else if (prog.tier === "catch-up") {
@@ -741,7 +736,7 @@ window.Views = (() => {
             badge = `<span class="prog-badge new">dobierz ciężar</span>`;
         }
         const working =
-            prog.workingKg != null ? `Ciężar roboczy: <b>${fmt(prog.workingKg)} kg</b>` : "Brak danych z poprzedniego tygodnia";
+            prog.workingKg !== null ? `Ciężar roboczy: <b>${fmt(prog.workingKg)} kg</b>` : "Brak danych z poprzedniego tygodnia";
         return `<div class="prog-card">
                 <div class="prog-top">
                     ${badge}
@@ -758,7 +753,7 @@ window.Views = (() => {
             state,
             currentWeekIndex
         } = ctx;
-        const day = DAYS[currentDayId];
+        const day = DAYS.find((d) => d && d.id === currentDayId) || null;
         const weekData = state.weeks[currentWeekIndex];
         const prevWeekData = currentWeekIndex > 0 ? state.weeks[currentWeekIndex - 1] : null;
 
@@ -872,7 +867,7 @@ window.Views = (() => {
                                     const prevReps = prev && prev.done && prev.reps ? prev.reps : "";
 
                                     const goalReps = prog && prog.targets && prog.targets[i] ? prog.targets[i] : "";
-                                    const kgPh = prog && prog.tier === "increase" && prog.nextKg != null
+                                    const kgPh = prog && prog.tier === "increase" && prog.nextKg !== null
                                         ? window.Utils.formatNumberPL(prog.nextKg)
                                         : (prevKg || "");
                                     const repsPh = prog && goalReps ? goalReps : (prevReps || "");
@@ -959,9 +954,8 @@ window.Views = (() => {
             return;
         }
 
-        const U = window.Utils;
         const hadFocus = document.activeElement && document.activeElement.id === "lib-search-input";
-        const detail = libSelectedId != null ? window.ExerciseLib.findById(libSelectedId) : null;
+        const detail = libSelectedId !== null ? window.ExerciseLib.findById(libSelectedId) : null;
 
         screen.innerHTML = `
             <div class="container lib-page">
@@ -1041,7 +1035,7 @@ window.Views = (() => {
     const renderLibResults = (ctx) => {
         const U = window.Utils;
         const L = window.ExerciseLib;
-        const userList = L.getUserPlanExercises(DAYS);
+        const userList = L.getUserPlanExercises(ctx.DAYS || []);
         const items = L.searchExercises(libQuery, libCategory, 300);
         const visible = items.slice(0, libItemLimit);
 
@@ -1100,12 +1094,12 @@ window.Views = (() => {
             .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
             .join(" ");
 
-        const userList = L.getUserPlanExercises(DAYS);
+        const userList = L.getUserPlanExercises(ctx.DAYS || []);
         const match = L.matchUserExercise(ex, userList);
 
         let ownBlock = "";
         if (match && S && ctx.state) {
-            const history = S.getExerciseHistory(ctx.state, DAYS, match.user.name, ctx.getExerciseKey);
+            const history = S.getExerciseHistory(ctx.state, ctx.DAYS || [], match.user.name, ctx.getExerciseKey);
             if (history.length) {
                 const values = history.map(
                     (h) => h.topWeight || (h.bestSet && h.bestSet.kg) || 0

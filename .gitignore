@@ -13,6 +13,9 @@ dist/
 build/
 .cache/
 
+# Stale unused code scaffold
+src/
+
 # IDE
 .vscode/
 .idea/

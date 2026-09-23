@@ -362,10 +362,10 @@ window.StatsModule = (() => {
         const last = sliced.length ? Number(sliced[sliced.length - 1].kg) || null : null;
         const prev = sliced.length > 1 ? Number(sliced[sliced.length - 2].kg) || null : null;
         let delta = null;
-        if (last != null && prev != null) delta = Math.round((last - prev) * 10) / 10;
+        if (last !== null && prev !== null) delta = Math.round((last - prev) * 10) / 10;
 
         let delta30 = null;
-        if (last != null && sliced.length) {
+        if (last !== null && sliced.length) {
             const now = sliced[sliced.length - 1].ts || Date.now();
             const target = now - 30 * 24 * 60 * 60 * 1000;
             let closest = null;

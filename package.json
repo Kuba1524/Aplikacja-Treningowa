@@ -5,14 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/build.mjs",
     "preview": "vite preview",
-    "lint": "eslint src/",
-    "lint:fix": "eslint src/ --fix",
-    "test": "vitest",
-    "test:coverage": "vitest --coverage",
-    "format": "prettier --write src/",
-    "type-check": "tsc --noEmit"
+    "lint": "eslint js/",
+    "lint:fix": "eslint js/ --fix",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "format": "prettier --write js/",
+    "format:check": "prettier --check js/"
   },
   "dependencies": {
     "firebase": "^10.8.0"
@@ -25,9 +25,7 @@
     "prettier": "^3.0.0",
     "vitest": "^1.0.0",
     "@vitest/ui": "^1.0.0",
-    "typescript": "^5.0.0",
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0"
+    "happy-dom": "^14.0.0"
   },
   "engines": {
     "node": ">=18.0.0"

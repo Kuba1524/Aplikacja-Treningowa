@@ -602,10 +602,7 @@ const formatRestTime = (s) => {
 const getRestTimerBar = () => {
     if (restTimer.bar) return restTimer.bar;
     restTimer.bar = document.getElementById("rest-timer-bar");
-    if (!restTimer.bar) return null;
-    restTimer.bar.querySelector(".rest-timer-plus").onclick = () => addRestRestTime(30);
-    restTimer.bar.querySelector(".rest-timer-skip").onclick = () => stopRestTimer();
-    return restTimer.bar;
+    return restTimer.bar || null;
 };
 
 const startRestTimer = (seconds) => {
@@ -632,17 +629,21 @@ const updateRestTimerUI = () => {
     const bar = getRestTimerBar();
     if (!bar) return;
     const time = bar.querySelector(".rest-timer-time");
+    if (!time) return;
     time.textContent = formatRestTime(restTimer.remaining);
     time.classList.toggle("done", restTimer.remaining <= 0);
 };
 
-const stopRestTimer = (finished) => {
-    if (restTimer.interval) { clearInterval(restTimer.interval); restTimer.interval = null; }
+const stopRestTimer = (_finished) => {
+    if (restTimer.interval) {
+        clearInterval(restTimer.interval);
+        restTimer.interval = null;
+    }
     const bar = getRestTimerBar();
     if (bar) {
         bar.classList.remove("open");
         const time = bar.querySelector(".rest-timer-time");
-        time.classList.remove("done");
+        if (time) time.classList.remove("done");
     }
 };
 
@@ -653,7 +654,13 @@ const toggleSet = (ei, i) => {
     const set = state.weeks[state.currentWeekIndex][key][i];
     set.done = !set.done;
 
-    if (set.done && state.settings && state.settings.restEnabled !== false) startRestTimer(state.settings && state.settings.restSeconds ? state.settings.restSeconds : 90);
+    if (set.done) {
+        const settings = state.settings || {};
+        if (settings.restEnabled !== false) {
+            const seconds = Number(settings.restSeconds) > 0 ? Number(settings.restSeconds) : 90;
+            startRestTimer(seconds);
+        }
+    }
 
     persistState();
     renderCurrentView();
@@ -1218,7 +1225,6 @@ window.setStatsRange = (cols) => {
     renderCurrentView();
 };
 
-window.selectProfile = null;
 window.navigateTo = navigateTo;
 window.navigateToWorkoutFromNav = navigateToWorkoutFromNav;
 window.setWeek = setWeek;
@@ -1304,6 +1310,5 @@ initTheme();
 initApp();
 
 window.addRestTime = addRestRestTime;
-window.addRestRestTime = addRestRestTime;
 window.startRestTimer = startRestTimer;
 window.stopRestTimer = stopRestTimer;
