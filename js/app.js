@@ -11,7 +11,7 @@ const PLAN_BARTEK = [
             { name: "Seated Dumbbell OHP", sets: 3, reps: "6-10", tag: "SHOULDER" },
             { name: "Machine Chest Press", sets: 3, reps: "8-10", tag: "CHEST" },
             { name: "Chest Dips", sets: 3, reps: "6-10", tag: "CHEST" },
-            { name: "Dumbbell Lateral Raises", sets: 4, reps: "8-12", tag: "DELTS" },
+            { name: "Dumbbell Lateral Raises", sets: 4, reps: "8-12", tag: "SHOULDER" },
             { name: "Ab Wheel", sets: 3, reps: "8-12", tag: "CORE" },
             { name: "Decline Oblique Crunches", sets: 3, reps: "8-12", tag: "CORE" }
         ]
@@ -62,7 +62,7 @@ const PLAN_BARTEK = [
             { name: "Bench Press", sets: 3, reps: "5-8", tag: "CHEST" },
             { name: "Cable Flyes (Low to High)", sets: 3, reps: "8-12", tag: "CHEST" },
             { name: "Single-Arm Lat Pulldown", sets: 3, reps: "6-10", tag: "BACK" },
-            { name: "Cable Lateral Raise", sets: 4, reps: "8-12", tag: "DELTS" },
+            { name: "Cable Lateral Raise", sets: 4, reps: "8-12", tag: "SHOULDER" },
             { name: "EZ-bar Preacher Curl", sets: 3, reps: "8-12", tag: "BICEPS" },
             { name: "Incline Skull Crushers", sets: 3, reps: "8-12", tag: "TRICEPS" },
             { name: "Cable Crunch", sets: 4, reps: "8-12", tag: "CORE" }
@@ -90,6 +90,12 @@ const copyPlan = (plan) =>
         exercises: (day.exercises || []).map((ex) => ({ ...ex }))
     }));
 
+const canonicalTag = (tag) => {
+    const t = String(tag || "CORE").trim().toUpperCase();
+    if (t === "DELTS") return "SHOULDER";
+    return t;
+};
+
 const applyCustomPlan = () => {
     const overrides = state && state.customPlan;
     if (overrides && typeof overrides === "object") {
@@ -101,7 +107,8 @@ const applyCustomPlan = () => {
                     name: String(ex && ex.name || "").trim(),
                     sets: Math.max(1, Math.min(30, Number(ex && ex.sets) || 1)),
                     reps: String(ex && ex.reps || "").trim(),
-                    tag: String(ex && ex.tag || "CORE").trim().toUpperCase() || "CORE"
+                    tag: canonicalTag(ex && ex.tag) || "CORE",
+                    rest: Math.max(0, Math.min(600, Number(ex && ex.rest) || 0))
                 }))
                 .filter((ex) => ex.name);
             if (cleaned.length) {
@@ -373,22 +380,18 @@ const ensureWorkoutDataExists = (dayId, exerciseIndex, setsCount) => {
     }
 };
 
-const getTrendUI = (curr, prev) => {
-    if (!prev || !prev.done || !curr.done) {
-        return '<span class="t-empty"></span>';
-    }
-
+// Porównanie serii z poprzednim tygodniem -> klucz statusu (null gdy brak danych).
+const getTrend = (curr, prev) => {
+    if (!curr || !curr.done || !prev || !prev.done) return null;
     const cKg = parseFloat(curr.kg) || 0;
     const pKg = parseFloat(prev.kg) || 0;
     const cR = parseFloat(curr.reps) || 0;
     const pR = parseFloat(prev.reps) || 0;
-
-    if (cKg > pKg) return '<span class="t-up">▲ CIĘŻAR</span>';
-    if (cKg < pKg) return '<span class="t-down">▼ CIĘŻAR</span>';
-    if (cR > pR) return '<span class="t-up">▲ POWT.</span>';
-    if (cR < pR) return '<span class="t-down">▼ POWT.</span>';
-
-    return '<span class="t-base">= BAZA</span>';
+    if (cKg > pKg) return "w-up";
+    if (cKg < pKg) return "w-down";
+    if (cR > pR) return "r-up";
+    if (cR < pR) return "r-down";
+    return "base";
 };
 
 const renderCurrentView = () => {
@@ -409,7 +412,7 @@ const renderCurrentView = () => {
         getWeekDaysUI,
         ensureWorkoutDataExists,
         logBodyWeight,
-        getTrendUI,
+        getTrend,
         currentProfileName,
         getManagePlan: () => managePlan
     };
@@ -657,12 +660,22 @@ const toggleSet = (ei, i) => {
     if (set.done) {
         const settings = state.settings || {};
         if (settings.restEnabled !== false) {
-            const seconds = Number(settings.restSeconds) > 0 ? Number(settings.restSeconds) : 90;
+            const day = DAYS.find((d) => d && d.id === currentDayId) || null;
+            const ex = day ? day.exercises[ei] : null;
+            let seconds = window.Utils.defaultRestSeconds(ex && ex.reps);
+            if (ex && Number(ex.rest) > 0) seconds = Number(ex.rest);
+            if (!(seconds > 0)) seconds = Number(settings.restSeconds) > 0 ? Number(settings.restSeconds) : 90;
             startRestTimer(seconds);
         }
     }
 
     persistState();
+    renderCurrentView();
+};
+
+const toggleExerciseExpand = (ei) => {
+    if (currentDayId === null) return;
+    if (window.Views.toggleExExpand) window.Views.toggleExExpand(currentDayId, ei);
     renderCurrentView();
 };
 
@@ -704,6 +717,7 @@ const resetWorkout = () => {
     });
 
     persistState();
+    if (window.Views.clearExpanded) window.Views.clearExpanded();
     openDay(currentDayId);
 };
 
@@ -1005,9 +1019,8 @@ const handleBackupImport = () => {
 
 let managePlan = null;
 
-const openManage = () => {
-    closeMoreSheet();
-    managePlan = DAYS.map((day) => ({
+const managePlanFromDays = () =>
+    DAYS.map((day) => ({
         dayId: day.id,
         name: day.name,
         label: day.label,
@@ -1017,9 +1030,14 @@ const openManage = () => {
             name: ex.name,
             sets: ex.sets,
             reps: ex.reps,
-            tag: ex.tag
+            tag: ex.tag,
+            rest: Number(ex.rest) > 0 ? Number(ex.rest) : window.Utils.defaultRestSeconds(ex.reps)
         }))
     }));
+
+const openManage = () => {
+    closeMoreSheet();
+    managePlan = managePlanFromDays();
     currentView = "manage";
     renderCurrentView();
 };
@@ -1029,6 +1047,8 @@ const manageEditField = (dayIdx, ei, field, value) => {
     const ex = managePlan[dayIdx].exercises[ei];
     if (field === "sets") {
         ex.sets = Math.max(1, Math.min(30, parseInt(value, 10) || 1));
+    } else if (field === "rest") {
+        ex.rest = Math.max(0, Math.min(600, parseInt(value, 10) || 0));
     } else {
         ex[field] = value;
     }
@@ -1040,7 +1060,8 @@ const manageAddExercise = (dayIdx) => {
         name: "Nowe ćwiczenie",
         sets: 3,
         reps: "8-12",
-        tag: "CORE"
+        tag: "CORE",
+        rest: window.Utils.defaultRestSeconds("8-12")
     });
     renderCurrentView();
     const inputs = document.querySelectorAll("#screen-manage .mg-ex-row input.mg-name");
@@ -1081,7 +1102,8 @@ const manageSave = () => {
                 name: String(ex.name || "").trim(),
                 sets: ex.sets,
                 reps: String(ex.reps || "").trim(),
-                tag: String(ex.tag || "CORE").trim().toUpperCase() || "CORE"
+                tag: canonicalTag(ex.tag) || "CORE",
+                rest: Math.max(0, Math.min(600, Number(ex.rest) || 0))
             }))
             .filter((ex) => ex.name);
         if (cleaned.length) customPlan[day.dayId] = cleaned;
@@ -1107,19 +1129,7 @@ const manageResetPlan = () => {
     state.customPlanMeta = {};
     applyCustomPlan();
     persistState();
-    managePlan = DAYS.map((day) => ({
-        dayId: day.id,
-        name: day.name,
-        label: day.label,
-        icon: day.icon,
-        color: day.color,
-        exercises: day.exercises.map((ex) => ({
-            name: ex.name,
-            sets: ex.sets,
-            reps: ex.reps,
-            tag: ex.tag
-        }))
-    }));
+    managePlan = managePlanFromDays();
     renderCurrentView();
     showToast("Przywrócono domyślny plan");
 };
@@ -1273,6 +1283,7 @@ window.toggleNoteBox = toggleNoteBox;
 window.updateNote = updateNote;
 window.updateSet = updateSet;
 window.toggleSet = toggleSet;
+window.toggleExerciseExpand = toggleExerciseExpand;
 window.resetWorkout = resetWorkout;
 window.authSubmit = authSubmit;
 window.toggleAuthMode = toggleAuthMode;

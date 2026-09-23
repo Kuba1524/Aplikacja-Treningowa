@@ -46,3 +46,26 @@ describe("getCurrentSunday", () => {
         expect(sunday.getMinutes()).toBe(0);
     });
 });
+
+describe("defaultRestSeconds", () => {
+    it("returns a long rest for heavy compound rep ranges", () => {
+        expect(U().defaultRestSeconds("5-8")).toBe(165);
+        expect(U().defaultRestSeconds("6-8")).toBe(165);
+        expect(U().defaultRestSeconds("6-10")).toBe(165);
+    });
+
+    it("returns a moderate rest for mid rep ranges", () => {
+        expect(U().defaultRestSeconds("8-10")).toBe(105);
+        expect(U().defaultRestSeconds("8-12")).toBe(105);
+    });
+
+    it("returns a short rest for high-rep isolation work", () => {
+        expect(U().defaultRestSeconds("10-15")).toBe(75);
+    });
+
+    it("tolerates dashes used in the UI and single numbers", () => {
+        expect(U().defaultRestSeconds("10–15")).toBe(75);
+        expect(U().defaultRestSeconds("8")).toBe(105);
+        expect(U().defaultRestSeconds("")).toBe(105);
+    });
+});

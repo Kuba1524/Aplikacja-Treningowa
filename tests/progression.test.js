@@ -105,4 +105,116 @@ describe("computeExercisePlan", () => {
         expect(plan.targets[0]).toBe(null);
         expect(plan.targets[1]).toBe(8);
     });
+
+    it("equal sets across all series -> non-generic reason", () => {
+        const prev = [
+            { kg: 50, reps: 11, done: true },
+            { kg: 50, reps: 11, done: true },
+            { kg: 50, reps: 11, done: true },
+            { kg: 50, reps: 11, done: true }
+        ];
+        const plan = P().computeExercisePlan({ name: "T", sets: 4, reps: "8-12" }, prev);
+        expect(plan.reason).toMatch(/na równym poziomie \(11 powt\.\)/);
+        expect(plan.reason).toContain("12");
+    });
+
+    it("only one set behind -> pinpoints that set", () => {
+        const prev = [
+            { kg: 60, reps: 10, done: true },
+            { kg: 60, reps: 10, done: true },
+            { kg: 60, reps: 10, done: true },
+            { kg: 60, reps: 9, done: true }
+        ];
+        const plan = P().computeExercisePlan({ name: "T", sets: 4, reps: "8-10" }, prev);
+        expect(plan.tier).toBe("catch-up");
+        expect(plan.reason).toMatch(/zostaje dogonić tylko serię 4/);
+        expect(plan.reason).toContain("brak 1 do 10");
+    });
+
+    it("mixed results -> names the split and the top sets", () => {
+        const prev = [
+            { kg: 50, reps: 9, done: true },
+            { kg: 50, reps: 9, done: true },
+            { kg: 50, reps: 9, done: true },
+            { kg: 50, reps: 10, done: true }
+        ];
+        const plan = P().computeExercisePlan({ name: "T", sets: 4, reps: "8-10" }, prev);
+        expect(plan.reason).toMatch(/3 z 4 serii wymagają/);
+        expect(plan.reason).toContain("górną granicę (10)");
+        expect(plan.reason).toContain("1 seria");
+    });
+
+    it("increase reason mentions the exact next working weight", () => {
+        const prev = [
+            { kg: 50, reps: 10, done: true },
+            { kg: 50, reps: 10, done: true },
+            { kg: 50, reps: 10, done: true }
+        ];
+        const plan = P().computeExercisePlan({ name: "T", sets: 3, reps: "8-10" }, prev);
+        expect(plan.tier).toBe("increase");
+        expect(plan.nextKg).toBe(52.5);
+        expect(plan.reason).toContain("52,5");
+        expect(plan.reason.length).toBeGreaterThan(30);
+    });
+
+    it("different exercise names produce different wording for the same tier", () => {
+        const prev = [
+            { kg: 50, reps: 10, done: true },
+            { kg: 50, reps: 10, done: true },
+            { kg: 50, reps: 10, done: true }
+        ];
+        const planA = P().computeExercisePlan({ name: "Bench", sets: 3, reps: "8-10" }, prev);
+        const planB = P().computeExercisePlan({ name: "Squat", sets: 3, reps: "8-10" }, prev);
+        expect(planA.reason).not.toBe(planB.reason);
+    });
+});
+
+describe("summarizeCompleted", () => {
+    it("returns null when nothing was performed", () => {
+        expect(P().summarizeCompleted({ name: "x", sets: 2, reps: "8-10" }, [{ kg: 0, reps: 0, done: false }])).toBe(null);
+        expect(P().summarizeCompleted({ name: "x", sets: 2, reps: "8-10" }, [])).toBe(null);
+    });
+
+    it("all sets on top -> announces the next heavier weight", () => {
+        const sets = [
+            { kg: 50, reps: 10, done: true },
+            { kg: 50, reps: 10, done: true }
+        ];
+        const prev = [
+            { kg: 50, reps: 9, done: true },
+            { kg: 50, reps: 9, done: true }
+        ];
+        const text = P().summarizeCompleted({ name: "x", sets: 2, reps: "8-10" }, sets, prev);
+        expect(text).toContain("52,5 kg");
+        expect(text).toContain("górnej granicy");
+    });
+
+    it("mixed outcome -> summarizes what happened", () => {
+        const sets = [
+            { kg: 50, reps: 10, done: true },
+            { kg: 50, reps: 9, done: true },
+            { kg: 50, reps: 9, done: true }
+        ];
+        const prev = [
+            { kg: 50, reps: 9, done: true },
+            { kg: 50, reps: 9, done: true },
+            { kg: 50, reps: 9, done: true }
+        ];
+        const text = P().summarizeCompleted({ name: "x", sets: 3, reps: "8-10" }, sets, prev);
+        expect(text).toMatch(/1 z 3 serii poszła w górę/);
+        expect(text).toMatch(/2 z 3 serii bez zmian/);
+    });
+
+    it("mentions a lowered result instead of echoing pre-workout instruction", () => {
+        const sets = [
+            { kg: 50, reps: 8, done: true },
+            { kg: 50, reps: 8, done: true }
+        ];
+        const prev = [
+            { kg: 50, reps: 10, done: true },
+            { kg: 50, reps: 10, done: true }
+        ];
+        const text = P().summarizeCompleted({ name: "x", sets: 2, reps: "8-10" }, sets, prev);
+        expect(text).toMatch(/2 z 2 serii poniżej zeszłotygodniowego wyniku/);
+    });
 });

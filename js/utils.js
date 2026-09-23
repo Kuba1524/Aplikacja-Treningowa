@@ -45,12 +45,26 @@ window.Utils = (() => {
         return `${startTxt} – ${endTxt}`;
     };
 
+    // Proponowany domyślny czas odpoczynku wg zakresu powtórzeń (dolna granica):
+    // ciężkie złożone (5-8 powt.) -> 150-180s, umiarkowane (8-12) -> 90-120s,
+    // małe partie / wysokie powt. (10-15+) -> 60-90s.
+    const defaultRestSeconds = (reps = "") => {
+        const txt = String(reps).trim().replace(/[–—]/g, "-");
+        const parts = txt.split("-").map((x) => parseInt(x, 10));
+        const nums = parts.filter((n) => Number.isFinite(n) && n > 0);
+        const low = nums.length ? nums[0] : 8;
+        if (low >= 10) return 75;
+        if (low >= 8) return 105;
+        return 165;
+    };
+
     return {
         formatNumberPL,
         escapeHtml,
         estimate1RM,
         getTodayWeekday,
         getCurrentSunday,
-        getWeekRangeLabel
+        getWeekRangeLabel,
+        defaultRestSeconds
     };
 })();

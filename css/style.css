@@ -981,10 +981,34 @@ button {
     border-color: rgba(88,166,255,0.4);
 }
 
-.tag-LEGS, .tag-QUADS, .tag-HAM, .tag-GLUTES, .tag-CALVES {
-    background: rgba(63,185,80,0.13);
-    color: #56d364;
-    border-color: rgba(63,185,80,0.4);
+.tag-LEGS {
+    background: rgba(232,121,249,0.13);
+    color: #e879f9;
+    border-color: rgba(232,121,249,0.4);
+}
+
+.tag-GLUTES {
+    background: rgba(244,114,182,0.13);
+    color: #f9a8d4;
+    border-color: rgba(244,114,182,0.4);
+}
+
+.tag-QUADS {
+    background: rgba(178,131,71,0.14);
+    color: #d8b27c;
+    border-color: rgba(178,131,71,0.5);
+}
+
+.tag-HAM {
+    background: rgba(251,191,36,0.13);
+    color: #fcd34d;
+    border-color: rgba(251,191,36,0.4);
+}
+
+.tag-CALVES {
+    background: rgba(56,189,248,0.13);
+    color: #7dd3fc;
+    border-color: rgba(56,189,248,0.4);
 }
 
 .tag-BICEPS, .tag-TRICEPS, .tag-FOREARMS {
@@ -1207,7 +1231,8 @@ button {
     font-size: 13px;
     color: #748397;
     font-weight: 700;
-    font-family: "JetBrains Mono", monospace;
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    font-variant-numeric: tabular-nums;
 }
 
 .trend-badge {
@@ -1245,7 +1270,8 @@ button {
     font-size: 20px;
     font-weight: 800;
     display: block;
-    font-family: "JetBrains Mono", monospace;
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    font-variant-numeric: tabular-nums;
 }
 
 .stat-lab {
@@ -1543,6 +1569,122 @@ button {
     color: var(--text-dim);
 }
 
+/* ===== "Wymaga uwagi" – stagnacja (neutralny żółty ostrzegawczy) ===== */
+.stale-list {
+    display: grid;
+    gap: 8px;
+}
+
+.stale-section .stale-list .stale-row:nth-child(n+6) {
+    display: none;
+}
+
+.stale-section.show-all .stale-list .stale-row:nth-child(n+6) {
+    display: flex;
+}
+
+.stale-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: color-mix(in srgb, #f5c518 7%, transparent);
+    border: 1px solid color-mix(in srgb, #f5c518 22%, transparent);
+}
+
+.stale-ico {
+    font-size: 15px;
+    line-height: 1;
+}
+
+.stale-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.stale-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.stale-bw {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: var(--text-dim);
+    background: color-mix(in srgb, var(--text-dim) 12%, transparent);
+    vertical-align: 1px;
+}
+
+.stale-sub {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+.stale-kg {
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 800;
+    color: #f5c518;
+}
+
+.stale-more {
+    margin-top: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid color-mix(in srgb, #f5c518 25%, transparent);
+    background: color-mix(in srgb, #f5c518 6%, transparent);
+    color: #f5c518;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.stale-more:hover {
+    background: color-mix(in srgb, #f5c518 12%, transparent);
+}
+
+/* ===== Objętość tygodniowa wg partii ===== */
+.vol-list {
+    display: grid;
+    gap: 9px;
+}
+
+.vol-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.vol-track {
+    height: 8px;
+    border-radius: 999px;
+    background: var(--bg-soft);
+    overflow: hidden;
+}
+
+.vol-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent-2) 75%, transparent);
+}
+
+.vol-sets {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--text-main);
+    white-space: nowrap;
+}
+
 /* Heatmapa aktywności – wiersze ND / PN / ŚR / PT */
 /* ===== Activity – OpenGym style ===== */
 .cal-wrap {
@@ -1747,6 +1889,62 @@ html[data-theme="proton"] .cal-cell.l4 { background: #6D4AFF; }
     height: 90px;
     display: block;
     margin-top: 6px;
+}
+
+.bw-line-raw {
+    fill: none;
+    stroke: var(--success);
+    stroke-width: 1.5;
+    opacity: 0.38;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.bw-line-avg {
+    fill: none;
+    stroke: var(--accent-2, #a78bfa);
+    stroke-width: 3;
+    opacity: 0.95;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.bw-dot-avg {
+    fill: var(--accent-2, #a78bfa);
+}
+
+.bw-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--text-dim);
+    align-items: center;
+}
+
+.bw-leg-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.bw-leg-swatch {
+    display: inline-block;
+    border-radius: 2px;
+}
+
+.bw-leg-swatch.raw {
+    width: 14px;
+    height: 2px;
+    background: var(--success);
+    opacity: 0.5;
+}
+
+.bw-leg-swatch.avg {
+    width: 14px;
+    height: 4px;
+    background: var(--accent-2, #a78bfa);
 }
 
 .bw-form {
@@ -2145,6 +2343,12 @@ html[data-theme="proton"] .cal-cell.l4 {
     border: 1px solid var(--border);
 }
 
+.chip.neutral {
+    background: rgba(148,163,184,0.1);
+    color: var(--text-soft);
+    border: 1px solid rgba(148,163,184,0.28);
+}
+
 .bw-chart {
     width: 100%;
     height: 96px;
@@ -2386,6 +2590,43 @@ html[data-theme="proton"] .plan-mode-toggle {
     background: linear-gradient(135deg, var(--accent), var(--accent-2));
     color: #fff;
     box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.week-tabs-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+}
+
+.week-tabs-wrap::before,
+.week-tabs-wrap::after {
+    content: "";
+    position: absolute;
+    top: -6px;
+    bottom: -2px;
+    width: 28px;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 0.18s ease;
+}
+
+.week-tabs-wrap::before {
+    left: 0;
+    background: linear-gradient(to right, var(--bg) 20%, transparent);
+    border-radius: 14px 0 0 14px;
+}
+
+.week-tabs-wrap::after {
+    right: 0;
+    background: linear-gradient(to left, var(--bg) 20%, transparent);
+    border-radius: 0 14px 14px 0;
+}
+
+.week-tabs-wrap.can-left::before,
+.week-tabs-wrap.can-right::after {
+    opacity: 1;
 }
 
 .plan-week-tabs {
@@ -3830,6 +4071,10 @@ html[data-theme="proton"] .tag-cat { background: linear-gradient(135deg, var(--a
     text-align: center;
 }
 
+.mg-rest {
+    width: 64px;
+}
+
 .mg-tag {
     flex-shrink: 0;
     padding: 7px 8px;
@@ -4206,14 +4451,34 @@ html[data-theme="light"] .tag-BACK {
     border-color: rgba(30,111,203,0.45);
 }
 
-html[data-theme="light"] .tag-LEGS,
-html[data-theme="light"] .tag-QUADS,
-html[data-theme="light"] .tag-HAM,
-html[data-theme="light"] .tag-GLUTES,
+html[data-theme="light"] .tag-LEGS {
+    background: rgba(162,28,175,0.1);
+    color: #a21caf;
+    border-color: rgba(162,28,175,0.4);
+}
+
+html[data-theme="light"] .tag-GLUTES {
+    background: rgba(190,24,93,0.1);
+    color: #be185d;
+    border-color: rgba(190,24,93,0.4);
+}
+
+html[data-theme="light"] .tag-QUADS {
+    background: rgba(122,74,23,0.12);
+    color: #7a4a17;
+    border-color: rgba(122,74,23,0.45);
+}
+
+html[data-theme="light"] .tag-HAM {
+    background: rgba(180,83,9,0.1);
+    color: #b45309;
+    border-color: rgba(180,83,9,0.4);
+}
+
 html[data-theme="light"] .tag-CALVES {
-    background: rgba(24,140,55,0.1);
-    color: #1b7a36;
-    border-color: rgba(24,140,55,0.45);
+    background: rgba(3,105,161,0.1);
+    color: #0369a1;
+    border-color: rgba(3,105,161,0.4);
 }
 
 html[data-theme="light"] .tag-BICEPS,
@@ -4231,6 +4496,75 @@ html[data-theme="light"] .tag-CORE {
 }
 
 /* ===== Poprawki UI/UX (dodane 2026-09) ===== */
+
+/* Zbiorcza odznaka statusu całego ćwiczenia (nagłówek karty) */
+.ex-trend {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.ex-trend.t-up { color: var(--success); }
+.ex-trend.t-down { color: #94a3b8; }
+.ex-trend.t-base { color: #94a3b8; }
+
+/* Ukończone ćwiczenie -> widoczny przycisk rozwijania/zwijania (cel min. 44px) */
+.ex-expand-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 12px;
+    margin: 0 0 12px;
+    border-radius: 10px;
+    border: 1px dashed color-mix(in srgb, var(--text-dim) 35%, transparent);
+    background: color-mix(in srgb, var(--text-dim) 5%, transparent);
+    color: var(--text-dim);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.ex-expand-btn:active {
+    background: color-mix(in srgb, var(--text-dim) 12%, transparent);
+}
+
+.ex-expand-btn .ex-chev {
+    margin-left: 0;
+    color: var(--accent-2);
+    font-size: 12px;
+}
+
+.ex-expand-btn .ex-btn-label {
+    text-transform: uppercase;
+}
+
+/* Podsumowanie zamiast instrukcji po ukończeniu ćwiczenia */
+.prog-card.completed {
+    border-color: color-mix(in srgb, var(--success) 35%, transparent);
+    background: color-mix(in srgb, var(--success) 8%, transparent);
+}
+
+.prog-card.completed::before {
+    content: "✓ Ukończone";
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--success);
+    margin-bottom: 5px;
+}
+
+.prog-card.completed .prog-detail {
+    color: color-mix(in srgb, var(--text-main) 88%, var(--success));
+}
 
 /* Zrobiona seria -> zwinięta do jednej linii podsumowania (klikalna) */
 .set-row.collapsed {
@@ -4262,13 +4596,6 @@ html[data-theme="light"] .tag-CORE {
     font-weight: 900;
     font-size: 15px;
 }
-.set-summary-sub {
-    margin-top: 8px;
-    font-size: 11px;
-    color: var(--text-dim);
-    padding-left: 44px;
-}
-.set-summary-sub .trend-badge { margin-top:  catastrophe?; }
 
 /* Cel serii - jednolity styl */
 .set-goal {
@@ -4326,7 +4653,8 @@ html[data-theme="light"] .tag-CORE {
     display: flex;
     align-items: center;
     gap: 10px;
-    font-family: "JetBrains Mono", monospace;
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    font-variant-numeric: tabular-nums;
 }
 .rest-timer-bar.open {
     transform: translateX(-50%) translateY(0);

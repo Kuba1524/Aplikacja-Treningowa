@@ -32,6 +32,37 @@ window.Views = (() => {
         );
     };
 
+    // Gradient na krawędzi paska zakładek tygodni, widoczny tylko gdy da się
+    // przewinąć w danym kierunku.
+    const updateTabEdges = (el) => {
+        if (!el || !el.closest) return;
+        const wrap = el.closest(".week-tabs-wrap");
+        if (!wrap) return;
+        wrap.classList.toggle("can-left", el.scrollLeft > 2);
+        wrap.classList.toggle("can-right", el.scrollWidth - el.scrollLeft - el.clientWidth > 2);
+    };
+    window.updateTabEdges = updateTabEdges;
+
+    // Etykiety statusu serii vs poprzedni tydzień (klucz -> klasa + tekst).
+    const TREND_META = {
+        "w-up": { cls: "t-up", label: "▲ CIĘŻAR" },
+        "w-down": { cls: "t-down", label: "▼ CIĘŻAR" },
+        "r-up": { cls: "t-up", label: "▲ POWT." },
+        "r-down": { cls: "t-down", label: "▼ POWT." },
+        base: { cls: "t-base", label: "= BAZA" }
+    };
+
+    // Ręcznie rozwinięte (niezwinięte) karty ukończonych ćwiczeń.
+    const expandedEx = {};
+    const toggleExExpand = (dayId, ei) => {
+        const key = dayId + "|" + ei;
+        expandedEx[key] = !expandedEx[key];
+        return expandedEx[key];
+    };
+    const clearExpanded = () => {
+        Object.keys(expandedEx).forEach((k) => delete expandedEx[k]);
+    };
+
     const MISC_ICONS = {
         calendar:
             '<path d="M8 2v4M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>',
@@ -244,22 +275,32 @@ window.Views = (() => {
                         <button class="seg-btn ${isFullPlan ? "active" : ""}" onclick="setPlanMode(true)">Pełny plan</button>
                         <button class="seg-btn ${!isFullPlan ? "active" : ""}" onclick="setPlanMode(false)">Wybierz dzień</button>
                     </div>
-                    <div class="plan-week-tabs">
-                        ${state.weeks.map((_, w) => {
-                            const summary = ctx.getWeekCompletion(w);
-                            return `
-                                <button class="week-btn ${currentWeekIndex === w ? "active" : ""}" onclick="setWeek(${w})">
-                                    TYDZIEŃ ${w + 1}
-                                    <span class="week-mini">${summary.pct}%</span>
-                                </button>
-                            `;
-                        }).join("")}
+                    <div class="week-tabs-wrap">
+                        <div class="plan-week-tabs">
+                            ${state.weeks.map((_, w) => {
+                                const summary = ctx.getWeekCompletion(w);
+                                return `
+                                    <button class="week-btn ${currentWeekIndex === w ? "active" : ""}" onclick="setWeek(${w})">
+                                        TYDZIEŃ ${w + 1}
+                                        <span class="week-mini">${summary.pct}%</span>
+                                    </button>
+                                `;
+                            }).join("")}
+                        </div>
                     </div>
                 </div>
 
                 ${isFullPlan ? renderFullPlan(DAYS, getDayProgress, getExerciseKey, ctx) : renderCompactPlan(DAYS, getDayProgress)}
             </div>
         `;
+
+        requestAnimationFrame(() => {
+            const tabs = screen.querySelector(".plan-week-tabs");
+            if (tabs) {
+                tabs.addEventListener("scroll", () => updateTabEdges(tabs), { passive: true });
+                updateTabEdges(tabs);
+            }
+        });
     };
 
     const renderFullPlan = (DAYS, getDayProgress, getExerciseKey, ctx) => {
@@ -423,7 +464,15 @@ window.Views = (() => {
         const weekComp = ctx.getWeekCompletion
             ? ctx.getWeekCompletion(currentWeekIndex)
             : { total: 0, done: 0, pct: 0 };
-        const prs = S.getPrimaryExercises(state, DAYS, ctx.getExerciseKey);
+        const prs = S.getPrimaryExercises(state, DAYS, ctx.getExerciseKey, ctx.getDayTimestampKey);
+        const stale = S.getStagnantExercises
+            ? S.getStagnantExercises(state, DAYS, ctx.getExerciseKey)
+            : [];
+        let volume = S.getWeeklyVolume ? S.getWeeklyVolume(DAYS) : [];
+        if (volume && volume.length) {
+            const maxSets = Math.max(...volume.map((v) => v.sets));
+            volume = volume.map((v) => ({ ...v, pct: maxSets ? Math.round((v.sets / maxSets) * 100) : 0 }));
+        }
 
         const cal = S.getActivityCalendar
             ? S.getActivityCalendar(state, DAYS, ctx.getExerciseKey, ctx.getDayTimestampKey, statsMaxCols)
@@ -468,9 +517,14 @@ window.Views = (() => {
             .join("");
 
         let bwSpark = "";
-        if (bw.values && bw.values.length > 1 && S.createSparklineSVG) {
-            bwSpark = S.createSparklineSVG(bw.values, "#22c55e")
-                .replace('class="pr-sparkline"', 'class="bw-chart"');
+        let bwLegend = "";
+        if (bw.values && bw.values.length > 1 && S.createWeightChartSVG) {
+            bwSpark = S.createWeightChartSVG(bw.entries);
+            bwLegend = `
+                <div class="bw-legend">
+                    <span class="bw-leg-item"><span class="bw-leg-swatch raw"></span>Pomiar dzienny</span>
+                    <span class="bw-leg-item"><span class="bw-leg-swatch avg"></span>Średnia 7-dniowa</span>
+                </div>`;
         }
 
         const lastBwEntry = bw.entries && bw.entries.length
@@ -482,18 +536,16 @@ window.Views = (() => {
 
         let lastChip = "";
         if (typeof bw.delta === "number" && bw.delta !== 0) {
-            const dir = bw.delta > 0 ? "up" : "down";
             const arrow = bw.delta > 0 ? "▲" : "▼";
-            lastChip = `<span class="chip ${dir}">${arrow} ${U.formatNumberPL(Math.abs(bw.delta))} kg</span>`;
+            lastChip = `<span class="chip neutral">${arrow} ${U.formatNumberPL(Math.abs(bw.delta))} kg</span>`;
         } else if (bw.last !== null) {
             lastChip = '<span class="chip flat">bez zmian</span>';
         }
 
         let d30Chip = "";
         if (typeof bw.delta30 === "number") {
-            const cls = bw.delta30 <= 0 ? "down" : "up";
             const sign = bw.delta30 > 0 ? "+" : "";
-            d30Chip = `<span class="chip ${cls}">${sign}${U.formatNumberPL(bw.delta30)} kg / 30d</span>`;
+            d30Chip = `<span class="chip neutral">${sign}${U.formatNumberPL(bw.delta30)} kg / 30d</span>`;
         }
 
         const weekDaysOverview = DAYS.map((day) => {
@@ -562,6 +614,11 @@ window.Views = (() => {
                         ? `${U.formatNumberPL(first)} → ${U.formatNumberPL(last)} kg`
                         : "";
 
+                const lastPR = S.getLastPR ? S.getLastPR(history) : null;
+                const prDate = lastPR && lastPR.ts
+                    ? new Date(lastPR.ts).toLocaleDateString("pl-PL", { day: "numeric", month: "short" })
+                    : "—";
+
                 return `
                 <div class="pr-card">
                     <div class="pr-card-top">
@@ -582,12 +639,12 @@ window.Views = (() => {
                             <span class="pr-cell-val">${est1RM ? est1RM + " kg" : "—"}</span>
                         </div>
                         <div class="pr-cell">
-                            <span class="pr-cell-lab">Zapisów</span>
+                            <span class="pr-cell-lab">Sesji</span>
                             <span class="pr-cell-val">${history.length}</span>
                         </div>
                         <div class="pr-cell">
-                            <span class="pr-cell-lab">Top kg</span>
-                            <span class="pr-cell-val">${last ? U.formatNumberPL(last) : "—"}</span>
+                            <span class="pr-cell-lab">Ostatni PR</span>
+                            <span class="pr-cell-val">${prDate}</span>
                         </div>
                     </div>
                 </div>`;
@@ -658,6 +715,54 @@ window.Views = (() => {
                         </div>
                     </section>
 
+                    ${stale && stale.length ? `
+                    <section class="stats-section stale-section">
+                        <div class="stats-section-head">
+                            <div>
+                                <div class="stats-section-title">Wymaga uwagi</div>
+                                <div class="stats-section-sub">Ciężar i powtórzenia bez zmian w kolejnych sesjach</div>
+                            </div>
+                        </div>
+                        <div class="stale-list">
+                            ${stale.map((s) => `
+                                <div class="stale-row">
+                                    <span class="stale-ico">⚠</span>
+                                    <div class="stale-main">
+                                        <div class="stale-name">${s.name}${s.bodyweight ? ' <span class="stale-bw">masa własna</span>' : ""}</div>
+                                        ${s.bodyweight
+                                            ? `<div class="stale-sub">bez zmian w powtórzeniach od ${s.streak} sesji (${s.reps} powt.)</div>`
+                                            : `<div class="stale-sub">bez zmian od ${s.streak} sesji</div>`}
+                                    </div>
+                                    ${s.bodyweight ? "" : `<span class="stale-kg">${U.formatNumberPL(s.kg)} kg</span>`}
+                                </div>
+                            `).join("")}
+                        </div>
+                        ${stale.length > 5 ? `
+                        <button type="button" class="stale-more" onclick="this.closest('.stale-section').classList.add('show-all');this.remove()">Pokaż wszystkie (${stale.length})</button>
+                        ` : ""}
+                    </section>
+                    ` : ""}
+
+                    ${volume && volume.length ? `
+                    <section class="stats-section">
+                        <div class="stats-section-head">
+                            <div>
+                                <div class="stats-section-title">Objętość tygodniowa wg partii</div>
+                                <div class="stats-section-sub">Liczba serii na partię z aktualnego planu</div>
+                            </div>
+                        </div>
+                        <div class="vol-list">
+                            ${volume.map((v) => `
+                                <div class="vol-row">
+                                    <span class="tag-badge tag-${v.tag}">${v.tag}</span>
+                                    <div class="vol-track"><div class="vol-fill" style="width:${v.pct}%"></div></div>
+                                    <span class="vol-sets">${v.sets} ${v.sets === 1 ? "seria" : v.sets <= 4 ? "serie" : "serii"}</span>
+                                </div>
+                            `).join("")}
+                        </div>
+                    </section>
+                    ` : ""}
+
                     <section class="stats-section">
                         <div class="stats-section-head stacked">
                             <div class="stats-section-title">Regularność</div>
@@ -697,6 +802,7 @@ window.Views = (() => {
                         </div>
                         <div class="bw-chips-mini">${lastChip}${d30Chip}</div>
                         ${bwSpark || '<div class="bw-empty">Zapisz kilka pomiarów, aby zobaczyć wykres.</div>'}
+                        ${bwLegend}
                         <div class="bw-log-row">
                             <button type="button" class="btn-secondary" onclick="document.getElementById('bw-form').classList.toggle('open');this.classList.toggle('open')">${bw.last !== null ? "✎ Edytuj wagę" : "＋ Zapisz wagę"}</button>
                         </div>
@@ -795,7 +901,7 @@ window.Views = (() => {
                     <div class="workout-progress-fill" style="width:${progressPct}%;"></div>
                 </div>
 
-                ${day.exercises.map((ex, ei) => {
+${day.exercises.map((ex, ei) => {
                     const key = ctx.getExerciseKey(currentDayId, ei);
                     const noteKey = ctx.getNoteKey(currentDayId, ei);
 
@@ -808,126 +914,174 @@ window.Views = (() => {
 
                     const exDone = sets.filter((s) => s.done).length;
                     const exPct = ex.sets ? Math.round((exDone / ex.sets) * 100) : 0;
+                    const isComplete = ex.sets > 0 && exDone === ex.sets;
 
                     const prog = window.Progression && window.Progression.computeExercisePlan
                         ? window.Progression.computeExercisePlan(ex, prevSets)
                         : null;
-                    const progUI = buildProgUI(prog);
 
-                    return `
-                        <div class="exercise-card ${exDone === ex.sets ? "complete" : ""}">
-                            <div class="exercise-header">
-                                <div class="exercise-title-wrap">
-                                    <span class="tag-badge tag-${ex.tag}">${ex.tag}</span>
-                                    <div class="exercise-main">
-                                        <span class="ex-title">${ex.name}</span>
-                                        <div class="ex-reps-range">${ex.sets} serie × ${ex.reps} powtórzeń</div>
-                                    </div>
-                                </div>
-                                <div class="ex-circle ${exDone === ex.sets ? "complete" : ""}">
-                                    <span class="ex-circle-num">${exDone}/${ex.sets}</span>
-                                    ${exPct > 0 ? `<span class="ex-circle-pct">${exPct}%</span>` : ""}
-                                </div>
+                    // Ukończone ćwiczenie -> podsumowanie tego, co się wydarzyło;
+                    // w trakcie -> instrukcja planu na dziś.
+                    const planText = isComplete
+                        ? (window.Progression && window.Progression.summarizeCompleted
+                            ? window.Progression.summarizeCompleted(ex, sets, prevSets)
+                            : "")
+                        : buildProgUI(prog);
+                    const commentBlock = planText
+                        ? (isComplete
+                            ? `<div class="prog-card completed"><div class="prog-detail">${planText}</div></div>`
+                            : planText)
+                        : "";
+
+                    // Status serii vs poprzedni tydzień: gdy wszystkie serie mają ten
+                    // sam status -> jedna zbiorcza odznaka w nagłówku; per-seria tylko
+                    // gdy statusy się faktycznie różnią.
+                    const trendKeys = sets.map((s, i) =>
+                        prevSets && prevSets[i] ? ctx.getTrend(s, prevSets[i]) : null);
+                    const realKeys = trendKeys.filter((k) => k !== null);
+                    const uniform = realKeys.length > 0 && new Set(realKeys).size === 1;
+                    const aggKey = uniform ? realKeys[0] : null;
+                    const aggMeta = aggKey ? TREND_META[aggKey] : null;
+                    const aggHtml = aggMeta
+                        ? `<span class="ex-trend ${aggMeta.cls}">${aggMeta.label}</span>`
+                        : "";
+                    const expanded = !!expandedEx[currentDayId + "|" + ei];
+                    const collapsedCard = isComplete && !expanded;
+
+                    const headerInner = `
+                        <div class="exercise-title-wrap">
+                            <span class="tag-badge tag-${ex.tag}">${ex.tag}</span>
+                            <div class="exercise-main">
+                                <span class="ex-title">${ex.name}</span>
+                                <div class="ex-reps-range">${ex.sets} serie × ${ex.reps} powtórzeń</div>
+                                ${aggHtml}
                             </div>
+                        </div>
+                        <div class="ex-circle ${isComplete ? "complete" : ""}">
+                            <span class="ex-circle-num">${exDone}/${ex.sets}</span>
+                            ${exPct > 0 ? `<span class="ex-circle-pct">${exPct}%</span>` : ""}
+                        </div>
+                    `;
 
-                            <div class="ex-progress-track">
-                                <div class="ex-progress-fill" style="width:${exPct}%"></div>
+                    const headerPart = `<div class="exercise-header">${headerInner}</div>`;
+
+                    const expandBtn = isComplete
+                        ? `<button class="ex-expand-btn" onclick="toggleExerciseExpand(${ei})" aria-expanded="${expanded ? "true" : "false"}">
+                            <span class="ex-chev">${expanded ? "▾" : "▸"}</span>
+                            <span class="ex-btn-label">${expanded ? "Zwiń szczegóły" : "Pokaż serie"}</span>
+                        </button>`
+                        : "";
+
+                    const bodyPart = `
+                        <div class="ex-progress-track">
+                            <div class="ex-progress-fill" style="width:${exPct}%"></div>
+                        </div>
+
+                        ${commentBlock}
+
+                        ${prevNote && prevNote.trim() ? `
+                            <div class="history-note">
+                                <div class="history-note-label">Notatka z poprzedniego tygodnia</div>
+                                <div class="history-note-text">${window.Utils.escapeHtml(prevNote)}</div>
                             </div>
+                        ` : ""}
 
-                            ${progUI}
+                        <button id="note-toggle-${ei}" class="btn-note-toggle ${currentNote ? "active" : ""}" onclick="toggleNoteBox(${ei})">
+                            ${window.renderNoteBtnLabel(!!currentNote)}
+                        </button>
 
-                            ${prevNote && prevNote.trim() ? `
-                                <div class="history-note">
-                                    <div class="history-note-label">Notatka z poprzedniego tygodnia</div>
-                                    <div class="history-note-text">${window.Utils.escapeHtml(prevNote)}</div>
-                                </div>
-                            ` : ""}
+                        <div id="note-box-${ei}" class="note-box">
+                            <textarea
+                                class="note-input"
+                                rows="2"
+                                placeholder="Notatka do ćwiczenia (ból, wyniki, tempo, uwagi)..."
+                                oninput="updateNote(${ei}, this.value)"
+                            >${window.Utils.escapeHtml(currentNote || "")}</textarea>
+                        </div>
 
-                            <button id="note-toggle-${ei}" class="btn-note-toggle ${currentNote ? "active" : ""}" onclick="toggleNoteBox(${ei})">
-                                ${window.renderNoteBtnLabel(!!currentNote)}
-                            </button>
+                        <div class="sets-list">
+                            ${sets.map((s, i) => {
+                                const prev = prevSets && prevSets[i] ? prevSets[i] : null;
+                                const prevTxt = prev && prev.done
+                                    ? `${window.Utils.formatNumberPL(prev.kg)} kg × ${window.Utils.formatNumberPL(prev.reps)}`
+                                    : "";
+                                const prevKg = prev && prev.done && prev.kg ? prev.kg : "";
+                                const prevReps = prev && prev.done && prev.reps ? prev.reps : "";
 
-                            <div id="note-box-${ei}" class="note-box">
-                                <textarea
-                                    class="note-input"
-                                    rows="2"
-                                    placeholder="Notatka do ćwiczenia (ból, wyniki, tempo, uwagi)..."
-                                    oninput="updateNote(${ei}, this.value)"
-                                >${window.Utils.escapeHtml(currentNote || "")}</textarea>
-                            </div>
+                                const goalReps = prog && prog.targets && prog.targets[i] ? prog.targets[i] : "";
+                                const kgPh = prog && prog.tier === "increase" && prog.nextKg !== null
+                                    ? window.Utils.formatNumberPL(prog.nextKg)
+                                    : (prevKg || "");
+                                const repsPh = prog && goalReps ? goalReps : (prevReps || "");
 
+                                const trendKey = trendKeys[i] || null;
+                                const showSetTrend = trendKey !== null && !uniform;
+                                const trendHtml = showSetTrend && TREND_META[trendKey]
+                                    ? `<span class="trend-badge ${TREND_META[trendKey].cls}">${TREND_META[trendKey].label}</span>`
+                                    : "";
 
-                            <div class="sets-list">
-                                ${sets.map((s, i) => {
-                                    const prev = prevSets && prevSets[i] ? prevSets[i] : null;
-                                    const prevTxt = prev && prev.done
-                                        ? `${window.Utils.formatNumberPL(prev.kg)} kg × ${window.Utils.formatNumberPL(prev.reps)}`
-                                        : "";
-                                    const prevKg = prev && prev.done && prev.kg ? prev.kg : "";
-                                    const prevReps = prev && prev.done && prev.reps ? prev.reps : "";
-
-                                    const goalReps = prog && prog.targets && prog.targets[i] ? prog.targets[i] : "";
-                                    const kgPh = prog && prog.tier === "increase" && prog.nextKg !== null
-                                        ? window.Utils.formatNumberPL(prog.nextKg)
-                                        : (prevKg || "");
-                                    const repsPh = prog && goalReps ? goalReps : (prevReps || "");
-
-                                    if (s.done) {
-                                        return `
-                                            <div class="set-row done collapsed" onclick="toggleSet(${ei}, ${i})" title="Naciśnij, aby wrócić do edycji">
-                                                <div class="set-summary">
-                                                    <span class="set-pill done">S${i + 1}</span>
-                                                    <span class="set-summary-val">${s.kg ? window.Utils.formatNumberPL(parseFloat(s.kg)) : "—"} kg × ${s.reps || "—"}</span>
-                                                    <span class="trend-badge">${ctx.getTrendUI(s, prev)}</span>
-                                                    <span class="set-summary-check">✓</span>
-                                                </div>
-                                                ${prevTxt ? `<div class="set-summary-sub">↺ ${prevTxt}</div>` : ""}
-                                            </div>
-                                        `;
-                                    }
-
+                                if (s.done) {
                                     return `
-                                        <div class="set-row ">
-                                            <div class="set-top-row">
-                                                <span class="set-pill ">S${i + 1}</span>
-                                                ${goalReps ? `<span class="set-goal" title="Cel na dziś: ${goalReps} powtórzeń w serii">→ ${goalReps}</span>`
-                                            : (prev && prev.done && prog && prog.targets && prog.targets[i] === null
-                                                ? `<span class="set-goal hold" title="Ta seria jest już na górze zakresu (${prev.reps} powt.) — po prostu utrzymaj ten wynik.">utrzymaj</span>`
-                                                : "")}
-
-                                                <div class="input-group">
-                                                    <input
-                                                        type="number"
-                                                        step="0.1"
-                                                        value="${s.kg || ""}"
-                                                        placeholder="${kgPh || "0"}"
-                                                        oninput="updateSet(${ei}, ${i}, 'kg', this.value)"
-                                                    >
-                                                    <span>KG</span>
-                                                </div>
-
-                                                <div class="input-group">
-                                                    <input
-                                                        type="number"
-                                                        step="1"
-                                                        value="${s.reps || ""}"
-                                                        placeholder="${repsPh || "0"}"
-                                                        oninput="updateSet(${ei}, ${i}, 'reps', this.value)"
-                                                    >
-                                                    <span>POW</span>
-                                                </div>
-
-                                                <button class="btn-check " onclick="toggleSet(${ei}, ${i})">✓</button>
-                                            </div>
-
-                                            <div class="set-bottom-row">
-                                                <span class="prev-label">${prevTxt ? "↺ " + prevTxt : ""}</span>
-                                                <span class="trend-badge">${ctx.getTrendUI(s, prev)}</span>
+                                        <div class="set-row done collapsed" onclick="toggleSet(${ei}, ${i})" title="${prevTxt ? `Poprzedni tydzień: ${prevTxt}. Naciśnij, aby wrócić do edycji.` : "Naciśnij, aby wrócić do edycji"}">
+                                            <div class="set-summary">
+                                                <span class="set-pill done">S${i + 1}</span>
+                                                <span class="set-summary-val">${s.kg ? window.Utils.formatNumberPL(parseFloat(s.kg)) : "—"} kg × ${s.reps || "—"}</span>
+                                                ${trendHtml}
+                                                <span class="set-summary-check">✓</span>
                                             </div>
                                         </div>
                                     `;
-                                }).join("")}
-                            </div>
+                                }
+
+                                return `
+                                    <div class="set-row">
+                                        <div class="set-top-row">
+                                            <span class="set-pill">S${i + 1}</span>
+                                            ${goalReps ? `<span class="set-goal" title="Cel na dziś: ${goalReps} powtórzeń w serii">→ ${goalReps}</span>`
+                                        : (prev && prev.done && prog && prog.targets && prog.targets[i] === null
+                                            ? `<span class="set-goal hold" title="Ta seria jest już na górze zakresu (${prev.reps} powt.) — po prostu utrzymaj ten wynik.">utrzymaj</span>`
+                                            : "")}
+
+                                            <div class="input-group">
+                                                <input
+                                                    type="number"
+                                                    step="0.1"
+                                                    value="${s.kg || ""}"
+                                                    placeholder="${kgPh || "0"}"
+                                                    oninput="updateSet(${ei}, ${i}, 'kg', this.value)"
+                                                >
+                                                <span>KG</span>
+                                            </div>
+
+                                            <div class="input-group">
+                                                <input
+                                                    type="number"
+                                                    step="1"
+                                                    value="${s.reps || ""}"
+                                                    placeholder="${repsPh || "0"}"
+                                                    oninput="updateSet(${ei}, ${i}, 'reps', this.value)"
+                                                >
+                                                <span>POW</span>
+                                            </div>
+
+                                            <button class="btn-check " onclick="toggleSet(${ei}, ${i})">✓</button>
+                                        </div>
+
+                                        <div class="set-bottom-row">
+                                            <span class="prev-label">${prevTxt ? "↺ " + prevTxt : ""}</span>
+                                            ${trendHtml}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join("")}
+                        </div>
+                    `;
+
+                    return `
+                        <div class="exercise-card ${isComplete ? "complete" : ""}">
+                            ${headerPart}
+                            ${expandBtn}
+                            ${collapsedCard ? "" : bodyPart}
                         </div>
                     `;
                 }).join("")}
@@ -1250,7 +1404,7 @@ window.Views = (() => {
     };
 
     const TAG_OPTIONS = [
-        "CORE", "CHEST", "BACK", "SHOULDER", "DELTS", "BICEPS", "TRICEPS",
+        "CORE", "CHEST", "BACK", "SHOULDER", "BICEPS", "TRICEPS",
         "LEGS", "QUADS", "HAM", "GLUTES", "CALVES", "TRAPS", "REAR", "FOREARMS"
     ];
 
@@ -1307,6 +1461,19 @@ window.Views = (() => {
                                             oninput="manageEditField(${di}, ${ei}, 'reps', this.value)"
                                         />
                                         <span class="mg-meta-lab">powt.</span>
+                                    </span>
+                                    <span class="mg-meta-block">
+                                        <input
+                                            class="mg-input mg-num mg-rest"
+                                            type="number"
+                                            min="0"
+                                            max="600"
+                                            step="5"
+                                            value="${Number(ex.rest) || 0}"
+                                            aria-label="Domyślny czas odpoczynku (s)"
+                                            oninput="manageEditField(${di}, ${ei}, 'rest', this.value)"
+                                        />
+                                        <span class="mg-meta-lab">przerwa (s)</span>
                                     </span>
                                     <select
                                         class="mg-input mg-tag"
@@ -1395,7 +1562,9 @@ window.Views = (() => {
         closeLibraryExercise,
         toggleLibMedia,
         setLibraryLoaded,
-        retryLoadLibrary
+        retryLoadLibrary,
+        toggleExExpand,
+        clearExpanded
     };
 })();
 
