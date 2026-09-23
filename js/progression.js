@@ -29,7 +29,6 @@ window.Progression = (() => {
         return Math.max(...done.map((s) => Number(s.kg)));
     };
 
-    // Ile powtórzeń dziś zrobić w danej serii. Cel to ASPIRACJA, nie wymóg.
     // null = seria już osiągnęła (lub pobiła) górną granicę -> "utrzymaj",
     //        NIE pokazujemy celu liczbowego niższego niż faktyczny wynik.
     const targetRepsForSet = (prevSet, range, tier) => {
