@@ -1,0 +1,134 @@
+/* Responsive design */
+
+/* Small devices */
+@media (max-width: 640px) {
+    .container {
+        padding: 0 var(--space-sm);
+    }
+
+    .app-main {
+        padding: var(--space-md);
+        padding-bottom: calc(var(--nav-h) + var(--space-md));
+    }
+
+    .grid-2,
+    .grid-3,
+    .grid-4 {
+        grid-template-columns: 1fr;
+    }
+
+    .card {
+        padding: var(--space-md);
+    }
+
+    .btn {
+        padding: var(--space-md);
+        font-size: var(--text-sm);
+    }
+
+    .text-5xl {
+        font-size: 32px;
+    }
+
+    .text-4xl {
+        font-size: 28px;
+    }
+
+    .text-3xl {
+        font-size: 24px;
+    }
+
+    .text-2xl {
+        font-size: 20px;
+    }
+
+    .gap-lg {
+        gap: var(--space-md);
+    }
+
+    .mb-3xl {
+        margin-bottom: var(--space-2xl);
+    }
+
+    .mt-2xl {
+        margin-top: var(--space-lg);
+    }
+
+    .bottom-nav {
+        height: 60px;
+    }
+
+    .nav-btn {
+        padding: var(--space-md);
+    }
+}
+
+/* Medium devices */
+@media (max-width: 1024px) {
+    .grid-3,
+    .grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .container {
+        padding: 0 var(--space-md);
+    }
+}
+
+/* Large devices */
+@media (min-width: 1025px) {
+    .container {
+        max-width: 1200px;
+    }
+
+    .grid-4 {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Landscape orientation */
+@media (max-width: 640px) and (orientation: landscape) {
+    .app-main {
+        padding-bottom: calc(var(--nav-h) + var(--space-sm));
+    }
+
+    .text-5xl {
+        font-size: 28px;
+    }
+
+    .text-4xl {
+        font-size: 24px;
+    }
+
+    .card {
+        padding: var(--space-md);
+    }
+}
+
+/* High DPI screens */
+@media (min-width: 1920px) {
+    :root {
+        --space-lg: 32px;
+        --text-lg: 20px;
+        --text-2xl: 28px;
+        --text-3xl: 36px;
+        --text-4xl: 44px;
+        --text-5xl: 56px;
+    }
+}
+
+/* Touch devices */
+@media (hover: none) and (pointer: coarse) {
+    .btn {
+        padding: var(--space-md) var(--space-lg);
+        min-height: 44px;
+    }
+
+    .nav-btn {
+        min-height: 44px;
+    }
+
+    .card {
+        border-radius: var(--radius-lg);
+    }
+}
