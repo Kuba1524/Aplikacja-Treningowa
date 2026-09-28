@@ -91,7 +91,7 @@ const KUBA_LEGS_V2 = [
 PLAN_KUBA[2].exercises = KUBA_LEGS_V2.map((ex) => ({ ...ex }));
 
 let DAYS = PLAN_BARTEK;
-const APP_VERSION = "v69";
+const APP_VERSION = "v70";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -166,7 +166,6 @@ let currentProfileName = "Użytkownik";
 let currentPlanKey = "bartek";
 let statsMaxCols = 12;
 let planCompactMode = false;
-let calMode = "perm";
 
 const getDayDateKey = (dayId) => `day_${dayId}_date`;
 const getDayTimestampKey = (dayId) => `day_${dayId}_ts`;
@@ -367,9 +366,6 @@ const getPlannedDayForWeekday = (weekIndex, weekday) => {
     }
     return DAYS.find((d) => d.weekday === weekday) || null;
 };
-
-const getPermDayForWeekday = (weekday) =>
-    DAYS.find((d) => d && d.weekday === weekday) || null;
 
 const getTodayPlan = () => {
     const weekday = new Date().getDay();
@@ -1093,251 +1089,7 @@ const toggleBackupSection = () => {
     }
 };
 
-/* ---- Kalendarz dni treningowych ---- */
-const WEEK_LABELS = ["ND", "PN", "WT", "ŚR", "CZ", "PT", "SB"];
 
-const refreshCalReset = () => {
-    const resetBtn = document.getElementById("cal-week-reset");
-    if (!resetBtn) return;
-    const hasOverride = !!state.weekSchedule && !!state.weekSchedule[state.currentWeekIndex];
-    resetBtn.classList.toggle("hidden", calMode !== "week" || !hasOverride);
-};
-
-const renderCalGrid = () => {
-    const list = document.getElementById("cal-days");
-    if (!list) return;
-
-    const sunday = window.Utils.getCurrentSunday();
-    const today = new Date().getDay();
-    const currentWeekSchedule = state.weekSchedule && state.weekSchedule[state.currentWeekIndex];
-
-    list.innerHTML = (WEEK_LABELS || []).map((lab, i) => {
-        const day = getPlannedDayForWeekday(state.currentWeekIndex, i);
-        const date = new Date(sunday);
-        date.setDate(sunday.getDate() + i);
-
-        const isToday = i === today;
-        const hasOverride = !!currentWeekSchedule && (i in currentWeekSchedule);
-
-        return `
-            <button type="button" class="cal-row${isToday ? " is-today" : ""}" data-weekday="${i}" onclick="openCalPicker(${i})">
-                <span class="cal-row-day">
-                    <span class="cal-row-lab">${lab}</span>
-                    <span class="cal-row-date">${date.getDate()}</span>
-                </span>
-                <span class="cal-row-main">
-                    ${day ? `
-                        <span class="cal-row-chip" style="--day-color:${day.color || "#3b82f6"}">
-                            <span class="cal-row-dot"></span>
-                            <span class="cal-row-name">${day.icon || ""} ${day.label}</span>
-                        </span>
-                        <span class="cal-row-sub">${day.name}</span>
-                    ` : `
-                        <span class="cal-row-plain">— dzień wolny</span>
-                        <span class="cal-row-sub">brak treningu</span>
-                    `}
-                </span>
-                <span class="cal-row-actions">
-                    ${hasOverride ? '<span class="cal-row-tag">T</span>' : ""}
-                    <span class="cal-row-chev">›</span>
-                </span>
-            </button>`;
-    }).join("");
-};
-
-const openCalPicker = (weekday) => {
-    const list = document.getElementById("cal-days");
-    if (!list) return;
-
-    hideCalPicker();
-
-    const anchor = list.querySelector(`.cal-row[data-weekday="${weekday}"]`);
-    if (anchor) anchor.classList.add("is-open");
-
-    const current = calMode === "week"
-        ? getPlannedDayForWeekday(state.currentWeekIndex, weekday)
-        : getPermDayForWeekday(weekday);
-
-    const usedElsewhere = {};
-    if (calMode === "week") {
-        for (let w = 0; w < 7; w++) {
-            if (w === weekday) continue;
-            const d = getPlannedDayForWeekday(state.currentWeekIndex, w);
-            if (d) usedElsewhere[d.id] = w;
-        }
-    }
-
-    const options = (DAYS || []).map((day) => {
-        const selected = current && current.id === day.id;
-        const usedAt = usedElsewhere[day.id];
-        const sub = calMode === "week" && usedAt !== undefined && !selected
-            ? `Jest już w ${WEEK_LABELS[usedAt]}` : `${day.name} · ${(day.exercises || []).length} ćw.`;
-
-        if (calMode === "week" && usedAt !== undefined && !selected) {
-            return `
-                <button type="button" class="cal-pick-opt used" disabled>
-                    <span class="cal-pick-dot"></span>
-                    <span class="cal-pick-main">
-                        <span class="cal-pick-name">${day.icon || ""} ${day.label}</span>
-                        <span class="cal-pick-sub">${sub}</span>
-                    </span>
-                </button>`;
-        }
-
-        return `
-            <button type="button" class="cal-pick-opt${selected ? " selected" : ""}" style="--day-color:${day.color || "#3b82f6"}" onclick="pickCalOption(${weekday}, ${day.id})">
-                <span class="cal-pick-dot"></span>
-                <span class="cal-pick-main">
-                    <span class="cal-pick-name">${day.icon || ""} ${day.label}</span>
-                    <span class="cal-pick-sub">${sub}</span>
-                </span>
-                ${selected ? '<span class="cal-pick-check">✓</span>' : ""}
-            </button>`;
-    });
-
-    const emptyOpt = `
-            <button type="button" class="cal-pick-opt${current === null ? " selected" : ""}" onclick="pickCalOption(${weekday}, null)">
-                <span class="cal-pick-dot cal-pick-rest"></span>
-                <span class="cal-pick-main">
-                    <span class="cal-pick-name">Dzień wolny</span>
-                    <span class="cal-pick-sub">${calMode === "week" ? "Brak treningu (tylko ten tydzień)" : "Brak treningu (na stałe)"}</span>
-                </span>
-                ${current === null ? '<span class="cal-pick-check">✓</span>' : ""}
-            </button>`;
-
-    const block = document.createElement("div");
-    block.className = "cal-pick";
-    block.innerHTML = `
-        <div class="cal-pick-head">
-            <span class="cal-pick-title">${WEEK_LABELS[weekday]} · ${current ? `${current.icon || ""} ${current.label}` : "wybierz trening"}</span>
-            <button type="button" class="cal-pick-close" onclick="hideCalPicker()" aria-label="Zamknij">✕</button>
-        </div>
-        ${options.join("")}
-        ${emptyOpt}
-    `;
-
-    const rows = Array.from(list.querySelectorAll(".cal-row"));
-    const row = rows[weekday] || rows[0];
-    if (row && row.nextSibling) {
-        list.insertBefore(block, row.nextSibling);
-    } else {
-        list.appendChild(block);
-    }
-
-    try {
-        block.scrollIntoView({ block: "nearest" });
-    } catch (e) {
-        /* ignore */
-    }
-};
-
-const hideCalPicker = () => {
-    const list = document.getElementById("cal-days");
-    if (!list) return;
-    const pick = list.querySelector(".cal-pick");
-    if (pick) pick.remove();
-    list.querySelectorAll(".cal-row").forEach((r) => r.classList.remove("is-open"));
-};
-
-const setPermAssignment = (weekday, dayId) => {
-    if (dayId === null || dayId === undefined) {
-        if (!getPermDayForWeekday(weekday)) return false;
-    } else {
-        const src = DAYS.find((d) => d && d.id === dayId);
-        if (!src) return false;
-        if (src.weekday === weekday) return false;
-    }
-
-    const meta = {};
-    DAYS.forEach((day) => {
-        const isTarget = dayId !== null && dayId !== undefined && day.id === dayId;
-        meta[day.id] = Object.assign({}, (state.customPlanMeta && state.customPlanMeta[day.id]) || {}, {
-            weekday: isTarget
-                ? weekday
-                : day.weekday === weekday
-                    ? null
-                    : day.weekday === undefined
-                        ? null
-                        : day.weekday
-        });
-    });
-    state.customPlanMeta = Object.assign({}, state.customPlanMeta || {}, meta);
-    persistState();
-    return true;
-};
-
-const setWeekOverride = (weekday, dayId) => {
-    if (!state.weekSchedule || typeof state.weekSchedule !== "object") state.weekSchedule = {};
-    if (!state.weekSchedule[state.currentWeekIndex]) state.weekSchedule[state.currentWeekIndex] = {};
-    if (dayId === null || dayId === undefined) {
-        state.weekSchedule[state.currentWeekIndex][weekday] = null;
-    } else {
-        state.weekSchedule[state.currentWeekIndex][weekday] = dayId;
-    }
-    persistState();
-};
-
-const clearWeekOverrides = () => {
-    if (!state.weekSchedule || typeof state.weekSchedule !== "object") return;
-    delete state.weekSchedule[state.currentWeekIndex];
-    persistState();
-    hideCalPicker();
-    refreshCalReset();
-    renderCalGrid();
-    renderCurrentView();
-    showToast("Przywrócono dni tego tygodnia");
-};
-
-const pickCalOption = (weekday, dayId) => {
-    if (calMode === "perm") {
-        const ok = setPermAssignment(weekday, dayId);
-        if (!ok) {
-            hideCalPicker();
-            renderCalGrid();
-            return;
-        }
-        applyCustomPlan();
-        const day = dayId === null ? null : DAYS.find((d) => d.id === dayId);
-        showToast(day
-            ? `${day.label} → ${WEEK_LABELS[weekday]} (na stałe)`
-            : `${WEEK_LABELS[weekday]} — dzień wolny (na stałe)`);
-    } else {
-        setWeekOverride(weekday, dayId);
-        const day = dayId === null ? null : DAYS.find((d) => d.id === dayId);
-        showToast(day ? `${day.label} → ${WEEK_LABELS[weekday]} (ten tydzień)` : `${WEEK_LABELS[weekday]} — dzień wolny (ten tydzień)`);
-    }
-    hideCalPicker();
-    refreshCalReset();
-    renderCalGrid();
-    renderCurrentView();
-};
-
-const setCalMode = (mode) => {
-    calMode = mode === "week" ? "week" : "perm";
-    const permBtn = document.getElementById("cal-mode-perm");
-    const weekBtn = document.getElementById("cal-mode-week");
-    if (permBtn) permBtn.classList.toggle("active", calMode === "perm");
-    if (weekBtn) weekBtn.classList.toggle("active", calMode === "week");
-    hideCalPicker();
-    refreshCalReset();
-    renderCalGrid();
-};
-
-const toggleCalendarSection = () => {
-    const box = document.getElementById("more-cal-section");
-    const item = document.getElementById("more-cal-item");
-    if (!box) return;
-    if (box.classList.contains("hidden")) {
-        setCalMode(calMode || "perm");
-        renderCalGrid();
-        box.classList.remove("hidden");
-        if (item) item.classList.add("active");
-    } else {
-        box.classList.add("hidden");
-        if (item) item.classList.remove("active");
-        hideCalPicker();
-    }
-};
 
 const sanitizeBackupState = (incoming) => {
     const clean = { currentWeekIndex: 0, weeks: [{}], startSunday: 0 };
@@ -1696,12 +1448,6 @@ window.closeMoreSheet = closeMoreSheet;
 window.toggleMoreSheet = toggleMoreSheet;
 window.toggleThemeSection = toggleThemeSection;
 window.toggleBackupSection = toggleBackupSection;
-window.toggleCalendarSection = toggleCalendarSection;
-window.setCalMode = setCalMode;
-window.openCalPicker = openCalPicker;
-window.hideCalPicker = hideCalPicker;
-window.pickCalOption = pickCalOption;
-window.clearWeekOverrides = clearWeekOverrides;
 window.downloadBackup = downloadBackup;
 window.handleBackupImport = handleBackupImport;
 window.showToast = showToast;

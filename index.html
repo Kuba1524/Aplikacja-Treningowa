@@ -9,13 +9,13 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <title>KubaGym – aplikacja treningowa</title>
 
-    <link rel="manifest" href="manifest.json?v=69" />
+    <link rel="manifest" href="manifest.json?v=70" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet" />
 
-    <link rel="stylesheet" href="css/style.css?v=69" />
+    <link rel="stylesheet" href="css/style.css?v=70" />
     <style>
         .profile-gate {
             position: fixed;
@@ -266,19 +266,6 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
             <span>Zarządzaj ćwiczeniami</span>
         </button>
-        <button type="button" class="sheet-item" id="more-cal-item" onclick="toggleCalendarSection()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m7 14 2 2-2 2"/><path d="M9 16H5M17 10h.01"/></svg>
-            <span>Kalendarz dni treningowych</span>
-        </button>
-        <div id="more-cal-section" class="more-theme-section hidden">
-            <div class="sheet-note">Ustaw, który trening wypada którego dnia — na stałe albo tylko na ten tydzień.</div>
-            <div class="cal-mode-row">
-                <button type="button" class="seg-btn cal-mode active" id="cal-mode-perm" onclick="setCalMode('perm')">Na stałe</button>
-                <button type="button" class="seg-btn cal-mode" id="cal-mode-week" onclick="setCalMode('week')">Tylko ten tydzień</button>
-            </div>
-            <div class="cal-days" id="cal-days"></div>
-            <button type="button" class="cal-reset hidden" id="cal-week-reset" onclick="clearWeekOverrides()">Resetuj dni tego tygodnia</button>
-        </div>
         <button type="button" class="sheet-item" id="more-theme-item" onclick="toggleThemeSection()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
             <span>Motywy (kolory)</span>
@@ -326,14 +313,14 @@
         const db = firebase.firestore();
     </script>
 
-    <script src="js/utils.js?v=69"></script>
-    <script src="js/storage.js?v=69"></script>
-    <script src="js/auth.js?v=69"></script>
-    <script src="js/stats.js?v=69"></script>
-    <script src="js/exercises-lib.js?v=69"></script>
-    <script src="js/progression.js?v=69"></script>
-    <script src="js/views.js?v=69"></script>
-    <script src="js/app.js?v=69"></script>
+    <script src="js/utils.js?v=70"></script>
+    <script src="js/storage.js?v=70"></script>
+    <script src="js/auth.js?v=70"></script>
+    <script src="js/stats.js?v=70"></script>
+    <script src="js/exercises-lib.js?v=70"></script>
+    <script src="js/progression.js?v=70"></script>
+    <script src="js/views.js?v=70"></script>
+    <script src="js/app.js?v=70"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').then((reg) => {
