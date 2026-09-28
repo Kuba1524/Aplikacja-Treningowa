@@ -1120,8 +1120,31 @@ const openCalPicker = (weekday) => {
     if (!picker) return;
 
     const current = getPlannedDayForWeekday(state.currentWeekIndex, weekday);
+
+    const usedElsewhere = {};
+    if (calMode === "week") {
+        for (let w = 0; w < 7; w++) {
+            if (w === weekday) continue;
+            const d = getPlannedDayForWeekday(state.currentWeekIndex, w);
+            if (d) usedElsewhere[d.id] = w;
+        }
+    }
+
     const options = (DAYS || []).map((day) => {
         const selected = current && current.id === day.id;
+        const usedAt = usedElsewhere[day.id];
+
+        if (calMode === "week" && usedAt !== undefined && !selected) {
+            return `
+                <button type="button" class="cal-pick-opt used" disabled>
+                    <span class="cal-pick-dot"></span>
+                    <span class="cal-pick-main">
+                        <span class="cal-pick-name">${day.icon || ""} ${day.label}</span>
+                        <span class="cal-pick-sub">Jest już w ${WEEK_LABELS[usedAt]}</span>
+                    </span>
+                </button>`;
+        }
+
         return `
             <button type="button" class="cal-pick-opt${selected ? " selected" : ""}" style="--day-color:${day.color || "#3b82f6"}" onclick="pickCalOption(${weekday}, ${day.id})">
                 <span class="cal-pick-dot"></span>
