@@ -1158,25 +1158,27 @@ const openCalPicker = (weekday) => {
         : getPermDayForWeekday(weekday);
 
     const usedElsewhere = {};
-    for (let w = 0; w < 7; w++) {
-        if (w === weekday) continue;
-        const d = calMode === "week"
-            ? getPlannedDayForWeekday(state.currentWeekIndex, w)
-            : getPermDayForWeekday(w);
-        if (d) usedElsewhere[d.id] = w;
+    if (calMode === "week") {
+        for (let w = 0; w < 7; w++) {
+            if (w === weekday) continue;
+            const d = getPlannedDayForWeekday(state.currentWeekIndex, w);
+            if (d) usedElsewhere[d.id] = w;
+        }
     }
 
     const options = (DAYS || []).map((day) => {
         const selected = current && current.id === day.id;
         const usedAt = usedElsewhere[day.id];
+        const sub = calMode === "week" && usedAt !== undefined && !selected
+            ? `Jest już w ${WEEK_LABELS[usedAt]}` : `${day.name} · ${(day.exercises || []).length} ćw.`;
 
-        if (usedAt !== undefined && !selected) {
+        if (calMode === "week" && usedAt !== undefined && !selected) {
             return `
                 <button type="button" class="cal-pick-opt used" disabled>
                     <span class="cal-pick-dot"></span>
                     <span class="cal-pick-main">
                         <span class="cal-pick-name">${day.icon || ""} ${day.label}</span>
-                        <span class="cal-pick-sub">Jest już w ${WEEK_LABELS[usedAt]}</span>
+                        <span class="cal-pick-sub">${sub}</span>
                     </span>
                 </button>`;
         }
@@ -1186,7 +1188,7 @@ const openCalPicker = (weekday) => {
                 <span class="cal-pick-dot"></span>
                 <span class="cal-pick-main">
                     <span class="cal-pick-name">${day.icon || ""} ${day.label}</span>
-                    <span class="cal-pick-sub">${day.name} · ${(day.exercises || []).length} ćw.</span>
+                    <span class="cal-pick-sub">${sub}</span>
                 </span>
                 ${selected ? '<span class="cal-pick-check">✓</span>' : ""}
             </button>`;
@@ -1196,8 +1198,8 @@ const openCalPicker = (weekday) => {
             <button type="button" class="cal-pick-opt${current === null ? " selected" : ""}" onclick="pickCalOption(${weekday}, null)">
                 <span class="cal-pick-dot cal-pick-rest"></span>
                 <span class="cal-pick-main">
-                    <span class="cal-pick-name">Brak treningu</span>
-                    <span class="cal-pick-sub">${calMode === "week" ? "Dzień wolny (tylko ten tydzień)" : "Dzień wolny (na stałe)"}</span>
+                    <span class="cal-pick-name">Dzień wolny</span>
+                    <span class="cal-pick-sub">${calMode === "week" ? "Brak treningu (tylko ten tydzień)" : "Brak treningu (na stałe)"}</span>
                 </span>
                 ${current === null ? '<span class="cal-pick-check">✓</span>' : ""}
             </button>`;
@@ -1237,32 +1239,28 @@ const hideCalPicker = () => {
 };
 
 const setPermAssignment = (weekday, dayId) => {
-    const writeMeta = (fun) => {
-        const meta = {};
-        DAYS.forEach((day) => {
-            meta[day.id] = Object.assign({}, (state.customPlanMeta && state.customPlanMeta[day.id]) || {}, {
-                weekday: fun(day)
-            });
-        });
-        state.customPlanMeta = Object.assign({}, state.customPlanMeta || {}, meta);
-    };
-
     if (dayId === null || dayId === undefined) {
-        const current = getPermDayForWeekday(weekday);
-        if (!current) return false;
-        writeMeta((day) => (day.id === current.id ? null : (day.weekday === undefined ? null : day.weekday)));
-        persistState();
-        return true;
+        if (!getPermDayForWeekday(weekday)) return false;
+    } else {
+        const src = DAYS.find((d) => d && d.id === dayId);
+        if (!src) return false;
+        if (src.weekday === weekday) return false;
     }
 
-    const src = DAYS.find((d) => d && d.id === dayId);
-    if (!src) return false;
-    if (src.weekday === weekday) return false;
-
-    const occupant = DAYS.find((d) => d && d.weekday === weekday && d.id !== dayId);
-    if (occupant) return false;
-
-    writeMeta((day) => (day.id === src.id ? weekday : (day.weekday === undefined ? null : day.weekday)));
+    const meta = {};
+    DAYS.forEach((day) => {
+        const isTarget = dayId !== null && dayId !== undefined && day.id === dayId;
+        meta[day.id] = Object.assign({}, (state.customPlanMeta && state.customPlanMeta[day.id]) || {}, {
+            weekday: isTarget
+                ? weekday
+                : day.weekday === weekday
+                    ? null
+                    : day.weekday === undefined
+                        ? null
+                        : day.weekday
+        });
+    });
+    state.customPlanMeta = Object.assign({}, state.customPlanMeta || {}, meta);
     persistState();
     return true;
 };
