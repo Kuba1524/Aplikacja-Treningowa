@@ -1,17 +1,17 @@
-const CACHE_NAME = "kubagym-v67";
+const CACHE_NAME = "kubagym-v68";
 const urlsToCache = [
     "/Aplikacja-Treningowa/",
     "/Aplikacja-Treningowa/index.html",
-    "/Aplikacja-Treningowa/css/style.css",
-    "/Aplikacja-Treningowa/js/utils.js",
-    "/Aplikacja-Treningowa/js/storage.js",
-    "/Aplikacja-Treningowa/js/auth.js",
-    "/Aplikacja-Treningowa/js/stats.js",
-    "/Aplikacja-Treningowa/js/exercises-lib.js",
-    "/Aplikacja-Treningowa/js/progression.js",
-    "/Aplikacja-Treningowa/js/views.js",
-    "/Aplikacja-Treningowa/js/app.js",
-    "/Aplikacja-Treningowa/manifest.json"
+    "/Aplikacja-Treningowa/css/style.css?v=68",
+    "/Aplikacja-Treningowa/js/utils.js?v=68",
+    "/Aplikacja-Treningowa/js/storage.js?v=68",
+    "/Aplikacja-Treningowa/js/auth.js?v=68",
+    "/Aplikacja-Treningowa/js/stats.js?v=68",
+    "/Aplikacja-Treningowa/js/exercises-lib.js?v=68",
+    "/Aplikacja-Treningowa/js/progression.js?v=68",
+    "/Aplikacja-Treningowa/js/views.js?v=68",
+    "/Aplikacja-Treningowa/js/app.js?v=68",
+    "/Aplikacja-Treningowa/manifest.json?v=68"
 ];
 
 self.addEventListener("install", (event) => {
@@ -49,6 +49,6 @@ self.addEventListener("fetch", (event) => {
                 caches.open(CACHE_NAME).then((c) => c.put(event.request, clone));
                 return response;
             })
-            .catch(() => caches.match(event.request).then((r) => r || Response("Offline", { status: 503 })))
+            .catch(() => caches.match(event.request).then((r) => r || new Response("Offline", { status: 503 })))
     );
 });
