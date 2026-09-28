@@ -78,6 +78,17 @@ const kubaIncline = PLAN_KUBA[0].exercises[0];
 kubaIncline.name = "Incline Smith Machine Press";
 kubaIncline.sets = 3;
 kubaIncline.reps = "6-8";
+const KUBA_LEGS_V2 = [
+    { name: "RDL", sets: 3, reps: "6-10", tag: "LEGS" },
+    { name: "Hack Squat / Leg Press", sets: 3, reps: "6-10", tag: "QUADS" },
+    { name: "Leg Extension", sets: 3, reps: "10-12", tag: "QUADS" },
+    { name: "Seated Leg Curl", sets: 3, reps: "8-12", tag: "HAM" },
+    { name: "Incline Dumbbell Curl [SS]", sets: 3, reps: "8-12", tag: "BICEPS" },
+    { name: "Single-Arm Cable Pushdown [SS]", sets: 3, reps: "8-12", tag: "TRICEPS" },
+    { name: "Incline Hammer Curl [SS]", sets: 3, reps: "8-12", tag: "BICEPS" },
+    { name: "Calf Raises [SS]", sets: 4, reps: "10-15", tag: "CALVES" }
+];
+PLAN_KUBA[2].exercises = KUBA_LEGS_V2.map((ex) => ({ ...ex }));
 
 let DAYS = PLAN_BARTEK;
 
@@ -124,8 +135,12 @@ const applyCustomPlan = () => {
             if (!m || typeof m !== "object") return;
             if (typeof m.color === "string" && /^#[0-9a-fA-F]{6}$/.test(m.color)) day.color = m.color;
             if (typeof m.icon === "string" && m.icon) day.icon = m.icon;
+            const wd = Number(m.weekday);
+            if (Number.isInteger(wd) && wd >= 0 && wd <= 6) day.weekday = wd;
         });
     }
+
+    DAYS = DAYS.slice().sort((a, b) => a.weekday - b.weekday);
 };
 
 let state = {
@@ -141,8 +156,10 @@ let noteSaveTimeout = null;
 let isLoaded = false;
 let currentUserId = null;
 let currentProfileName = "Użytkownik";
+let currentPlanKey = "bartek";
 let statsMaxCols = 12;
 let planCompactMode = false;
+let calMode = "perm";
 
 const getDayDateKey = (dayId) => `day_${dayId}_date`;
 const getDayTimestampKey = (dayId) => `day_${dayId}_ts`;
@@ -199,6 +216,13 @@ const ensureStateShape = () => {
 
     if (typeof state.startSunday !== "number") {
         state.startSunday = 0;
+    }
+
+    if (!state.weekSchedule || typeof state.weekSchedule !== "object") {
+        state.weekSchedule = {};
+    }
+    if (!state.migrations || typeof state.migrations !== "object") {
+        state.migrations = {};
     }
 };
 
@@ -326,9 +350,20 @@ const getDayProgress = (dayId) => {
     };
 };
 
+const getPlannedDayForWeekday = (weekIndex, weekday) => {
+    const sch = state && state.weekSchedule ? state.weekSchedule[weekIndex] : undefined;
+    if (sch && typeof sch === "object" && weekday in sch) {
+        const override = sch[weekday];
+        return override === null || override === undefined
+            ? null
+            : DAYS.find((d) => d && d.id === override) || null;
+    }
+    return DAYS.find((d) => d.weekday === weekday) || null;
+};
+
 const getTodayPlan = () => {
     const weekday = new Date().getDay();
-    return DAYS.find((d) => d.weekday === weekday) || null;
+    return getPlannedDayForWeekday(state.currentWeekIndex, weekday);
 };
 
 const getWeekDaysUI = () => {
@@ -342,7 +377,7 @@ const getWeekDaysUI = () => {
         const date = new Date(sunday);
         date.setDate(sunday.getDate() + i);
 
-        const linkedDay = DAYS.find((d) => d.weekday === i);
+        const linkedDay = getPlannedDayForWeekday(state.currentWeekIndex, i);
         const progress = linkedDay ? getDayProgress(linkedDay.id) : null;
         const active = i === weekday;
         const done = progress ? progress.done > 0 : false;
@@ -593,7 +628,8 @@ const updateSet = (ei, i, field, val) => {
 };
 
 /* ---- Timer odpoczynku między seriami ---- */
-const restTimer = { duration: 0, remaining: 0, interval: null, bar: null };
+const restTimer = { duration: 0, remaining: 0, deadline: 0, interval: null, bar: null };
+const REST_DEADLINE_KEY = "kubagym_restTimerDeadline";
 
 const formatRestTime = (s) => {
     const sec = Math.max(0, Math.ceil(s));
@@ -608,23 +644,38 @@ const getRestTimerBar = () => {
     return restTimer.bar || null;
 };
 
+// Licznik działa na bazie chwili docelowej (Date.now()), więc działa też,
+// gdy przeglądarka wstrzymuje setTimeout/setInterval (gasi ekran telefonu
+// albo zwija kartę). Po obudzeniu wartości poprawiają się do realnego czasu.
+const tickRestTimer = () => {
+    const remaining = (restTimer.deadline - Date.now()) / 1000;
+    restTimer.remaining = remaining;
+    if (remaining <= 0) {
+        stopRestTimer(true);
+        return;
+    }
+    updateRestTimerUI();
+};
+
 const startRestTimer = (seconds) => {
     const bar = getRestTimerBar();
     if (!bar) return;
     restTimer.duration = seconds;
+    restTimer.deadline = Date.now() + Math.max(0, seconds) * 1000;
     restTimer.remaining = seconds;
     if (restTimer.interval) { clearInterval(restTimer.interval); restTimer.interval = null; }
     bar.classList.add("open");
     updateRestTimerUI();
-    restTimer.interval = setInterval(() => {
-        restTimer.remaining--;
-        updateRestTimerUI();
-        if (restTimer.remaining <= 0) stopRestTimer(true);
-    }, 1000);
+    try { localStorage.setItem(REST_DEADLINE_KEY, String(restTimer.deadline)); } catch (e) { /* ignore */ }
+    restTimer.interval = setInterval(tickRestTimer, 250);
 };
 
 const addRestRestTime = (sec) => {
-    restTimer.remaining += sec;
+    const bar = getRestTimerBar();
+    if (!bar || !bar.classList.contains("open")) return;
+    restTimer.deadline += sec * 1000;
+    restTimer.remaining = (restTimer.deadline - Date.now()) / 1000;
+    try { localStorage.setItem(REST_DEADLINE_KEY, String(restTimer.deadline)); } catch (e) { /* ignore */ }
     updateRestTimerUI();
 };
 
@@ -642,6 +693,10 @@ const stopRestTimer = (_finished) => {
         clearInterval(restTimer.interval);
         restTimer.interval = null;
     }
+    restTimer.duration = 0;
+    restTimer.deadline = 0;
+    restTimer.remaining = 0;
+    try { localStorage.removeItem(REST_DEADLINE_KEY); } catch (e) { /* ignore */ }
     const bar = getRestTimerBar();
     if (bar) {
         bar.classList.remove("open");
@@ -649,6 +704,42 @@ const stopRestTimer = (_finished) => {
         if (time) time.classList.remove("done");
     }
 };
+
+// Wznawia licznik po ponownym otwarciu aplikacji, jeśli telefon uśpił
+// stronę w trakcie odpoczynku (deadline zapisany w localStorage).
+const restoreRestTimer = () => {
+    let deadline = 0;
+    try { deadline = Number(localStorage.getItem(REST_DEADLINE_KEY)) || 0; } catch (e) { /* ignore */ }
+    if (!(deadline > 0)) return;
+    const seconds = (deadline - Date.now()) / 1000;
+    if (seconds > 0) {
+        const bar = getRestTimerBar();
+        if (!bar) return;
+        restTimer.duration = seconds;
+        restTimer.deadline = deadline;
+        restTimer.remaining = seconds;
+        if (restTimer.interval) { clearInterval(restTimer.interval); restTimer.interval = null; }
+        bar.classList.add("open");
+        updateRestTimerUI();
+        restTimer.interval = setInterval(tickRestTimer, 250);
+    } else {
+        try { localStorage.removeItem(REST_DEADLINE_KEY); } catch (e) { /* ignore */ }
+    }
+};
+
+const attachTimerWakeHandler = () => {
+    const onWake = () => {
+        if (restTimer.deadline > 0) {
+            if (restTimer.deadline - Date.now() <= 0) stopRestTimer(true);
+            else updateRestTimerUI();
+        }
+    };
+    document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) onWake();
+    });
+    window.addEventListener("pageshow", onWake);
+};
+attachTimerWakeHandler();
 
 const toggleSet = (ei, i) => {
     if (currentDayId === null) return;
@@ -832,9 +923,30 @@ const completeLogin = async (firebaseUser, username, profileName) => {
     await bootWithUser(resolved.id, resolved.plan, profileName || resolved.name);
 };
 
+/* ---- Migracje planu (odpalenie raz, per profil) ---- */
+const KUBA_LEGS_V2_DAY = 2;
+const KUBA_LEGS_V2_MAP = [2, 1, null, 3, 4, 5, 6, 7];
+
+const runPlanMigrations = (planKey) => {
+    if (planKey !== "kuba") return;
+    if (state.migrations && state.migrations["kuba_legs_v2"]) return;
+
+    state.weeks = (state.weeks || []).map((week) =>
+        window.Utils.reorderDayLogs(week || {}, KUBA_LEGS_V2_DAY, KUBA_LEGS_V2_MAP)
+    );
+
+    if (state.customPlan && Array.isArray(state.customPlan[KUBA_LEGS_V2_DAY])) {
+        state.customPlan[KUBA_LEGS_V2_DAY] = KUBA_LEGS_V2.map((ex) => ({ ...ex }));
+    }
+
+    state.migrations["kuba_legs_v2"] = true;
+    persistState();
+};
+
 const bootWithUser = async (storageKey, planKey = "bartek", profileName = "") => {
     currentUserId = storageKey;
     currentProfileName = profileName || "Użytkownik";
+    currentPlanKey = planKey;
     DAYS = copyPlan(getPlanByKey(planKey));
 
     const empty = { currentWeekIndex: 0, weeks: [{}], startSunday: 0 };
@@ -846,10 +958,13 @@ const bootWithUser = async (storageKey, planKey = "bartek", profileName = "") =>
         state.customPlan = {};
     }
     applyCustomPlan();
+    runPlanMigrations(planKey);
+    applyCustomPlan();
     isLoaded = true;
     updateTimeline();
     trimWeekToPlan(state.weeks[state.currentWeekIndex] || {}, planSetLimits());
     persistState();
+    restoreRestTimer();
 
     currentView = "home";
     currentDayId = null;
@@ -948,6 +1063,192 @@ const toggleBackupSection = () => {
     }
 };
 
+/* ---- Kalendarz dni treningowych ---- */
+const WEEK_LABELS = ["ND", "PN", "WT", "ŚR", "CZ", "PT", "SB"];
+
+const refreshCalReset = () => {
+    const resetBtn = document.getElementById("cal-week-reset");
+    if (!resetBtn) return;
+    const hasOverride = !!state.weekSchedule && !!state.weekSchedule[state.currentWeekIndex];
+    resetBtn.classList.toggle("hidden", calMode !== "week" || !hasOverride);
+};
+
+const renderCalGrid = () => {
+    const list = document.getElementById("cal-days");
+    if (!list) return;
+
+    const sunday = window.Utils.getCurrentSunday();
+    const today = new Date().getDay();
+    const currentWeekSchedule = state.weekSchedule && state.weekSchedule[state.currentWeekIndex];
+
+    list.innerHTML = (WEEK_LABELS || []).map((lab, i) => {
+        const day = getPlannedDayForWeekday(state.currentWeekIndex, i);
+        const date = new Date(sunday);
+        date.setDate(sunday.getDate() + i);
+
+        const isToday = i === today;
+        const hasOverride = !!currentWeekSchedule && (i in currentWeekSchedule);
+
+        return `
+            <button type="button" class="cal-row${isToday ? " is-today" : ""}" onclick="openCalPicker(${i})">
+                <span class="cal-row-day">
+                    <span class="cal-row-lab">${lab}</span>
+                    <span class="cal-row-date">${date.getDate()}</span>
+                </span>
+                <span class="cal-row-main">
+                    ${day ? `
+                        <span class="cal-row-chip" style="--day-color:${day.color || "#3b82f6"}">
+                            <span class="cal-row-dot"></span>
+                            <span class="cal-row-name">${day.icon || ""} ${day.label}</span>
+                        </span>
+                        <span class="cal-row-sub">${day.name}</span>
+                    ` : `
+                        <span class="cal-row-plain">— dzień wolny</span>
+                        <span class="cal-row-sub">brak treningu</span>
+                    `}
+                </span>
+                <span class="cal-row-actions">
+                    ${hasOverride ? '<span class="cal-row-tag">T</span>' : ""}
+                    <span class="cal-row-chev">›</span>
+                </span>
+            </button>`;
+    }).join("");
+};
+
+const openCalPicker = (weekday) => {
+    const picker = document.getElementById("cal-pick");
+    if (!picker) return;
+
+    const current = getPlannedDayForWeekday(state.currentWeekIndex, weekday);
+    const options = (DAYS || []).map((day) => {
+        const selected = current && current.id === day.id;
+        return `
+            <button type="button" class="cal-pick-opt${selected ? " selected" : ""}" style="--day-color:${day.color || "#3b82f6"}" onclick="pickCalOption(${weekday}, ${day.id})">
+                <span class="cal-pick-dot"></span>
+                <span class="cal-pick-main">
+                    <span class="cal-pick-name">${day.icon || ""} ${day.label}</span>
+                    <span class="cal-pick-sub">${day.name} · ${(day.exercises || []).length} ćw.</span>
+                </span>
+                ${selected ? '<span class="cal-pick-check">✓</span>' : ""}
+            </button>`;
+    });
+
+    const emptyOpt = calMode === "week"
+        ? `
+            <button type="button" class="cal-pick-opt${current === null ? " selected" : ""}" onclick="pickCalOption(${weekday}, null)">
+                <span class="cal-pick-dot cal-pick-rest"></span>
+                <span class="cal-pick-main">
+                    <span class="cal-pick-name">Brak treningu</span>
+                    <span class="cal-pick-sub">Dzień wolny (tylko ten tydzień)</span>
+                </span>
+                ${current === null ? '<span class="cal-pick-check">✓</span>' : ""}
+            </button>`
+        : "";
+
+    picker.innerHTML = `
+        <div class="cal-pick-title">${WEEK_LABELS[weekday]} — wybierz trening</div>
+        ${options.join("")}
+        ${emptyOpt}
+    `;
+    picker.classList.remove("hidden");
+};
+
+const hideCalPicker = () => {
+    const picker = document.getElementById("cal-pick");
+    if (picker) picker.classList.add("hidden");
+};
+
+const assignWeekdayPermanent = (dayId, weekday) => {
+    const src = DAYS.find((d) => d && d.id === dayId);
+    if (!src) return false;
+    if (src.weekday === weekday) return false;
+
+    const occupant = DAYS.find((d) => d && d.weekday === weekday && d.id !== dayId);
+    if (occupant) {
+        occupant.weekday = src.weekday;
+    }
+    src.weekday = weekday;
+    DAYS = DAYS.slice().sort((a, b) => a.weekday - b.weekday);
+
+    const meta = {};
+    DAYS.forEach((day) => {
+        meta[day.id] = Object.assign({}, (state.customPlanMeta && state.customPlanMeta[day.id]) || {}, { weekday: day.weekday });
+    });
+    state.customPlanMeta = Object.assign({}, state.customPlanMeta || {}, meta);
+    persistState();
+    return true;
+};
+
+const setWeekOverride = (weekday, dayId) => {
+    if (!state.weekSchedule || typeof state.weekSchedule !== "object") state.weekSchedule = {};
+    if (!state.weekSchedule[state.currentWeekIndex]) state.weekSchedule[state.currentWeekIndex] = {};
+    if (dayId === null || dayId === undefined) {
+        state.weekSchedule[state.currentWeekIndex][weekday] = null;
+    } else {
+        state.weekSchedule[state.currentWeekIndex][weekday] = dayId;
+    }
+    persistState();
+};
+
+const clearWeekOverrides = () => {
+    if (!state.weekSchedule || typeof state.weekSchedule !== "object") return;
+    delete state.weekSchedule[state.currentWeekIndex];
+    persistState();
+    hideCalPicker();
+    refreshCalReset();
+    renderCalGrid();
+    renderCurrentView();
+    showToast("Przywrócono dni tego tygodnia");
+};
+
+const pickCalOption = (weekday, dayId) => {
+    if (calMode === "perm") {
+        const ok = assignWeekdayPermanent(dayId, weekday);
+        if (!ok) {
+            hideCalPicker();
+            renderCalGrid();
+            return;
+        }
+        const day = DAYS.find((d) => d.id === dayId);
+        showToast(`${day ? day.label : "Dzień"} → ${WEEK_LABELS[weekday]} (na stałe)`);
+    } else {
+        setWeekOverride(weekday, dayId);
+        const day = dayId === null ? null : DAYS.find((d) => d.id === dayId);
+        showToast(day ? `${day.label} → ${WEEK_LABELS[weekday]} (ten tydzień)` : `${WEEK_LABELS[weekday]} — dzień wolny (ten tydzień)`);
+    }
+    hideCalPicker();
+    refreshCalReset();
+    renderCalGrid();
+    renderCurrentView();
+};
+
+const setCalMode = (mode) => {
+    calMode = mode === "week" ? "week" : "perm";
+    const permBtn = document.getElementById("cal-mode-perm");
+    const weekBtn = document.getElementById("cal-mode-week");
+    if (permBtn) permBtn.classList.toggle("active", calMode === "perm");
+    if (weekBtn) weekBtn.classList.toggle("active", calMode === "week");
+    hideCalPicker();
+    refreshCalReset();
+    renderCalGrid();
+};
+
+const toggleCalendarSection = () => {
+    const box = document.getElementById("more-cal-section");
+    const item = document.getElementById("more-cal-item");
+    if (!box) return;
+    if (box.classList.contains("hidden")) {
+        setCalMode(calMode || "perm");
+        renderCalGrid();
+        box.classList.remove("hidden");
+        if (item) item.classList.add("active");
+    } else {
+        box.classList.add("hidden");
+        if (item) item.classList.remove("active");
+        hideCalPicker();
+    }
+};
+
 const sanitizeBackupState = (incoming) => {
     const clean = { currentWeekIndex: 0, weeks: [{}], startSunday: 0 };
     if (incoming && Array.isArray(incoming.weeks) && incoming.weeks.length) {
@@ -957,6 +1258,8 @@ const sanitizeBackupState = (incoming) => {
     if (incoming && typeof incoming.startSunday === "number") clean.startSunday = incoming.startSunday;
     if (incoming && typeof incoming.customPlan === "object") clean.customPlan = incoming.customPlan;
     if (incoming && typeof incoming.customPlanMeta === "object") clean.customPlanMeta = incoming.customPlanMeta;
+    if (incoming && typeof incoming.weekSchedule === "object") clean.weekSchedule = incoming.weekSchedule;
+    if (incoming && typeof incoming.migrations === "object") clean.migrations = incoming.migrations;
     if (Array.isArray(incoming && incoming.bodyWeight)) clean.bodyWeight = incoming.bodyWeight;
     return clean;
 };
@@ -965,7 +1268,7 @@ const downloadBackup = () => {
     if (!state || !Array.isArray(state.weeks)) return;
     const payload = {
         app: "kuba-gym",
-        version: 3,
+        version: 4,
         exportedAt: new Date().toISOString(),
         state: {
             currentWeekIndex: state.currentWeekIndex,
@@ -973,6 +1276,8 @@ const downloadBackup = () => {
             startSunday: state.startSunday,
             customPlan: state.customPlan || {},
             customPlanMeta: state.customPlanMeta || {},
+            weekSchedule: state.weekSchedule || {},
+            migrations: state.migrations || {},
             bodyWeight: Array.isArray(state.bodyWeight) ? state.bodyWeight : []
         }
     };
@@ -1004,6 +1309,8 @@ const handleBackupImport = () => {
                 return;
             }
             state = sanitizeBackupState(data.state);
+            applyCustomPlan();
+            runPlanMigrations(currentPlanKey);
             applyCustomPlan();
             persistState();
             if (input) input.value = "";
@@ -1107,7 +1414,13 @@ const manageSave = () => {
             }))
             .filter((ex) => ex.name);
         if (cleaned.length) customPlan[day.dayId] = cleaned;
-        customPlanMeta[day.dayId] = { color: day.color || "#3b82f6", icon: day.icon || "🔥" };
+        const prevMeta = (state.customPlanMeta && state.customPlanMeta[day.dayId]) || {};
+        const weekday =
+            typeof prevMeta.weekday === "number" ? prevMeta.weekday : undefined;
+        customPlanMeta[day.dayId] = Object.assign(
+            { color: day.color || "#3b82f6", icon: day.icon || "🔥" },
+            weekday !== undefined ? { weekday } : {}
+        );
     });
     state.customPlan = customPlan;
     state.customPlanMeta = customPlanMeta;
@@ -1294,6 +1607,11 @@ window.closeMoreSheet = closeMoreSheet;
 window.toggleMoreSheet = toggleMoreSheet;
 window.toggleThemeSection = toggleThemeSection;
 window.toggleBackupSection = toggleBackupSection;
+window.toggleCalendarSection = toggleCalendarSection;
+window.setCalMode = setCalMode;
+window.openCalPicker = openCalPicker;
+window.pickCalOption = pickCalOption;
+window.clearWeekOverrides = clearWeekOverrides;
 window.downloadBackup = downloadBackup;
 window.handleBackupImport = handleBackupImport;
 window.showToast = showToast;

@@ -58,6 +58,41 @@ window.Utils = (() => {
         return 165;
     };
 
+    // Przepina serie i notatki jednego dnia pomiędzy pozycjami ćwiczeń (slotami),
+    // tak aby historia podążała za ćwiczeniami po zmianie układu planu.
+    // fromByNewIndex: dla każdej nowej pozycji podaje starą pozycję, z której
+    // ma być wzięte ćwiczenie (null/niedefined = nowe ćwiczenie, bez historii).
+    const reorderDayLogs = (week = {}, dayId, fromByNewIndex = []) => {
+        const out = { ...week };
+        const keyFor = (j) => `d${dayId}_e${j}`;
+        const prefix = `d${dayId}_e`;
+
+        const held = {};
+        fromByNewIndex.forEach((from) => {
+            if (from !== null && from !== undefined) {
+                const k = keyFor(from);
+                held[k] = out[k];
+                held[k + "_note"] = out[k + "_note"];
+            }
+        });
+
+        Object.keys(out).forEach((k) => {
+            if (k.startsWith(prefix)) {
+                delete out[k];
+            }
+        });
+
+        fromByNewIndex.forEach((from, to) => {
+            if (from === null || from === undefined) return;
+            const fromKey = keyFor(from);
+            const toKey = keyFor(to);
+            if (held[fromKey] !== undefined) out[toKey] = held[fromKey];
+            if (held[fromKey + "_note"] !== undefined) out[toKey + "_note"] = held[fromKey + "_note"];
+        });
+
+        return out;
+    };
+
     return {
         formatNumberPL,
         escapeHtml,
@@ -65,6 +100,7 @@ window.Utils = (() => {
         getTodayWeekday,
         getCurrentSunday,
         getWeekRangeLabel,
-        defaultRestSeconds
+        defaultRestSeconds,
+        reorderDayLogs
     };
 })();

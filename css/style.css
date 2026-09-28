@@ -3985,6 +3985,237 @@ html[data-theme="proton"] .tag-cat { background: linear-gradient(135deg, var(--a
     border-color: rgba(88,166,255,0.35);
 }
 
+/* ===== Kalendarz dni treningowych ===== */
+.cal-mode-row {
+    display: flex;
+    gap: 8px;
+    margin: 12px 0 10px;
+}
+
+.cal-mode-row .seg-btn {
+    flex: 1;
+}
+
+.cal-days {
+    display: grid;
+    gap: 8px;
+}
+
+.cal-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 52px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.07);
+    background: rgba(255,255,255,0.03);
+    color: var(--text-main);
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.cal-row.is-today {
+    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.cal-row:active {
+    border-color: color-mix(in srgb, var(--accent) 75%, transparent);
+    background: rgba(255,255,255,0.06);
+}
+
+.cal-row-day {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    min-height: 42px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.05);
+}
+
+.cal-row.is-today .cal-row-day {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.cal-row-lab {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+}
+
+.cal-row-date {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.cal-row-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+}
+
+.cal-row-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--day-color, #3b82f6) 35%, transparent);
+    background: color-mix(in srgb, var(--day-color, #3b82f6) 10%, transparent);
+}
+
+.cal-row-dot {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--day-color, #3b82f6);
+}
+
+.cal-row-name {
+    font-size: 13px;
+    font-weight: 800;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.cal-row-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+}
+
+.cal-row-plain {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-dim);
+}
+
+.cal-row-actions {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cal-row-tag {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 18px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+}
+
+.cal-row-chev {
+    font-size: 18px;
+    line-height: 1;
+    color: var(--text-dim);
+}
+
+.cal-pick {
+    margin-top: 10px;
+    display: grid;
+    gap: 8px;
+}
+
+.cal-pick-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-dim);
+    margin-bottom: 2px;
+}
+
+.cal-pick-opt {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 48px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--day-color, #3b82f6) 24%, transparent);
+    background: color-mix(in srgb, var(--day-color, #3b82f6) 6%, transparent);
+    color: var(--text-main);
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.cal-pick-opt.selected {
+    border-color: var(--day-color, #3b82f6);
+    box-shadow: 0 0 0 1px var(--day-color, #3b82f6);
+}
+
+.cal-pick-dot {
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--day-color, #3b82f6);
+}
+
+.cal-pick-dot.cal-pick-rest {
+    background: rgba(255,255,255,0.22);
+}
+
+.cal-pick-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.cal-pick-name {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.cal-pick-sub {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--text-dim);
+}
+
+.cal-pick-check {
+    flex-shrink: 0;
+    color: var(--day-color, #3b82f6);
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.cal-reset {
+    margin-top: 12px;
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,59,48,0.35);
+    background: rgba(255,59,48,0.08);
+    color: var(--text-main);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
 /* ============ ZARZĄDZANIE ĆWICZENIAMI ============ */
 
 .mg-day-card {

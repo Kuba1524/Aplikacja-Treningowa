@@ -69,3 +69,44 @@ describe("defaultRestSeconds", () => {
         expect(U().defaultRestSeconds("")).toBe(105);
     });
 });
+
+describe("reorderDayLogs", () => {
+    it("moves history to target slots and drops removed slots", () => {
+        const week = {
+            d2_e0: [{ kg: 60, done: true }], // Hip Thrust -> removed
+            d2_e1: [{ kg: 80, done: true }], // Hack -> stays
+            d2_e2: [{ kg: 90, done: true }], // RDL -> new slot 0
+            d2_e2_note: "pasek",
+            d2_e3: [{ kg: 40, done: false }], // Seated Leg Curl -> stays
+            day_2_ts: 987
+        };
+        const out = U().reorderDayLogs(week, 2, [2, 1, null, 3, 4, 5, 6, 7]);
+        expect(out.d2_e0).toEqual([{ kg: 90, done: true }]); // RDL moved here
+        expect(out.d2_e0_note).toBe("pasek");
+        expect(out.d2_e1).toEqual([{ kg: 80, done: true }]); // Hack preserved
+        expect(Object.prototype.hasOwnProperty.call(out, "d2_e2")).toBe(false); // Leg Extension - no stale history
+        expect(out.d2_e3).toEqual([{ kg: 40, done: false }]);
+        expect(out.day_2_ts).toBe(987);
+    });
+
+    it("clears all history when every slot is new", () => {
+        const week = {
+            d2_e0: [{ kg: 50, done: true }],
+            d2_e1_note: "old",
+            day_2_ts: 5
+        };
+        const out = U().reorderDayLogs(week, 2, [null, null, null]);
+        expect(Object.keys(out)).toEqual(["day_2_ts"]);
+        expect(Object.prototype.hasOwnProperty.call(out, "d2_e0")).toBe(false);
+        expect(Object.prototype.hasOwnProperty.call(out, "d2_e1_note")).toBe(false);
+    });
+
+    it("does not mutate the input week", () => {
+        const week = { d2_e0: [{ kg: 60, done: true }], d2_e2: [{ kg: 90, done: true }] };
+        const out = U().reorderDayLogs(week, 2, [2, null, 0]);
+        expect(out.d2_e0).toEqual([{ kg: 90, done: true }]);
+        expect(out.d2_e2).toEqual([{ kg: 60, done: true }]);
+        expect(week.d2_e0[0].kg).toBe(60);
+        expect(week.d2_e2[0].kg).toBe(90);
+    });
+});
