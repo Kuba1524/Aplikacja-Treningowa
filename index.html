@@ -9,13 +9,13 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <title>KubaGym – aplikacja treningowa</title>
 
-    <link rel="manifest" href="manifest.json?v=68" />
+    <link rel="manifest" href="manifest.json?v=69" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet" />
 
-    <link rel="stylesheet" href="css/style.css?v=68" />
+    <link rel="stylesheet" href="css/style.css?v=69" />
     <style>
         .profile-gate {
             position: fixed;
@@ -304,6 +304,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
             <span>Wyloguj się</span>
         </button>
+        <div class="sheet-note app-version" id="app-version"></div>
     </div>
 
     <div id="toast" class="toast" role="status"></div>
@@ -325,14 +326,14 @@
         const db = firebase.firestore();
     </script>
 
-    <script src="js/utils.js?v=68"></script>
-    <script src="js/storage.js?v=68"></script>
-    <script src="js/auth.js?v=68"></script>
-    <script src="js/stats.js?v=68"></script>
-    <script src="js/exercises-lib.js?v=68"></script>
-    <script src="js/progression.js?v=68"></script>
-    <script src="js/views.js?v=68"></script>
-    <script src="js/app.js?v=68"></script>
+    <script src="js/utils.js?v=69"></script>
+    <script src="js/storage.js?v=69"></script>
+    <script src="js/auth.js?v=69"></script>
+    <script src="js/stats.js?v=69"></script>
+    <script src="js/exercises-lib.js?v=69"></script>
+    <script src="js/progression.js?v=69"></script>
+    <script src="js/views.js?v=69"></script>
+    <script src="js/app.js?v=69"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').then((reg) => {

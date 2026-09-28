@@ -91,6 +91,7 @@ const KUBA_LEGS_V2 = [
 PLAN_KUBA[2].exercises = KUBA_LEGS_V2.map((ex) => ({ ...ex }));
 
 let DAYS = PLAN_BARTEK;
+const APP_VERSION = "v69";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -1726,6 +1727,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 initTheme();
 initApp();
+
+const versionEl = document.getElementById("app-version");
+if (versionEl) versionEl.textContent = `Wersja: ${APP_VERSION}`;
+window.APP_VERSION = APP_VERSION;
 
 window.addRestTime = addRestRestTime;
 window.startRestTimer = startRestTimer;

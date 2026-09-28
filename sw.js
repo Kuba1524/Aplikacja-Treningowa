@@ -1,17 +1,17 @@
-const CACHE_NAME = "kubagym-v68";
+const CACHE_NAME = "kubagym-v69";
 const urlsToCache = [
     "/Aplikacja-Treningowa/",
     "/Aplikacja-Treningowa/index.html",
-    "/Aplikacja-Treningowa/css/style.css?v=68",
-    "/Aplikacja-Treningowa/js/utils.js?v=68",
-    "/Aplikacja-Treningowa/js/storage.js?v=68",
-    "/Aplikacja-Treningowa/js/auth.js?v=68",
-    "/Aplikacja-Treningowa/js/stats.js?v=68",
-    "/Aplikacja-Treningowa/js/exercises-lib.js?v=68",
-    "/Aplikacja-Treningowa/js/progression.js?v=68",
-    "/Aplikacja-Treningowa/js/views.js?v=68",
-    "/Aplikacja-Treningowa/js/app.js?v=68",
-    "/Aplikacja-Treningowa/manifest.json?v=68"
+    "/Aplikacja-Treningowa/css/style.css?v=69",
+    "/Aplikacja-Treningowa/js/utils.js?v=69",
+    "/Aplikacja-Treningowa/js/storage.js?v=69",
+    "/Aplikacja-Treningowa/js/auth.js?v=69",
+    "/Aplikacja-Treningowa/js/stats.js?v=69",
+    "/Aplikacja-Treningowa/js/exercises-lib.js?v=69",
+    "/Aplikacja-Treningowa/js/progression.js?v=69",
+    "/Aplikacja-Treningowa/js/views.js?v=69",
+    "/Aplikacja-Treningowa/js/app.js?v=69",
+    "/Aplikacja-Treningowa/manifest.json?v=69"
 ];
 
 self.addEventListener("install", (event) => {
