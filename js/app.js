@@ -1110,7 +1110,7 @@ const renderCalGrid = () => {
         const hasOverride = !!currentWeekSchedule && (i in currentWeekSchedule);
 
         return `
-            <button type="button" class="cal-row${isToday ? " is-today" : ""}" onclick="openCalPicker(${i})">
+            <button type="button" class="cal-row${isToday ? " is-today" : ""}" data-weekday="${i}" onclick="openCalPicker(${i})">
                 <span class="cal-row-day">
                     <span class="cal-row-lab">${lab}</span>
                     <span class="cal-row-date">${date.getDate()}</span>
@@ -1136,8 +1136,13 @@ const renderCalGrid = () => {
 };
 
 const openCalPicker = (weekday) => {
-    const picker = document.getElementById("cal-pick");
-    if (!picker) return;
+    const list = document.getElementById("cal-days");
+    if (!list) return;
+
+    hideCalPicker();
+
+    const anchor = list.querySelector(`.cal-row[data-weekday="${weekday}"]`);
+    if (anchor) anchor.classList.add("is-open");
 
     const current = getPlannedDayForWeekday(state.currentWeekIndex, weekday);
 
@@ -1188,17 +1193,38 @@ const openCalPicker = (weekday) => {
             </button>`
         : "";
 
-    picker.innerHTML = `
-        <div class="cal-pick-title">${WEEK_LABELS[weekday]} — wybierz trening</div>
+    const block = document.createElement("div");
+    block.className = "cal-pick";
+    block.innerHTML = `
+        <div class="cal-pick-head">
+            <span class="cal-pick-title">${WEEK_LABELS[weekday]} · ${current ? `${current.icon || ""} ${current.label}` : "wybierz trening"}</span>
+            <button type="button" class="cal-pick-close" onclick="hideCalPicker()" aria-label="Zamknij">✕</button>
+        </div>
         ${options.join("")}
         ${emptyOpt}
     `;
-    picker.classList.remove("hidden");
+
+    const rows = Array.from(list.querySelectorAll(".cal-row"));
+    const row = rows[weekday] || rows[0];
+    if (row && row.nextSibling) {
+        list.insertBefore(block, row.nextSibling);
+    } else {
+        list.appendChild(block);
+    }
+
+    try {
+        block.scrollIntoView({ block: "nearest" });
+    } catch (e) {
+        /* ignore */
+    }
 };
 
 const hideCalPicker = () => {
-    const picker = document.getElementById("cal-pick");
-    if (picker) picker.classList.add("hidden");
+    const list = document.getElementById("cal-days");
+    if (!list) return;
+    const pick = list.querySelector(".cal-pick");
+    if (pick) pick.remove();
+    list.querySelectorAll(".cal-row").forEach((r) => r.classList.remove("is-open"));
 };
 
 const assignWeekdayPermanent = (dayId, weekday) => {
@@ -1653,6 +1679,7 @@ window.toggleBackupSection = toggleBackupSection;
 window.toggleCalendarSection = toggleCalendarSection;
 window.setCalMode = setCalMode;
 window.openCalPicker = openCalPicker;
+window.hideCalPicker = hideCalPicker;
 window.pickCalOption = pickCalOption;
 window.clearWeekOverrides = clearWeekOverrides;
 window.downloadBackup = downloadBackup;

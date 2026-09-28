@@ -4022,6 +4022,11 @@ html[data-theme="proton"] .tag-cat { background: linear-gradient(135deg, var(--a
     border-color: color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
+.cal-row.is-open {
+    border-color: color-mix(in srgb, var(--accent) 75%, transparent);
+    background: rgba(255,255,255,0.06);
+}
+
 .cal-row:active {
     border-color: color-mix(in srgb, var(--accent) 75%, transparent);
     background: rgba(255,255,255,0.06);
@@ -4131,9 +4136,44 @@ html[data-theme="proton"] .tag-cat { background: linear-gradient(135deg, var(--a
 }
 
 .cal-pick {
-    margin-top: 10px;
     display: grid;
     gap: 8px;
+    padding: 12px;
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 12px;
+    background: rgba(0,0,0,0.25);
+    animation: cal-pick-in 0.16s ease-out;
+}
+
+@keyframes cal-pick-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.cal-pick-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+
+.cal-pick-close {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.05);
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.cal-pick-close:active {
+    background: rgba(255,255,255,0.1);
 }
 
 .cal-pick-title {
