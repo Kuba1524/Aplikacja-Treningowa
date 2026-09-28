@@ -91,7 +91,7 @@ const KUBA_LEGS_V2 = [
 PLAN_KUBA[2].exercises = KUBA_LEGS_V2.map((ex) => ({ ...ex }));
 
 let DAYS = PLAN_BARTEK;
-const APP_VERSION = "v70";
+const APP_VERSION = "v71";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -136,18 +136,8 @@ const applyCustomPlan = () => {
             if (!m || typeof m !== "object") return;
             if (typeof m.color === "string" && /^#[0-9a-fA-F]{6}$/.test(m.color)) day.color = m.color;
             if (typeof m.icon === "string" && m.icon) day.icon = m.icon;
-            const wd = m.weekday;
-            if (wd === null) {
-                day.weekday = undefined;
-            } else if (typeof wd === "number" && Number.isInteger(wd) && wd >= 0 && wd <= 6) {
-                day.weekday = wd;
-            }
         });
     }
-
-    DAYS = DAYS.slice().sort(
-        (a, b) => (a.weekday === undefined ? 7 : a.weekday) - (b.weekday === undefined ? 7 : b.weekday)
-    );
 };
 
 let state = {
@@ -356,16 +346,8 @@ const getDayProgress = (dayId) => {
     };
 };
 
-const getPlannedDayForWeekday = (weekIndex, weekday) => {
-    const sch = state && state.weekSchedule ? state.weekSchedule[weekIndex] : undefined;
-    if (sch && typeof sch === "object" && weekday in sch) {
-        const override = sch[weekday];
-        return override === null || override === undefined
-            ? null
-            : DAYS.find((d) => d && d.id === override) || null;
-    }
-    return DAYS.find((d) => d.weekday === weekday) || null;
-};
+const getPlannedDayForWeekday = (weekIndex, weekday) =>
+    DAYS.find((d) => d && d.weekday === weekday) || null;
 
 const getTodayPlan = () => {
     const weekday = new Date().getDay();
