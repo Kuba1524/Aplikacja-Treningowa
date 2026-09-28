@@ -135,12 +135,18 @@ const applyCustomPlan = () => {
             if (!m || typeof m !== "object") return;
             if (typeof m.color === "string" && /^#[0-9a-fA-F]{6}$/.test(m.color)) day.color = m.color;
             if (typeof m.icon === "string" && m.icon) day.icon = m.icon;
-            const wd = Number(m.weekday);
-            if (Number.isInteger(wd) && wd >= 0 && wd <= 6) day.weekday = wd;
+            const wd = m.weekday;
+            if (wd === null) {
+                day.weekday = undefined;
+            } else if (typeof wd === "number" && Number.isInteger(wd) && wd >= 0 && wd <= 6) {
+                day.weekday = wd;
+            }
         });
     }
 
-    DAYS = DAYS.slice().sort((a, b) => a.weekday - b.weekday);
+    DAYS = DAYS.slice().sort(
+        (a, b) => (a.weekday === undefined ? 7 : a.weekday) - (b.weekday === undefined ? 7 : b.weekday)
+    );
 };
 
 let state = {
@@ -360,6 +366,9 @@ const getPlannedDayForWeekday = (weekIndex, weekday) => {
     }
     return DAYS.find((d) => d.weekday === weekday) || null;
 };
+
+const getPermDayForWeekday = (weekday) =>
+    DAYS.find((d) => d && d.weekday === weekday) || null;
 
 const getTodayPlan = () => {
     const weekday = new Date().getDay();
@@ -1144,22 +1153,24 @@ const openCalPicker = (weekday) => {
     const anchor = list.querySelector(`.cal-row[data-weekday="${weekday}"]`);
     if (anchor) anchor.classList.add("is-open");
 
-    const current = getPlannedDayForWeekday(state.currentWeekIndex, weekday);
+    const current = calMode === "week"
+        ? getPlannedDayForWeekday(state.currentWeekIndex, weekday)
+        : getPermDayForWeekday(weekday);
 
     const usedElsewhere = {};
-    if (calMode === "week") {
-        for (let w = 0; w < 7; w++) {
-            if (w === weekday) continue;
-            const d = getPlannedDayForWeekday(state.currentWeekIndex, w);
-            if (d) usedElsewhere[d.id] = w;
-        }
+    for (let w = 0; w < 7; w++) {
+        if (w === weekday) continue;
+        const d = calMode === "week"
+            ? getPlannedDayForWeekday(state.currentWeekIndex, w)
+            : getPermDayForWeekday(w);
+        if (d) usedElsewhere[d.id] = w;
     }
 
     const options = (DAYS || []).map((day) => {
         const selected = current && current.id === day.id;
         const usedAt = usedElsewhere[day.id];
 
-        if (calMode === "week" && usedAt !== undefined && !selected) {
+        if (usedAt !== undefined && !selected) {
             return `
                 <button type="button" class="cal-pick-opt used" disabled>
                     <span class="cal-pick-dot"></span>
@@ -1181,17 +1192,15 @@ const openCalPicker = (weekday) => {
             </button>`;
     });
 
-    const emptyOpt = calMode === "week"
-        ? `
+    const emptyOpt = `
             <button type="button" class="cal-pick-opt${current === null ? " selected" : ""}" onclick="pickCalOption(${weekday}, null)">
                 <span class="cal-pick-dot cal-pick-rest"></span>
                 <span class="cal-pick-main">
                     <span class="cal-pick-name">Brak treningu</span>
-                    <span class="cal-pick-sub">Dzień wolny (tylko ten tydzień)</span>
+                    <span class="cal-pick-sub">${calMode === "week" ? "Dzień wolny (tylko ten tydzień)" : "Dzień wolny (na stałe)"}</span>
                 </span>
                 ${current === null ? '<span class="cal-pick-check">✓</span>' : ""}
-            </button>`
-        : "";
+            </button>`;
 
     const block = document.createElement("div");
     block.className = "cal-pick";
@@ -1227,23 +1236,33 @@ const hideCalPicker = () => {
     list.querySelectorAll(".cal-row").forEach((r) => r.classList.remove("is-open"));
 };
 
-const assignWeekdayPermanent = (dayId, weekday) => {
+const setPermAssignment = (weekday, dayId) => {
+    const writeMeta = (fun) => {
+        const meta = {};
+        DAYS.forEach((day) => {
+            meta[day.id] = Object.assign({}, (state.customPlanMeta && state.customPlanMeta[day.id]) || {}, {
+                weekday: fun(day)
+            });
+        });
+        state.customPlanMeta = Object.assign({}, state.customPlanMeta || {}, meta);
+    };
+
+    if (dayId === null || dayId === undefined) {
+        const current = getPermDayForWeekday(weekday);
+        if (!current) return false;
+        writeMeta((day) => (day.id === current.id ? null : (day.weekday === undefined ? null : day.weekday)));
+        persistState();
+        return true;
+    }
+
     const src = DAYS.find((d) => d && d.id === dayId);
     if (!src) return false;
     if (src.weekday === weekday) return false;
 
     const occupant = DAYS.find((d) => d && d.weekday === weekday && d.id !== dayId);
-    if (occupant) {
-        occupant.weekday = src.weekday;
-    }
-    src.weekday = weekday;
-    DAYS = DAYS.slice().sort((a, b) => a.weekday - b.weekday);
+    if (occupant) return false;
 
-    const meta = {};
-    DAYS.forEach((day) => {
-        meta[day.id] = Object.assign({}, (state.customPlanMeta && state.customPlanMeta[day.id]) || {}, { weekday: day.weekday });
-    });
-    state.customPlanMeta = Object.assign({}, state.customPlanMeta || {}, meta);
+    writeMeta((day) => (day.id === src.id ? weekday : (day.weekday === undefined ? null : day.weekday)));
     persistState();
     return true;
 };
@@ -1272,14 +1291,17 @@ const clearWeekOverrides = () => {
 
 const pickCalOption = (weekday, dayId) => {
     if (calMode === "perm") {
-        const ok = assignWeekdayPermanent(dayId, weekday);
+        const ok = setPermAssignment(weekday, dayId);
         if (!ok) {
             hideCalPicker();
             renderCalGrid();
             return;
         }
-        const day = DAYS.find((d) => d.id === dayId);
-        showToast(`${day ? day.label : "Dzień"} → ${WEEK_LABELS[weekday]} (na stałe)`);
+        applyCustomPlan();
+        const day = dayId === null ? null : DAYS.find((d) => d.id === dayId);
+        showToast(day
+            ? `${day.label} → ${WEEK_LABELS[weekday]} (na stałe)`
+            : `${WEEK_LABELS[weekday]} — dzień wolny (na stałe)`);
     } else {
         setWeekOverride(weekday, dayId);
         const day = dayId === null ? null : DAYS.find((d) => d.id === dayId);
@@ -1484,12 +1506,11 @@ const manageSave = () => {
             .filter((ex) => ex.name);
         if (cleaned.length) customPlan[day.dayId] = cleaned;
         const prevMeta = (state.customPlanMeta && state.customPlanMeta[day.dayId]) || {};
-        const weekday =
-            typeof prevMeta.weekday === "number" ? prevMeta.weekday : undefined;
-        customPlanMeta[day.dayId] = Object.assign(
-            { color: day.color || "#3b82f6", icon: day.icon || "🔥" },
-            weekday !== undefined ? { weekday } : {}
-        );
+        const entry = { color: day.color || "#3b82f6", icon: day.icon || "🔥" };
+        if (prevMeta.weekday === null || typeof prevMeta.weekday === "number") {
+            entry.weekday = prevMeta.weekday;
+        }
+        customPlanMeta[day.dayId] = entry;
     });
     state.customPlan = customPlan;
     state.customPlanMeta = customPlanMeta;

@@ -79,7 +79,7 @@ window.StatsModule = (() => {
                     }
                 }
 
-                if (!date && state.startSunday) {
+                if (!date && state.startSunday && typeof day.weekday === "number") {
                     const base = new Date(state.startSunday + weekIndex * 7 * 24 * 60 * 60 * 1000);
                     base.setDate(base.getDate() + day.weekday);
                     date = base;
