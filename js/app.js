@@ -24,7 +24,7 @@ const PLAN_BARTEK = [
         icon: "💪",
         color: "#00b4d8",
         exercises: [
-            { name: "Weighted Pull Ups", sets: 4, reps: "6-8", tag: "BACK" },
+            { name: "Weighted Pull Ups", sets: 3, reps: "6-8", tag: "BACK" },
             { name: "Single-Arm Dumbbell Row", sets: 3, reps: "6-10", tag: "BACK" },
             { name: "Seated Cable Row", sets: 3, reps: "6-10", tag: "BACK" },
             { name: "Reverse Peck Deck", sets: 4, reps: "8-12", tag: "REAR" },
@@ -47,7 +47,7 @@ const PLAN_BARTEK = [
             { name: "Seated Leg Curl", sets: 3, reps: "8-12", tag: "HAM" },
             { name: "Supination Curl [SS]", sets: 3, reps: "8-12", tag: "BICEPS" },
             { name: "Single-Arm Cable Pushdown [SS]", sets: 3, reps: "8-12", tag: "TRICEPS" },
-            { name: "Cross-Body Hammer Curl [SS]", sets: 3, reps: "8-12", tag: "BICEPS" },
+            { name: "Cross-Body Hammer Curl [SS]", sets: 3, reps: "8-10", tag: "BICEPS" },
             { name: "Calf Raises [SS]", sets: 4, reps: "10-15", tag: "CALVES" }
         ]
     },
@@ -64,7 +64,7 @@ const PLAN_BARTEK = [
             { name: "Single-Arm Lat Pulldown", sets: 3, reps: "6-10", tag: "BACK" },
             { name: "Cable Lateral Raise", sets: 4, reps: "8-12", tag: "SHOULDER" },
             { name: "EZ-bar Preacher Curl", sets: 3, reps: "8-12", tag: "BICEPS" },
-            { name: "Incline Skull Crushers", sets: 3, reps: "8-12", tag: "TRICEPS" },
+            { name: "Incline Skull Crushers", sets: 3, reps: "8-10", tag: "TRICEPS" },
             { name: "Cable Crunch", sets: 4, reps: "8-12", tag: "CORE" }
         ]
     }
@@ -85,7 +85,7 @@ const KUBA_LEGS_V2 = [
     { name: "Seated Leg Curl", sets: 3, reps: "8-12", tag: "HAM" },
     { name: "Incline Dumbbell Curl [SS]", sets: 3, reps: "8-12", tag: "BICEPS" },
     { name: "Single-Arm Cable Pushdown [SS]", sets: 3, reps: "8-12", tag: "TRICEPS" },
-    { name: "Incline Hammer Curl [SS]", sets: 3, reps: "8-12", tag: "BICEPS" },
+    { name: "Incline Hammer Curl [SS]", sets: 3, reps: "8-10", tag: "BICEPS" },
     { name: "Calf Raises [SS]", sets: 4, reps: "10-15", tag: "CALVES" }
 ];
 PLAN_KUBA[2].exercises = KUBA_LEGS_V2.map((ex) => ({ ...ex }));
@@ -928,19 +928,39 @@ const KUBA_LEGS_V2_DAY = 2;
 const KUBA_LEGS_V2_MAP = [2, 1, null, 3, 4, 5, 6, 7];
 
 const runPlanMigrations = (planKey) => {
-    if (planKey !== "kuba") return;
-    if (state.migrations && state.migrations["kuba_legs_v2"]) return;
+    const hadLegs = state.migrations && state.migrations["kuba_legs_v2"];
 
-    state.weeks = (state.weeks || []).map((week) =>
-        window.Utils.reorderDayLogs(week || {}, KUBA_LEGS_V2_DAY, KUBA_LEGS_V2_MAP)
-    );
+    if (planKey === "kuba" && !hadLegs) {
+        state.weeks = (state.weeks || []).map((week) =>
+            window.Utils.reorderDayLogs(week || {}, KUBA_LEGS_V2_DAY, KUBA_LEGS_V2_MAP)
+        );
 
-    if (state.customPlan && Array.isArray(state.customPlan[KUBA_LEGS_V2_DAY])) {
-        state.customPlan[KUBA_LEGS_V2_DAY] = KUBA_LEGS_V2.map((ex) => ({ ...ex }));
+        if (state.customPlan && Array.isArray(state.customPlan[KUBA_LEGS_V2_DAY])) {
+            state.customPlan[KUBA_LEGS_V2_DAY] = KUBA_LEGS_V2.map((ex) => ({ ...ex }));
+        }
+
+        state.migrations["kuba_legs_v2"] = true;
     }
 
-    state.migrations["kuba_legs_v2"] = true;
-    persistState();
+    if (state.migrations && !state.migrations["reps_sets_v3"]) {
+        if (state.customPlan && typeof state.customPlan === "object") {
+            Object.keys(state.customPlan).forEach((dayKey) => {
+                const list = state.customPlan[dayKey];
+                if (!Array.isArray(list)) return;
+                list.forEach((ex) => {
+                    if (!ex || !ex.name) return;
+                    if (/Hammer Curl/.test(ex.name)) ex.reps = "8-10";
+                    if (/Skull Crushers/.test(ex.name)) ex.reps = "8-10";
+                    if (/Weighted Pull Ups/.test(ex.name)) ex.sets = 3;
+                });
+            });
+        }
+        state.migrations["reps_sets_v3"] = true;
+    }
+
+    if (state.migrations && (!hadLegs || !state.migrations["reps_sets_v3"])) {
+        persistState();
+    }
 };
 
 const bootWithUser = async (storageKey, planKey = "bartek", profileName = "") => {
