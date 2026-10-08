@@ -9,13 +9,13 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <title>KubaGym – aplikacja treningowa</title>
 
-    <link rel="manifest" href="manifest.json?v=71" />
+    <link rel="manifest" href="manifest.json?v=72" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet" />
 
-    <link rel="stylesheet" href="css/style.css?v=71" />
+    <link rel="stylesheet" href="css/style.css?v=72" />
     <style>
         .profile-gate {
             position: fixed;
@@ -142,7 +142,7 @@
     </style>
 </head>
 <body>
-    <div id="profile-gate" class="profile-gate">
+    <div id="profile-gate" class="profile-gate hidden">
         <div class="profile-gate-inner">
             <h1>Kuba<span>Gym</span></h1>
             <p id="auth-subtitle">Zaloguj się na swoje konto</p>
@@ -287,10 +287,6 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
             <span>Biblioteka ćwiczeń</span>
         </button>
-        <button type="button" class="sheet-item sheet-danger" onclick="logoutUser()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
-            <span>Wyloguj się</span>
-        </button>
         <div class="sheet-note app-version" id="app-version"></div>
     </div>
 
@@ -313,14 +309,14 @@
         const db = firebase.firestore();
     </script>
 
-    <script src="js/utils.js?v=71"></script>
-    <script src="js/storage.js?v=71"></script>
-    <script src="js/auth.js?v=71"></script>
-    <script src="js/stats.js?v=71"></script>
-    <script src="js/exercises-lib.js?v=71"></script>
-    <script src="js/progression.js?v=71"></script>
-    <script src="js/views.js?v=71"></script>
-    <script src="js/app.js?v=71"></script>
+    <script src="js/utils.js?v=72"></script>
+    <script src="js/storage.js?v=72"></script>
+    <script src="js/auth.js?v=72"></script>
+    <script src="js/stats.js?v=72"></script>
+    <script src="js/exercises-lib.js?v=72"></script>
+    <script src="js/progression.js?v=72"></script>
+    <script src="js/views.js?v=72"></script>
+    <script src="js/app.js?v=72"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').then((reg) => {

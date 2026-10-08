@@ -91,7 +91,7 @@ const KUBA_LEGS_V2 = [
 PLAN_KUBA[2].exercises = KUBA_LEGS_V2.map((ex) => ({ ...ex }));
 
 let DAYS = PLAN_BARTEK;
-const APP_VERSION = "v71";
+const APP_VERSION = "v72";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -1276,17 +1276,25 @@ const manageCancel = () => {
 };
 
 const initApp = async () => {
+    const bootProfile = (meta) => bootWithUser(meta.id, meta.plan, meta.name);
     try {
-        const user = await window.AuthModule.onReady();
-        if (!user) {
-            showAuthGate();
-            return;
+        const savedId = window.StorageModule.getSelectedProfileId() || "";
+        const meta = window.StorageModule.profileMeta(savedId);
+        if (meta && meta.id) {
+            await bootProfile(meta);
+        } else {
+            const first = window.StorageModule.PROFILES[0];
+            await bootProfile(window.StorageModule.profileMeta(first && first.id));
         }
-        const username = (user.email || "").split("@")[0];
-        await completeLogin(user, username, "");
     } catch (e) {
         console.error("initApp error:", e);
-        showAuthGate();
+        try {
+            const first = window.StorageModule.PROFILES[0];
+            await bootProfile(window.StorageModule.profileMeta(first && first.id));
+        } catch (e2) {
+            console.error("initApp fallback error:", e2);
+            showAuthGate();
+        }
     }
 };
 

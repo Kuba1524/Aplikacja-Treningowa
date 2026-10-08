@@ -58,6 +58,18 @@ window.StorageModule = (() => {
 
     const getProfile = (id) => PROFILES.find((p) => p.id === id) || null;
 
+    const profileMeta = (id) => {
+        const prof = PROFILES.find((p) => p.id === id) || null;
+        const known = Object.keys(KNOWN_USERS)
+            .map((k) => KNOWN_USERS[k])
+            .find((u) => u.id === id) || null;
+        return {
+            id: id,
+            name: (prof && prof.name) || (known && known.name) || "Użytkownik",
+            plan: (known && known.plan) || "bartek"
+        };
+    };
+
     const storageKeyFor = (userId) => "kuba_v11_" + userId;
 
     const safeParse = (raw) => {
@@ -119,6 +131,7 @@ window.StorageModule = (() => {
         setSelectedProfileId: setSelectedProfileId,
         clearSelectedProfile: clearSelectedProfile,
         getProfile: getProfile,
+        profileMeta: profileMeta,
         load: load,
         save: save
     };
