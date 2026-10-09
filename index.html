@@ -9,13 +9,13 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <title>KubaGym – aplikacja treningowa</title>
 
-    <link rel="manifest" href="manifest.json?v=72" />
+    <link rel="manifest" href="manifest.json?v=73" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet" />
 
-    <link rel="stylesheet" href="css/style.css?v=72" />
+    <link rel="stylesheet" href="css/style.css?v=73" />
     <style>
         .profile-gate {
             position: fixed;
@@ -145,53 +145,18 @@
     <div id="profile-gate" class="profile-gate hidden">
         <div class="profile-gate-inner">
             <h1>Kuba<span>Gym</span></h1>
-            <p id="auth-subtitle">Zaloguj się na swoje konto</p>
+            <p>Kto ćwiczy?</p>
 
-            <form id="auth-form" autocomplete="on">
-                <input
-                    id="auth-username"
-                    class="auth-input"
-                    type="text"
-                    placeholder="Nazwa użytkownika"
-                    autocomplete="username"
-                    autocapitalize="off"
-                    autocorrect="off"
-                    spellcheck="false"
-                    required
-                />
-                <div class="auth-pass-wrap">
-                    <input
-                        id="auth-password"
-                        class="auth-input"
-                        type="password"
-                        placeholder="Hasło"
-                        autocomplete="current-password"
-                        autocapitalize="off"
-                        autocorrect="off"
-                        spellcheck="false"
-                        required
-                    />
-                    <button type="button" id="auth-pass-toggle" class="auth-pass-toggle" aria-label="Pokaż hasło" aria-pressed="false" onclick="togglePasswordVisibility()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
-                    </button>
-                </div>
-                <div id="auth-register-name-wrap" class="auth-wrap hidden">
-                    <input
-                        id="auth-register-name"
-                        class="auth-input"
-                        type="text"
-                        placeholder="Jak się do Ciebie zwracać? (np. Kuba)"
-                        autocomplete="name"
-                        autocapitalize="words"
-                        required
-                    />
-                </div>
-                <button id="auth-submit" class="profile-btn" type="submit">Zaloguj się</button>
-            </form>
-
-            <div id="auth-error" class="auth-error hidden"></div>
-
-            <button id="auth-toggle" class="auth-toggle" type="button" onclick="toggleAuthMode()">Nie masz konta? Zarejestruj się</button>
+            <div class="profile-list" id="profile-list">
+                <button type="button" class="profile-btn" onclick="chooseProfile('user_rt8zi8glg_1787597563228')">
+                    <span class="emoji" aria-hidden="true">💪</span>
+                    <span class="name">Kuba</span>
+                </button>
+                <button type="button" class="profile-btn" onclick="chooseProfile('user_u2x8glbug_1787607478584')">
+                    <span class="emoji" aria-hidden="true">🏋️</span>
+                    <span class="name">Bartek</span>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -287,13 +252,16 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
             <span>Biblioteka ćwiczeń</span>
         </button>
+        <button type="button" class="sheet-item" onclick="switchProfile()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>Zmień profil</span>
+        </button>
         <div class="sheet-note app-version" id="app-version"></div>
     </div>
 
     <div id="toast" class="toast" role="status"></div>
 
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script>
         const firebaseConfig = {
@@ -309,14 +277,13 @@
         const db = firebase.firestore();
     </script>
 
-    <script src="js/utils.js?v=72"></script>
-    <script src="js/storage.js?v=72"></script>
-    <script src="js/auth.js?v=72"></script>
-    <script src="js/stats.js?v=72"></script>
-    <script src="js/exercises-lib.js?v=72"></script>
-    <script src="js/progression.js?v=72"></script>
-    <script src="js/views.js?v=72"></script>
-    <script src="js/app.js?v=72"></script>
+    <script src="js/utils.js?v=73"></script>
+    <script src="js/storage.js?v=73"></script>
+    <script src="js/stats.js?v=73"></script>
+    <script src="js/exercises-lib.js?v=73"></script>
+    <script src="js/progression.js?v=73"></script>
+    <script src="js/views.js?v=73"></script>
+    <script src="js/app.js?v=73"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').then((reg) => {

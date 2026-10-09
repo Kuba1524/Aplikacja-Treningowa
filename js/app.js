@@ -91,7 +91,7 @@ const KUBA_LEGS_V2 = [
 PLAN_KUBA[2].exercises = KUBA_LEGS_V2.map((ex) => ({ ...ex }));
 
 let DAYS = PLAN_BARTEK;
-const APP_VERSION = "v72";
+const APP_VERSION = "v73";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -800,115 +800,22 @@ const resetWorkout = () => {
     openDay(currentDayId);
 };
 
-const showAuthGate = () => {
+const showProfileGate = () => {
     const gate = document.getElementById("profile-gate");
     if (gate) gate.classList.remove("hidden");
 };
 
-let authRegisterMode = false;
-
-const setAuthMode = (registerMode) => {
-    authRegisterMode = registerMode;
-    const subtitle = document.getElementById("auth-subtitle");
-    const submit = document.getElementById("auth-submit");
-    const toggle = document.getElementById("auth-toggle");
-    const nameWrap = document.getElementById("auth-register-name-wrap");
-    const password = document.getElementById("auth-password");
-    const error = document.getElementById("auth-error");
-    if (subtitle) subtitle.textContent = registerMode ? "Zarejestruj nowe konto" : "Zaloguj się na swoje konto";
-    if (submit) submit.textContent = registerMode ? "Zarejestruj się" : "Zaloguj się";
-    if (toggle) toggle.textContent = registerMode ? "Masz już konto? Zaloguj się" : "Nie masz konta? Zarejestruj się";
-    if (nameWrap) nameWrap.classList.toggle("hidden", !registerMode);
-    if (password) password.autocomplete = registerMode ? "new-password" : "current-password";
-    if (error) error.classList.add("hidden");
-};
-
-const toggleAuthMode = () => {
-    const newMode = !authRegisterMode;
-    setAuthMode(newMode);
-    const username = document.getElementById("auth-username");
-    if (username) username.focus();
-};
-
-const togglePasswordVisibility = () => {
-    const input = document.getElementById("auth-password");
-    const btn = document.getElementById("auth-pass-toggle");
-    if (!input || !btn) return;
-    const show = input.type === "password";
-    input.type = show ? "text" : "password";
-    btn.setAttribute("aria-pressed", String(show));
-    btn.setAttribute("aria-label", show ? "Ukryj hasło" : "Pokaż hasło");
-    btn.innerHTML = show
-        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>'
-        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
-};
-
-const authSubmit = async () => {
-    const username = document.getElementById("auth-username").value.trim();
-    const password = document.getElementById("auth-password").value;
-    const errorEl = document.getElementById("auth-error");
-    const submitBtn = document.getElementById("auth-submit");
-
-    const showError = (msg) => {
-        if (errorEl) {
-            errorEl.textContent = msg;
-            errorEl.classList.remove("hidden");
-        }
-    };
-
-    if (!username || !password) {
-        showError("Podaj nazwę użytkownika i hasło");
-        return;
-    }
-
-    const registerName = authRegisterMode
-        ? (document.getElementById("auth-register-name").value.trim() || "")
-        : "";
-
-    if (authRegisterMode && !registerName) {
-        showError("Podaj, jak się do Ciebie zwracać (np. Kuba)");
-        const nameInput = document.getElementById("auth-register-name");
-        if (nameInput) nameInput.focus();
-        return;
-    }
-
-    try {
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.textContent = authRegisterMode ? "Rejestracja…" : "Logowanie…";
-        }
-
-        const user = authRegisterMode
-            ? await window.AuthModule.register(username, password)
-            : await window.AuthModule.login(username, password);
-
-        const profileName = authRegisterMode ? registerName : "";
-
-        await completeLogin(user, username, profileName);
-    } catch (err) {
-        const msg =
-            (err && err.message) ||
-            "Nie udało się zalogować. Sprawdź dane i połączenie z internetem.";
-        showError(msg);
-    } finally {
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            const mode = authRegisterMode ? "Zarejestruj się" : "Zaloguj się";
-            submitBtn.textContent = mode;
-        }
-    }
-};
-
-const completeLogin = async (firebaseUser, username, profileName) => {
-    const fallbackId = firebaseUser ? firebaseUser.uid : username;
-    const resolved = window.StorageModule.resolveUser(username, fallbackId);
-
-    window.StorageModule.setSelectedProfileId(resolved.id);
-
+const hideProfileGate = () => {
     const gate = document.getElementById("profile-gate");
     if (gate) gate.classList.add("hidden");
+};
 
-    await bootWithUser(resolved.id, resolved.plan, profileName || resolved.name);
+const chooseProfile = async (profileId) => {
+    const meta = window.StorageModule.profileMeta(profileId);
+    if (!meta || !meta.id) return;
+    window.StorageModule.setSelectedProfileId(meta.id);
+    hideProfileGate();
+    await bootWithUser(meta.id, meta.plan, meta.name);
 };
 
 /* ---- Migracje planu (odpalenie raz, per profil) ---- */
@@ -979,13 +886,7 @@ const bootWithUser = async (storageKey, planKey = "bartek", profileName = "") =>
     renderCurrentView();
 };
 
-const logoutUser = async () => {
-    try {
-        await window.AuthModule.logout();
-    } catch (e) {
-        /* ignore */
-    }
-    window.StorageModule.clearSelectedProfile();
+const switchProfile = () => {
     closeMoreSheet();
     managePlan = null;
     currentUserId = null;
@@ -993,7 +894,7 @@ const logoutUser = async () => {
     currentView = "home";
     isLoaded = false;
     state = { currentWeekIndex: 0, weeks: [{}], startSunday: 0 };
-    showAuthGate();
+    showProfileGate();
 };
 
 const populateThemeSection = () => {
@@ -1283,17 +1184,21 @@ const initApp = async () => {
         if (meta && meta.id) {
             await bootProfile(meta);
         } else {
-            const first = window.StorageModule.PROFILES[0];
-            await bootProfile(window.StorageModule.profileMeta(first && first.id));
+            showProfileGate();
         }
     } catch (e) {
         console.error("initApp error:", e);
         try {
-            const first = window.StorageModule.PROFILES[0];
-            await bootProfile(window.StorageModule.profileMeta(first && first.id));
+            const savedId = window.StorageModule.getSelectedProfileId() || "";
+            const meta = window.StorageModule.profileMeta(savedId);
+            if (meta && meta.id) {
+                await bootProfile(meta);
+            } else {
+                showProfileGate();
+            }
         } catch (e2) {
             console.error("initApp fallback error:", e2);
-            showAuthGate();
+            showProfileGate();
         }
     }
 };
@@ -1429,10 +1334,8 @@ window.updateSet = updateSet;
 window.toggleSet = toggleSet;
 window.toggleExerciseExpand = toggleExerciseExpand;
 window.resetWorkout = resetWorkout;
-window.authSubmit = authSubmit;
-window.toggleAuthMode = toggleAuthMode;
-window.togglePasswordVisibility = togglePasswordVisibility;
-window.logoutUser = logoutUser;
+window.chooseProfile = chooseProfile;
+window.switchProfile = switchProfile;
 window.openMoreSheet = openMoreSheet;
 window.closeMoreSheet = closeMoreSheet;
 window.toggleMoreSheet = toggleMoreSheet;
@@ -1450,16 +1353,6 @@ window.manageMoveExercise = manageMoveExercise;
 window.manageSave = manageSave;
 window.manageResetPlan = manageResetPlan;
 window.manageCancel = manageCancel;
-
-document.addEventListener("DOMContentLoaded", () => {
-    const form = document.getElementById("auth-form");
-    if (form) {
-        form.addEventListener("submit", (e) => {
-            e.preventDefault();
-            authSubmit();
-        });
-    }
-});
 
 initTheme();
 initApp();
