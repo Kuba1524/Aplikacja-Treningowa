@@ -658,7 +658,7 @@ const startRestTimer = (seconds) => {
     restTimer.interval = setInterval(tickRestTimer, 250);
 };
 
-const addRestRestTime = (sec) => {
+const addRestTime = (sec) => {
     const bar = getRestTimerBar();
     if (!bar || !bar.classList.contains("open")) return;
     restTimer.deadline += sec * 1000;
@@ -887,6 +887,8 @@ const bootWithUser = async (storageKey, planKey = "bartek", profileName = "") =>
 };
 
 const switchProfile = () => {
+    stopRestTimer(true);
+    window.Views.clearExpanded();
     closeMoreSheet();
     managePlan = null;
     currentUserId = null;
@@ -1206,7 +1208,7 @@ const initApp = async () => {
 const logBodyWeight = (rawKg) => {
     const kg = parseFloat(String(rawKg).replace(",", "."));
     if (!kg || kg < 30 || kg > 300) {
-        alert("Podaj wagę w kg (np. 78.5)");
+        showToast("Podaj wagę w kg (np. 78,5)");
         return;
     }
     if (!Array.isArray(state.bodyWeight)) state.bodyWeight = [];
@@ -1361,6 +1363,6 @@ const versionEl = document.getElementById("app-version");
 if (versionEl) versionEl.textContent = `Wersja: ${APP_VERSION}`;
 window.APP_VERSION = APP_VERSION;
 
-window.addRestTime = addRestRestTime;
+window.addRestTime = addRestTime;
 window.startRestTimer = startRestTimer;
 window.stopRestTimer = stopRestTimer;

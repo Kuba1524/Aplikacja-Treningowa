@@ -196,8 +196,8 @@ window.Views = (() => {
                                             <div class="day-plan-left">
                                                 <div class="day-plan-icon">${iconFor(day.icon)}</div>
                                                 <div>
-                                                    <div class="day-plan-title">${day.label}</div>
-                                                    <div class="day-plan-sub">${day.name} · ${day.exercises.length} ćwiczeń</div>
+                                                    <div class="day-plan-title">${window.Utils.escapeHtml(day.label)}</div>
+                                                    <div class="day-plan-sub">${window.Utils.escapeHtml(day.name)} · ${day.exercises.length} ćwiczeń</div>
                                                 </div>
                                             </div>
                                             <div class="day-plan-right">
@@ -355,8 +355,8 @@ window.Views = (() => {
                                 <div class="full-plan-day-left">
                                     <div class="full-plan-day-icon">${iconFor(day.icon)}</div>
                                     <div class="full-plan-day-info">
-                                        <div class="full-plan-day-label">${day.label}</div>
-                                        <div class="full-plan-day-name">${day.name}</div>
+                                        <div class="full-plan-day-label">${window.Utils.escapeHtml(day.label)}</div>
+                                        <div class="full-plan-day-name">${window.Utils.escapeHtml(day.name)}</div>
                                     </div>
                                 </div>
                                 <div class="full-plan-day-right">
@@ -383,7 +383,7 @@ window.Views = (() => {
                                         <div class="full-plan-exercise ${exDone === ex.sets ? "completed" : ""}">
                                             <span class="tag-badge tag-${ex.tag}">${ex.tag}</span>
                                             <div class="full-plan-ex-info">
-                                                <div class="full-plan-ex-name">${ex.name}</div>
+                                                <div class="full-plan-ex-name">${window.Utils.escapeHtml(ex.name)}</div>
                                                 <div class="full-plan-ex-meta">${ex.sets}×${ex.reps}</div>
                                             </div>
                                             <div class="full-plan-ex-status">
@@ -420,8 +420,8 @@ window.Views = (() => {
                             <div class="day-plan-left">
                                 <div class="day-plan-icon">${iconFor(day.icon)}</div>
                                 <div>
-                                    <div class="day-plan-title">${day.label}</div>
-                                    <div class="day-plan-sub">${day.name} · ${day.exercises.length} ćwiczeń</div>
+                                    <div class="day-plan-title">${window.Utils.escapeHtml(day.label)}</div>
+                                    <div class="day-plan-sub">${window.Utils.escapeHtml(day.name)} · ${day.exercises.length} ćwiczeń</div>
                                 </div>
                             </div>
                             <div class="day-plan-right">
@@ -552,7 +552,7 @@ window.Views = (() => {
                 <div class="wd-row">
                     <div class="wd-icon">${iconFor(day.icon)}</div>
                     <div class="wd-main">
-                        <div class="wd-label">${day.label}</div>
+                        <div class="wd-label">${window.Utils.escapeHtml(day.label)}</div>
                         <div class="wd-track"><div class="wd-fill" style="width:${progress.pct}%"></div></div>
                     </div>
                     <div class="wd-right">
@@ -619,7 +619,7 @@ window.Views = (() => {
                 <div class="pr-card">
                     <div class="pr-card-top">
                         <div>
-                            <div class="pr-name">${pr.name}</div>
+                            <div class="pr-name">${window.Utils.escapeHtml(pr.name)}</div>
                             <div class="pr-sub">${routeTxt || "Najlepszy wynik"}</div>
                         </div>
                         <div class="pr-badge ${badgeClass}">${badgeLabel}</div>
@@ -724,7 +724,7 @@ window.Views = (() => {
                                 <div class="stale-row">
                                     <span class="stale-ico">⚠</span>
                                     <div class="stale-main">
-                                        <div class="stale-name">${s.name}${s.bodyweight ? ' <span class="stale-bw">masa własna</span>' : ""}</div>
+                                        <div class="stale-name">${window.Utils.escapeHtml(s.name)}${s.bodyweight ? ' <span class="stale-bw">masa własna</span>' : ""}</div>
                                         ${s.bodyweight
                                             ? `<div class="stale-sub">bez zmian w powtórzeniach od ${s.streak} sesji (${s.reps} powt.)</div>`
                                             : `<div class="stale-sub">bez zmian od ${s.streak} sesji</div>`}
@@ -886,7 +886,7 @@ window.Views = (() => {
                     <button class="icon-btn" onclick="goBackFromWorkout()">←</button>
 
                     <div class="workout-head-center">
-                        <div class="workout-title">${day.label}</div>
+                        <div class="workout-title">${window.Utils.escapeHtml(day.label)}</div>
                         <div class="workout-sub">${dayDateText} • ${doneSets}/${totalSets} serii</div>
                     </div>
 
@@ -948,7 +948,7 @@ ${day.exercises.map((ex, ei) => {
                         <div class="exercise-title-wrap">
                             <span class="tag-badge tag-${ex.tag}">${ex.tag}</span>
                             <div class="exercise-main">
-                                <span class="ex-title">${ex.name}</span>
+                                <span class="ex-title">${window.Utils.escapeHtml(ex.name)}</span>
                                 <div class="ex-reps-range">${ex.sets} serie × ${ex.reps} powtórzeń</div>
                                 ${aggHtml}
                             </div>
@@ -1491,7 +1491,7 @@ ${day.exercises.map((ex, ei) => {
                 <div class="card mg-day-card">
                     <div class="mg-day-header" style="--day-color:${day.color}">
                         <span class="mg-day-icon">${day.icon}</span>
-                        <span class="mg-day-title">${day.name} · ${day.label}</span>
+                        <span class="mg-day-title">${window.Utils.escapeHtml(day.name)} · ${window.Utils.escapeHtml(day.label)}</span>
                         <span class="mg-day-count">${day.exercises.length} ćw.</span>
                     </div>
                     <div class="mg-day-style">

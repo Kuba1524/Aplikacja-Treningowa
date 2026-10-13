@@ -261,6 +261,9 @@
 
     <div id="toast" class="toast" role="status"></div>
 
+<!-- Pasek odpoczynku (timer miedzy seriami) -->
+<div id="rest-timer-bar" class="rest-timer-bar"><span class="rt-label">Odpoczynek</span><span id="rest-timer-time" class="rest-timer-time">00:00</span><div class="rest-timer-actions"><button onclick="addRestTime(30)" title="Dodaj 30 s">+30 s</button><button onclick="stopRestTimer(true)" title="Pomiń">Pomiń</button></div></div>
+
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script>
@@ -299,8 +302,5 @@
             }).catch(() => {});
         }
     </script>
-
-<!-- Pasek odpoczynku (timer miedzy seriami) -->
-<div id="rest-timer-bar" class="rest-timer-bar"><div class="rest-timer-inner"><span class="rest-timer-label">Odpoczynek</span><span id="rest-timer-time" class="rest-timer-time">00:00</span><div class="rest-timer-actions"><button class="rest-timer-btn" onclick="addRestTime(30)" title="Dodaj 30 s">+30 s</button><button class="rest-timer-btn" onclick="stopRestTimer(true)" title="Pomin">Pomin</button></div></div></div>
 </body>
 </html>
