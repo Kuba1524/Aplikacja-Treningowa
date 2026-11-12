@@ -20,9 +20,10 @@ const setupDom = () => {
 };
 
 const setupStorage = () => {
-    // Start w niedzielę 10.05.2026 — tydzień 26 (8.11.2026) to już nowy plan.
+    // Start w niedzielę 10.05.2026 — tydzień 26 (8.11.2026) ma plan v3,
+    // a tydzień 27 (15.11.2026) dostaje nowy plan v4.
     const startSunday = new Date(2026, 4, 10, 0, 0, 0, 0).getTime();
-    const weeks = Array.from({ length: 27 }, () => ({}));
+    const weeks = Array.from({ length: 28 }, () => ({}));
 
     // Tydzień 1: stary plan z Incline Dumbbell Press (4 serie) i wiosłowaniami
     // po 4 serie, dane PULL jeszcze w nowym układzie po migracji v74.
@@ -49,11 +50,14 @@ const setupStorage = () => {
         d1_e2: set(59.1, 11, 4),
     };
 
-    // Tydzień 27: nowy plan.
+    // Tydzień 27 (8.11.2026): plan v3.
     weeks[26] = {
         d1_e0: set(10, 6, 3),
         d1_e3: set(15, 12, 3),
     };
+
+    // Tydzień 28 (15.11.2026): nowy plan v4 — pusty, bo dopiero się zaczyna.
+    weeks[27] = {};
 
     const fixture = {
         currentWeekIndex: 26,
@@ -140,6 +144,24 @@ describe("historyczny plan Kuby per tydzień", () => {
         const names = (week) => week.flatMap((d) => d.exercises.map((ex) => ex.name));
         expect(names(saved.weekPlans[26])).toContain("Face Pull");
         expect(names(saved.weekPlans[25])).not.toContain("Face Pull");
+    });
+
+    it("od 15.11 wchodzi plan v4, a tydzień v3 zostaje bez zmian", () => {
+        const names = (week) => week.flatMap((d) => d.exercises.map((ex) => ex.name));
+        const v3 = names(saved.weekPlans[26]);
+        const v4 = names(saved.weekPlans[27]);
+
+        expect(v3).toContain("Incline Hammer Curl [SS]");
+        expect(v3).not.toContain("Hyperextension [SS]");
+        expect(v4).toContain("Incline Hammer Curl");
+        expect(v4).toContain("Hyperextension [SS]");
+        expect(v4).not.toContain("Incline Hammer Curl [SS]");
+
+        expect(saved.weekPlans[27][1].exercises[4].name).toBe("Incline Hammer Curl");
+        expect(saved.weekPlans[27][2].exercises[6].name).toBe("Hyperextension [SS]");
+        const sets = (plan) =>
+            plan.reduce((sum, day) => sum + day.exercises.reduce((s, ex) => s + ex.sets, 0), 0);
+        expect(sets(saved.weekPlans[27])).toBe(84);
     });
 
     it("nigdzie nie ma więcej ukończonych serii niż plan", () => {
