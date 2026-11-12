@@ -56,13 +56,53 @@ describe("renderStats", () => {
 
     it("renders the stagnation section with the stale exercise", () => {
         window.Views.renderStats(makeCtx(makeState()));
-        const html = document.getElementById("screen-stats").innerHTML;
+        const root = document.getElementById("screen-stats");
+        const html = root.innerHTML;
+        const staleSection = root.querySelector(".stale-section");
         expect(html).toContain("Wymaga uwagi");
         expect(html).toContain("⚠");
         expect(html).toContain("Bench Press");
-        expect(html).not.toContain("Cable Crunch");
+        expect(staleSection).not.toBeNull();
+        expect(staleSection.innerHTML).not.toContain("Cable Crunch");
         expect(html).toContain("bez zmian od 5 sesji");
         expect(html).toContain("55 kg");
+    });
+
+    it("shows all remaining exercises with history", () => {
+        window.Views.renderStats(makeCtx(makeState()));
+        const root = document.getElementById("screen-stats");
+        const html = root.innerHTML;
+        const sections = [...root.querySelectorAll(".stats-section")];
+        const extraSection = sections.find((section) =>
+            section.textContent.includes("Pozostałe ćwiczenia")
+        );
+        expect(extraSection).toBeTruthy();
+        expect(extraSection.textContent).toContain("Cable Crunch");
+        expect(extraSection.textContent).toContain("Chest Dips");
+        expect(extraSection.textContent).not.toContain("Bench Press");
+        expect(html).toContain("Pełna historia wyników z planu");
+    });
+
+    it("includes exercises that exist only in historical week plans", () => {
+        const state = makeState();
+        state.weekPlans = {
+            0: [
+                {
+                    id: 0,
+                    weekday: 0,
+                    exercises: [{ name: "Seated Cable Row", sets: 3, reps: "8-10", tag: "BACK" }]
+                }
+            ]
+        };
+        state.weeks[0] = { d0_e0: [{ kg: 50, reps: 8, done: true }] };
+        window.Views.renderStats(makeCtx(state));
+        const root = document.getElementById("screen-stats");
+        const sections = [...root.querySelectorAll(".stats-section")];
+        const extraSection = sections.find((section) =>
+            section.textContent.includes("Pozostałe ćwiczenia")
+        );
+        expect(extraSection).toBeTruthy();
+        expect(extraSection.textContent).toContain("Seated Cable Row");
     });
 
     it("shows bodyweight exercises with reps and 'masa własna' instead of 0 kg", () => {

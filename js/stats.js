@@ -193,25 +193,59 @@ window.StatsModule = (() => {
         return history.sort((a, b) => a.weekIndex - b.weekIndex);
     };
 
-    const getPrimaryExercises = (state, DAYS, getExerciseKey, getDayTimestampKey) => {
-        const preferred = [
-            "Bench Press",
-            "Weighted Pull Ups",
-            "Hip Thrust",
-            "RDL",
-            "Incline Dumbbell Press",
-            "Incline Smith Machine Press",
-            "Hack Squat / Leg Press"
-        ];
+    const PRIMARY_EXERCISE_NAMES = [
+        "Bench Press",
+        "Weighted Pull Ups",
+        "Hip Thrust",
+        "RDL",
+        "Incline Dumbbell Press",
+        "Incline Smith Machine Press",
+        "Hack Squat / Leg Press"
+    ];
 
-        return preferred
+    const getAllExercisePRs = (state, DAYS, getExerciseKey, getDayTimestampKey) => {
+        const names = new Set(PRIMARY_EXERCISE_NAMES);
+        Object.values(state.weekPlans || {}).forEach((plan) => {
+            (plan || []).forEach((day) => {
+                (day.exercises || []).forEach((ex) => {
+                    if (ex && ex.name) names.add(ex.name);
+                });
+            });
+        });
+        (DAYS || []).forEach((day) => {
+            (day.exercises || []).forEach((ex) => {
+                if (ex && ex.name) names.add(ex.name);
+            });
+        });
+
+        const preferredIndex = (name) => {
+            const index = PRIMARY_EXERCISE_NAMES.indexOf(name);
+            return index === -1 ? PRIMARY_EXERCISE_NAMES.length : index;
+        };
+
+        return [...names]
             .map((name) => ({
                 name,
                 history: getExerciseHistory(state, DAYS, name, getExerciseKey, getDayTimestampKey)
             }))
             .filter((item) => item.history.length > 0)
-            .slice(0, 4);
+            .sort((a, b) => {
+                const prefDiff = preferredIndex(a.name) - preferredIndex(b.name);
+                if (prefDiff) return prefDiff;
+                if (b.history.length !== a.history.length) {
+                    return b.history.length - a.history.length;
+                }
+                return a.name.localeCompare(b.name);
+            });
     };
+
+    const getPrimaryExercises = (state, DAYS, getExerciseKey, getDayTimestampKey) =>
+        PRIMARY_EXERCISE_NAMES.map((name) => ({
+            name,
+            history: getExerciseHistory(state, DAYS, name, getExerciseKey, getDayTimestampKey)
+        }))
+            .filter((item) => item.history.length > 0)
+            .slice(0, 4);
 
     // Ćwiczenia, w których nie nastąpił postęp sesja-do-sesji przez `minStreak`
     // lub więcej kolejnych wykonanych sesji. Sesja jest "bez zmian", gdy ciężar
@@ -567,6 +601,7 @@ window.StatsModule = (() => {
         getCurrentMonthWorkouts,
         getWeekStreak,
         getPrimaryExercises,
+        getAllExercisePRs,
         getProgressPercent,
         getActivityCells,
         createSparklineSVG,

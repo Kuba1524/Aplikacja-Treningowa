@@ -543,6 +543,10 @@ window.Views = (() => {
             ? ctx.getWeekCompletion(currentWeekIndex)
             : { total: 0, done: 0, pct: 0 };
         const prs = S.getPrimaryExercises(state, DAYS, ctx.getExerciseKey, ctx.getDayTimestampKey);
+        const allPrs = S.getAllExercisePRs
+            ? S.getAllExercisePRs(state, DAYS, ctx.getExerciseKey, ctx.getDayTimestampKey)
+            : prs;
+        const extraPrs = allPrs.filter((pr) => !prs.some((primary) => primary.name === pr.name));
         const stale = S.getStagnantExercises
             ? S.getStagnantExercises(state, DAYS, ctx.getExerciseKey)
             : [];
@@ -645,8 +649,7 @@ window.Views = (() => {
             `;
         }).join("");
 
-        const prHtml = (prs || [])
-            .map((pr) => {
+        const renderPrCard = (pr) => {
                 const history = pr.history || [];
                 const values = history.map((h) => h.topWeight || (h.bestSet && h.bestSet.kg) || 0);
                 const first = values[0] || 0;
@@ -726,8 +729,10 @@ window.Views = (() => {
                         </div>
                     </div>
                 </div>`;
-            })
-            .join("");
+        };
+
+        const prHtml = (prs || []).map(renderPrCard).join("");
+        const extraPrHtml = extraPrs.map(renderPrCard).join("");
 
         screen.innerHTML = `
             <div class="container stats-page">
@@ -901,6 +906,18 @@ window.Views = (() => {
                             ? `<div class="pr-grid">${prHtml}</div>`
                             : `<div class="empty-state"><div class="empty-ico">${iconFor("💪")}</div><div class="empty-txt">Jeszcze brak danych.<br/>Ukończ pierwsze serie, a pojawią się tu wykresy postępu.</div></div>`}
                     </section>
+
+                    ${extraPrHtml
+                        ? `<section class="stats-section">
+                        <div class="stats-section-head">
+                            <div>
+                                <div class="stats-section-title">Pozostałe ćwiczenia</div>
+                                <div class="stats-section-sub">Pełna historia wyników z planu</div>
+                            </div>
+                        </div>
+                        <div class="pr-grid">${extraPrHtml}</div>
+                    </section>`
+                        : ""}
 
                 </div>
             </div>
