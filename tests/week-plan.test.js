@@ -20,7 +20,7 @@ const setupDom = () => {
 const setupStorage = () => {
     // Tydzień zmiany planu na v3 (niedziela 8.11.2026) jest tygodniem nr 2.
     // Tygodnie 0 i 1 muszą dalej pokazywać stary plan Kuby, a tydzień 3
-    // (od 15.11.2026) dostaje nowy plan v4.
+    // (od 15.11.2026) dostaje nowy plan v5.
     const startSunday = new Date(2026, 9, 25, 0, 0, 0, 0).getTime();
     const fixture = {
         currentWeekIndex: 2,
@@ -107,7 +107,7 @@ describe("plan per tydzień", () => {
         expect(html).not.toContain("Hyperextension");
     });
 
-    it("nowy tydzień (15.11) pokazuje plan v4, nie nadpisując v3", () => {
+    it("nowy tydzień (15.11) pokazuje plan v5, nie nadpisując v3", () => {
         window.navigateTo("plan");
         window.setWeek(3);
         const html = document.getElementById("screen-plan").innerHTML;

@@ -21,7 +21,7 @@ const setupDom = () => {
 
 const setupStorage = () => {
     // Start w niedzielę 10.05.2026 — tydzień 26 (8.11.2026) ma plan v3,
-    // a tydzień 27 (15.11.2026) dostaje nowy plan v4.
+    // a tydzień 27 (15.11.2026) dostaje nowy plan v5.
     const startSunday = new Date(2026, 4, 10, 0, 0, 0, 0).getTime();
     const weeks = Array.from({ length: 28 }, () => ({}));
 
@@ -56,7 +56,7 @@ const setupStorage = () => {
         d1_e3: set(15, 12, 3),
     };
 
-    // Tydzień 28 (15.11.2026): nowy plan v4 — pusty, bo dopiero się zaczyna.
+    // Tydzień 28 (15.11.2026): nowy plan v5 — pusty, bo dopiero się zaczyna.
     weeks[27] = {};
 
     const fixture = {
@@ -146,18 +146,23 @@ describe("historyczny plan Kuby per tydzień", () => {
         expect(names(saved.weekPlans[25])).not.toContain("Face Pull");
     });
 
-    it("od 15.11 wchodzi plan v4, a tydzień v3 zostaje bez zmian", () => {
+    it("od 15.11 wchodzi plan v5, a tydzień v3 zostaje bez zmian", () => {
         const names = (week) => week.flatMap((d) => d.exercises.map((ex) => ex.name));
         const v3 = names(saved.weekPlans[26]);
-        const v4 = names(saved.weekPlans[27]);
+        const v5 = names(saved.weekPlans[27]);
 
         expect(v3).toContain("Incline Hammer Curl [SS]");
         expect(v3).not.toContain("Hyperextension [SS]");
-        expect(v4).toContain("Incline Hammer Curl");
-        expect(v4).toContain("Hyperextension [SS]");
-        expect(v4).not.toContain("Incline Hammer Curl [SS]");
+        expect(v5).toContain("Incline Hammer Curl");
+        expect(v5).toContain("Hyperextension [SS]");
+        expect(v5).not.toContain("Incline Hammer Curl [SS]");
 
-        expect(saved.weekPlans[27][1].exercises[4].name).toBe("Incline Hammer Curl");
+        expect(saved.weekPlans[26][1].exercises[4].name).toBe("EZ-bar Reverse Curl");
+        expect(saved.weekPlans[26][2].exercises[6].name).toBe("Incline Hammer Curl [SS]");
+        expect(saved.weekPlans[26][2].exercises[6].reps).toBe("8-10");
+        expect(saved.weekPlans[27][1].exercises[4].name).toBe("EZ-bar Reverse Curl");
+        expect(saved.weekPlans[27][1].exercises[5].name).toBe("Incline Hammer Curl");
+        expect(saved.weekPlans[27][1].exercises[5].reps).toBe("8-12");
         expect(saved.weekPlans[27][2].exercises[6].name).toBe("Hyperextension [SS]");
         const sets = (plan) =>
             plan.reduce((sum, day) => sum + day.exercises.reduce((s, ex) => s + ex.sets, 0), 0);
@@ -234,5 +239,73 @@ describe("historyczny plan Kuby per tydzień", () => {
         expect(saved.weekPlans[0][0].exercises[0].sets).toBe(4);
         expect(saved.weekPlans[14][1].exercises[1].sets).toBe(3);
         expect(saved.weekPlans[19][0].exercises[0].name).toBe("Incline Smith Machine Press");
+    });
+
+    it("v5 poprawia customPlan i przyszły tydzień, nie ruszając tygodnia v3", async () => {
+        const fixture = globalThis.__kubaFixture;
+        const oldPlan = JSON.parse(JSON.stringify(saved.weekPlans[27]));
+        const oldPull = oldPlan[1].exercises;
+        const oldLegs = oldPlan[2].exercises;
+
+        oldPlan[1] = {
+            ...oldPlan[1],
+            exercises: [
+                oldPull[0],
+                oldPull[1],
+                oldPull[2],
+                oldPull[3],
+                { name: "Incline Hammer Curl", sets: 3, reps: "8-10", tag: "BICEPS" },
+                oldPull[4],
+                oldPull[6],
+            ],
+        };
+        oldPlan[2] = {
+            ...oldPlan[2],
+            exercises: [
+                oldLegs[0],
+                oldLegs[1],
+                oldLegs[2],
+                oldLegs[3],
+                oldLegs[4],
+                oldLegs[5],
+                { name: "Incline Hammer Curl [SS]", sets: 3, reps: "8-10", tag: "BICEPS" },
+                oldLegs[7],
+            ],
+        };
+
+        fixture.customPlan = {
+            1: oldPlan[1].exercises,
+            2: oldPlan[2].exercises,
+        };
+        fixture.weekPlans = {
+            26: JSON.parse(JSON.stringify(saved.weekPlans[26])),
+            27: oldPlan,
+        };
+        fixture.migrations = {
+            kuba_legs_v2: true,
+            kuba_plan_v3: true,
+            kuba_plan_v3_repair: true,
+            kuba_plan_v4: true,
+            kuba_plan_history_v1: true,
+            kuba_plan_history_v2: true,
+            reps_sets_v3: true,
+            week_plans_v1: true,
+        };
+
+        await window.chooseProfile(KUBA_ID);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        saved = readSavedState();
+
+        expect(saved.migrations.kuba_plan_v5).toBe(true);
+        expect(saved.customPlan[1][4].name).toBe("EZ-bar Reverse Curl");
+        expect(saved.customPlan[1][5].name).toBe("Incline Hammer Curl");
+        expect(saved.customPlan[1][5].reps).toBe("8-12");
+        expect(saved.customPlan[2].map((ex) => ex.name)).toContain("Hyperextension [SS]");
+        expect(saved.customPlan[2].map((ex) => ex.name)).not.toContain("Incline Hammer Curl [SS]");
+
+        expect(saved.weekPlans[27][1].exercises[4].name).toBe("EZ-bar Reverse Curl");
+        expect(saved.weekPlans[27][1].exercises[5].name).toBe("Incline Hammer Curl");
+        expect(saved.weekPlans[27][2].exercises[6].name).toBe("Hyperextension [SS]");
+        expect(saved.weekPlans[26][2].exercises[6].name).toBe("Incline Hammer Curl [SS]");
     });
 });
