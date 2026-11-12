@@ -9,6 +9,7 @@ const setupDom = () => {
     document.body.innerHTML = `
         <div id="screen-home"></div>
         <div id="screen-plan"></div>
+        <div id="screen-fullplan"></div>
         <div id="screen-stats"></div>
         <div id="screen-workout"></div>
         <div id="screen-library"></div>
@@ -67,6 +68,7 @@ const setupStorage = () => {
 
     localStorage.setItem("selected_profile_id", KUBA_ID);
     localStorage.setItem("user_id", KUBA_ID);
+    globalThis.__kubaFixture = fixture;
 
     globalThis.firebase = {
         firestore: {
@@ -168,5 +170,47 @@ describe("historyczny plan Kuby per tydzień", () => {
         expect(db[0].bestSet.kg).toBe(24);
         expect(smith.length).toBe(2);
         expect(smith[0].bestSet.kg).toBe(40);
+    });
+
+    it("Zobacz plan otwiera osobną podstronę z pełną listą ćwiczeń", () => {
+        window.setWeek(0);
+        window.openFullPlan();
+
+        const full = document.getElementById("screen-fullplan");
+        const plan = document.getElementById("screen-plan");
+
+        expect(full.classList.contains("hidden")).toBe(false);
+        expect(plan.classList.contains("hidden")).toBe(true);
+        expect(full.innerHTML).toContain("Incline Dumbbell Press");
+        expect(full.innerHTML).toContain("Single-Arm Dumbbell Row");
+        expect(full.innerHTML).toContain("Seated Cable Row");
+        expect(full.innerHTML).not.toContain("Face Pull");
+    });
+
+    it("v79 naprawia stare tygodnie mimo ustawionej flagi z v78", async () => {
+        const fixture = globalThis.__kubaFixture;
+        const newPlan = JSON.parse(JSON.stringify(fixture.weekPlans[26]));
+
+        for (let i = 0; i < 26; i++) {
+            fixture.weekPlans[i] = JSON.parse(JSON.stringify(newPlan));
+        }
+        fixture.migrations = {
+            kuba_legs_v2: true,
+            kuba_plan_v3: true,
+            kuba_plan_v3_repair: true,
+            kuba_plan_history_v1: true,
+            reps_sets_v3: true,
+            week_plans_v1: true,
+        };
+
+        await window.chooseProfile(KUBA_ID);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        saved = readSavedState();
+
+        expect(saved.migrations.kuba_plan_history_v2).toBe(true);
+        expect(saved.weekPlans[0][0].exercises[0].name).toBe("Incline Dumbbell Press");
+        expect(saved.weekPlans[0][0].exercises[0].sets).toBe(4);
+        expect(saved.weekPlans[14][1].exercises[1].sets).toBe(3);
+        expect(saved.weekPlans[19][0].exercises[0].name).toBe("Incline Smith Machine Press");
     });
 });

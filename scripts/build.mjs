@@ -5,7 +5,18 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const dist = resolve(root, "dist");
 
-const ITEMS = ["index.html", "manifest.json", "sw.js", "css", "js"];
+const ITEMS = [
+    "index.html",
+    "manifest.json",
+    "sw.js",
+    "css",
+    "js",
+    "favicon-32x32.png",
+    "favicon-192x192.png",
+    "favicon-512x512.png",
+    "favicon-192x192-maskable.png",
+    "favicon-512x512-maskable.png"
+];
 
 rmSync(dist, { recursive: true, force: true });
 mkdirSync(dist, { recursive: true });

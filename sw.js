@@ -1,16 +1,21 @@
-const CACHE_NAME = "kubagym-v78";
+const CACHE_NAME = "kubagym-v79";
 const urlsToCache = [
     "/Aplikacja-Treningowa/",
     "/Aplikacja-Treningowa/index.html",
-    "/Aplikacja-Treningowa/css/style.css?v=78",
-    "/Aplikacja-Treningowa/js/utils.js?v=78",
-    "/Aplikacja-Treningowa/js/storage.js?v=78",
-    "/Aplikacja-Treningowa/js/stats.js?v=78",
-    "/Aplikacja-Treningowa/js/exercises-lib.js?v=78",
-    "/Aplikacja-Treningowa/js/progression.js?v=78",
-    "/Aplikacja-Treningowa/js/views.js?v=78",
-    "/Aplikacja-Treningowa/js/app.js?v=78",
-    "/Aplikacja-Treningowa/manifest.json?v=78"
+    "/Aplikacja-Treningowa/css/style.css?v=79",
+    "/Aplikacja-Treningowa/js/utils.js?v=79",
+    "/Aplikacja-Treningowa/js/storage.js?v=79",
+    "/Aplikacja-Treningowa/js/stats.js?v=79",
+    "/Aplikacja-Treningowa/js/exercises-lib.js?v=79",
+    "/Aplikacja-Treningowa/js/progression.js?v=79",
+    "/Aplikacja-Treningowa/js/views.js?v=79",
+    "/Aplikacja-Treningowa/js/app.js?v=79",
+    "/Aplikacja-Treningowa/manifest.json?v=79",
+    "/Aplikacja-Treningowa/favicon-32x32.png",
+    "/Aplikacja-Treningowa/favicon-192x192.png",
+    "/Aplikacja-Treningowa/favicon-512x512.png",
+    "/Aplikacja-Treningowa/favicon-192x192-maskable.png",
+    "/Aplikacja-Treningowa/favicon-512x512-maskable.png"
 ];
 
 self.addEventListener("install", (event) => {

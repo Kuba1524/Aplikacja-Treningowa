@@ -233,7 +233,7 @@ const buildKubaHistoricalPlan = (weekStart, weekData = {}) => {
 
 let DAYS = PLAN_BARTEK;
 let CURRENT_PLAN = PLAN_BARTEK;
-const APP_VERSION = "v78";
+const APP_VERSION = "v79";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -305,6 +305,7 @@ let currentProfileName = "Użytkownik";
 let currentPlanKey = "bartek";
 let statsMaxCols = 12;
 let planCompactMode = false;
+let fullPlanReturnView = "plan";
 
 const getDayDateKey = (dayId) => `day_${dayId}_date`;
 const getDayTimestampKey = (dayId) => `day_${dayId}_ts`;
@@ -613,6 +614,7 @@ const renderCurrentView = () => {
     try {
         if (currentView === "home") window.Views.renderHome(ctx);
         if (currentView === "plan") window.Views.renderPlan(ctx);
+        if (currentView === "fullplan") window.Views.renderFullPlanPage(ctx);
         if (currentView === "stats") window.Views.renderStats(ctx);
         if (currentView === "library") {
             window.Views.renderLibrary(ctx);
@@ -652,6 +654,7 @@ const updateVisibleScreen = () => {
     const screens = {
         home: document.getElementById("screen-home"),
         plan: document.getElementById("screen-plan"),
+        fullplan: document.getElementById("screen-fullplan"),
         stats: document.getElementById("screen-stats"),
         workout: document.getElementById("screen-workout"),
         library: document.getElementById("screen-library"),
@@ -673,7 +676,8 @@ const updateBottomNav = () => {
         btn.classList.remove("active");
 
         if (currentView === "home" && view === "home") btn.classList.add("active");
-        if (currentView === "plan" && view === "plan") btn.classList.add("active");
+        if ((currentView === "plan" || currentView === "fullplan") && view === "plan")
+            btn.classList.add("active");
         if (currentView === "stats" && view === "stats") btn.classList.add("active");
     });
 };
@@ -715,8 +719,14 @@ const setPlanMode = (fullPlan) => {
 };
 
 const openFullPlan = () => {
-    planCompactMode = false;
-    navigateTo("plan");
+    if (currentView !== "fullplan") {
+        fullPlanReturnView = currentView || "plan";
+    }
+    navigateTo("fullplan");
+};
+
+const closeFullPlan = () => {
+    navigateTo(fullPlanReturnView || "plan");
 };
 
 const openDay = (id) => {
@@ -998,6 +1008,7 @@ const runPlanMigrations = (planKey) => {
     const hadPlanV3 = state.migrations && state.migrations["kuba_plan_v3"];
     const hadRepair = state.migrations && state.migrations["kuba_plan_v3_repair"];
     const hadHistory = state.migrations && state.migrations["kuba_plan_history_v1"];
+    const hadHistoryV2 = state.migrations && state.migrations["kuba_plan_history_v2"];
 
     if (planKey === "kuba" && !hadLegs) {
         state.weeks = (state.weeks || []).map((week) =>
@@ -1091,6 +1102,29 @@ const runPlanMigrations = (planKey) => {
         state.migrations["kuba_plan_history_v1"] = true;
     }
 
+    // v78 zapisywało flagę kuba_plan_history_v1, ale u części profili snapshoty
+    // zdążyły już powstać z nowego planu (Smith) i migracja ich nie naprawiła.
+    // v79 wymusza ponowne odtworzenie planów wszystkich tygodni sprzed zmiany.
+    if (planKey === "kuba" && state.startSunday && state.migrations && !hadHistoryV2) {
+        if (!state.weekPlans || typeof state.weekPlans !== "object" || Array.isArray(state.weekPlans)) {
+            state.weekPlans = {};
+        }
+
+        const boundary = Math.max(
+            0,
+            Math.floor((KUBA_PLAN_V3_START - state.startSunday) / WEEK_MS)
+        );
+
+        (state.weeks || []).forEach((week, idx) => {
+            if (idx >= boundary) return;
+            const weekStart = kubaWeekStart(state.startSunday, idx);
+            if (weekStart === null) return;
+            state.weekPlans[idx] = buildKubaHistoricalPlan(weekStart, week || {});
+        });
+
+        state.migrations["kuba_plan_history_v2"] = true;
+    }
+
     if (state.migrations && !state.migrations["reps_sets_v3"]) {
         if (state.customPlan && typeof state.customPlan === "object") {
             Object.keys(state.customPlan).forEach((dayKey) => {
@@ -1113,6 +1147,7 @@ const runPlanMigrations = (planKey) => {
             !hadPlanV3 ||
             !hadRepair ||
             !hadHistory ||
+            !hadHistoryV2 ||
             !state.migrations["reps_sets_v3"])
     ) {
         persistState();
@@ -1182,6 +1217,10 @@ const bootWithUser = async (storageKey, planKey = "bartek", profileName = "") =>
 
     currentView = "home";
     currentDayId = null;
+    const requestedView = new URLSearchParams(window.location.search).get("view");
+    if (requestedView === "plan" || requestedView === "stats") {
+        currentView = requestedView;
+    }
     renderCurrentView();
 };
 
@@ -1608,6 +1647,7 @@ window.navigateToWorkoutFromNav = navigateToWorkoutFromNav;
 window.setWeek = setWeek;
 window.setPlanMode = setPlanMode;
 window.openFullPlan = openFullPlan;
+window.closeFullPlan = closeFullPlan;
 window.openDay = openDay;
 window.goBackFromWorkout = goBackFromWorkout;
 window.setLibQuery = (v) => {

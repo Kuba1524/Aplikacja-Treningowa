@@ -414,6 +414,84 @@ window.Views = (() => {
         `;
     };
 
+    // Osobna podstrona „Zobacz plan” — tylko pełna lista ćwiczeń,
+    // bez statystyk i przycisków startu treningu.
+    const renderFullPlanPage = (ctx) => {
+        const { state, DAYS, currentWeekIndex } = ctx;
+        const screen = document.getElementById("screen-fullplan");
+        if (!screen) return;
+
+        const totalExercises = DAYS.reduce((sum, day) => sum + day.exercises.length, 0);
+
+        screen.innerHTML = `
+            <div class="container fullplan-page">
+                <div class="fullplan-top">
+                    <button class="icon-btn" onclick="closeFullPlan()" aria-label="Wstecz">←</button>
+                    <div class="fullplan-top-info">
+                        <div class="header-title">Plan <span>Treningowy</span></div>
+                        <div class="header-sub">Tydzień ${currentWeekIndex + 1} · ${totalExercises} ćwiczeń</div>
+                    </div>
+                </div>
+
+                <div class="tabs-row">
+                    <div class="plan-week-tabs">
+                        ${state.weeks
+                            .map(
+                                (_, w) => `
+                                <button class="week-btn ${currentWeekIndex === w ? "active" : ""}" onclick="setWeek(${w})">
+                                    TYDZIEŃ ${w + 1}
+                                </button>
+                            `
+                            )
+                            .join("")}
+                    </div>
+                </div>
+
+                <div class="full-plan-days">
+                    ${DAYS.map(
+                        (day) => `
+                        <div class="full-plan-day fullplan-day">
+                            <div class="full-plan-day-header">
+                                <div class="full-plan-day-left">
+                                    <div class="full-plan-day-icon">${iconFor(day.icon)}</div>
+                                    <div class="full-plan-day-info">
+                                        <div class="full-plan-day-label">${window.Utils.escapeHtml(day.label)}</div>
+                                        <div class="full-plan-day-name">${window.Utils.escapeHtml(day.name)}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="full-plan-exercises">
+                                ${day.exercises
+                                    .map(
+                                        (ex) => `
+                                    <div class="full-plan-exercise">
+                                        <span class="tag-badge tag-${ex.tag}">${ex.tag}</span>
+                                        <div class="full-plan-ex-info">
+                                            <div class="full-plan-ex-name">${window.Utils.escapeHtml(ex.name)}</div>
+                                            <div class="full-plan-ex-meta">${ex.sets}×${ex.reps}</div>
+                                        </div>
+                                    </div>
+                                `
+                                    )
+                                    .join("")}
+                            </div>
+                        </div>
+                    `
+                    ).join("")}
+                </div>
+            </div>
+        `;
+
+        requestAnimationFrame(() => {
+            const tabs = screen.querySelector(".plan-week-tabs");
+            if (tabs) {
+                tabs.addEventListener("scroll", () => updateTabEdges(tabs), { passive: true });
+                updateTabEdges(tabs);
+            }
+        });
+    };
+
     const renderCompactPlan = (DAYS, getDayProgress) => {
         return `
             <div class="day-list">
@@ -1551,6 +1629,7 @@ ${day.exercises.map((ex, ei) => {
     return {
         renderHome,
         renderPlan,
+        renderFullPlanPage,
         renderStats,
         renderWorkout,
         renderLibrary,

@@ -2728,6 +2728,40 @@ html[data-theme="proton"] .full-plan-overview {
     }
 }
 
+/* Podstrona „Zobacz plan” */
+.fullplan-page {
+    padding-bottom: 24px;
+}
+
+.fullplan-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.fullplan-top-info {
+    min-width: 0;
+}
+
+.fullplan-top .header-title {
+    font-size: 28px;
+}
+
+@media (min-width: 600px) {
+    .fullplan-top .header-title {
+        font-size: 34px;
+    }
+}
+
+.fullplan-day {
+    cursor: default;
+}
+
+.fullplan-day:active {
+    transform: none;
+}
+
 .full-plan-day {
     background:
         linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.01)),

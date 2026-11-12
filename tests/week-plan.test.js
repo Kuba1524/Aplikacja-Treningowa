@@ -7,6 +7,7 @@ const setupDom = () => {
     document.body.innerHTML = `
         <div id="screen-home"></div>
         <div id="screen-plan"></div>
+        <div id="screen-fullplan"></div>
         <div id="screen-stats"></div>
         <div id="screen-workout"></div>
         <div id="screen-library"></div>
