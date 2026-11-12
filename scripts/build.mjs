@@ -11,11 +11,14 @@ const ITEMS = [
     "sw.js",
     "css",
     "js",
+    "favicon.ico",
+    "apple-touch-icon.png",
     "favicon-32x32.png",
     "favicon-192x192.png",
     "favicon-512x512.png",
     "favicon-192x192-maskable.png",
-    "favicon-512x512-maskable.png"
+    "favicon-512x512-maskable.png",
+    "logo-1024.png"
 ];
 
 rmSync(dist, { recursive: true, force: true });
