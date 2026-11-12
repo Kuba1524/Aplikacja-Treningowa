@@ -76,9 +76,7 @@ const makeKubaPlan = (days) =>
         exercises: (days[idx] || []).map((ex) => ({ ...ex }))
     }));
 
-// Plan Kuby v3 — obowiązywał od niedzieli 8.11.2026 do 14.11.2026.
-// Trzymamy go zamrożonego, bo od 15.11.2026 wchodzi nowy plan, a stare
-// tygodnie muszą dalej pokazywać ćwiczenia, które były wtedy zaplanowane.
+// PUSH i UPPER z planu v3 zostają bez zmian również w v5.
 const KUBA_PUSH_V3 = [
     { name: "Incline Smith Machine Press", sets: 3, reps: "6-8", tag: "CHEST" },
     { name: "Seated Dumbbell OHP", sets: 3, reps: "6-10", tag: "SHOULDER" },
@@ -87,24 +85,6 @@ const KUBA_PUSH_V3 = [
     { name: "Dumbbell Lateral Raises", sets: 3, reps: "8-12", tag: "SHOULDER" },
     { name: "Ab Wheel", sets: 3, reps: "8-12", tag: "CORE" },
     { name: "Dragon Flag (negatywy)", sets: 2, reps: "8-12", tag: "CORE" }
-];
-const KUBA_PULL_V3 = [
-    { name: "Weighted Pull Ups", sets: 3, reps: "6-8", tag: "BACK" },
-    { name: "Single-Arm Cable Row", sets: 3, reps: "8-10", tag: "BACK" },
-    { name: "Reverse Peck Deck", sets: 2, reps: "8-12", tag: "REAR" },
-    { name: "Face Pull", sets: 3, reps: "12-15", tag: "REAR" },
-    { name: "EZ-bar Reverse Curl", sets: 3, reps: "8-12", tag: "FOREARMS" },
-    { name: "Barbell Wrist Curl", sets: 3, reps: "10-15", tag: "FOREARMS" }
-];
-const KUBA_LEGS_V3 = [
-    { name: "RDL (sztanga)", sets: 3, reps: "6-10", tag: "LEGS" },
-    { name: "Hack Squat / Leg Press", sets: 3, reps: "6-10", tag: "QUADS" },
-    { name: "Leg Extension", sets: 3, reps: "10-12", tag: "QUADS" },
-    { name: "Seated Leg Curl", sets: 3, reps: "8-12", tag: "HAM" },
-    { name: "Incline Dumbbell Curl [SS]", sets: 3, reps: "8-12", tag: "BICEPS" },
-    { name: "Single-Arm Cable Pushdown [SS]", sets: 3, reps: "8-12", tag: "TRICEPS" },
-    { name: "Incline Hammer Curl [SS]", sets: 3, reps: "8-10", tag: "BICEPS" },
-    { name: "Calf Raises [SS]", sets: 4, reps: "10-12", tag: "CALVES" }
 ];
 const KUBA_UPPER_V3 = [
     { name: "Bench Press", sets: 3, reps: "5-8", tag: "CHEST" },
@@ -116,7 +96,7 @@ const KUBA_UPPER_V3 = [
     { name: "Cable Crunch", sets: 3, reps: "8-12", tag: "CORE" }
 ];
 
-// Plan Kuby v5 (poprawka v4) — obowiązuje od niedzieli 15.11.2026.
+// Plan Kuby v5 (poprawka v4) — obowiązuje od niedzieli 8.11.2026.
 // PUSH i UPPER zostają bez zmian; Incline Hammer Curl jest w PULL zaraz po
 // EZ-bar Reverse Curl, a w nogach zamiast niego jest Hyperextension.
 const KUBA_PUSH = KUBA_PUSH_V3.map((ex) => ({ ...ex }));
@@ -141,12 +121,6 @@ const KUBA_LEGS = [
 ];
 const KUBA_UPPER = KUBA_UPPER_V3.map((ex) => ({ ...ex }));
 
-const PLAN_KUBA_V3 = makeKubaPlan([
-    KUBA_PUSH_V3,
-    KUBA_PULL_V3,
-    KUBA_LEGS_V3,
-    KUBA_UPPER_V3
-]);
 const PLAN_KUBA = makeKubaPlan([KUBA_PUSH, KUBA_PULL, KUBA_LEGS, KUBA_UPPER]);
 
 // Plan Kuby sprzed zmiany (obowiązywał do tygodnia z 8.11.2026).
@@ -161,13 +135,11 @@ const KUBA_LEGS_V1 = [
     { name: "Incline Hammer Curl [SS]", sets: 3, reps: "8-10", tag: "BICEPS" },
     { name: "Calf Raises [SS]", sets: 4, reps: "10-15", tag: "CALVES" }
 ];
-// Tydzień, od którego obowiązuje plan Kuby v3 (niedziela 8.11.2026).
+// Tydzień, od którego obowiązuje plan Kuby v5 (niedziela 8.11.2026).
+// Starsze tygodnie nadal dostają plan historyczny.
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const KUBA_PLAN_V3_START = new Date(2026, 10, 8, 0, 0, 0, 0).getTime();
-
-// Nowy plan Kuby wchodzi od niedzieli 15.11.2026. Tydzień 8–14.11.2026
-// zostaje przy planie v3, żeby dało się porównać oba tygodnie.
-const KUBA_PLAN_V4_START = new Date(2026, 10, 15, 0, 0, 0, 0).getTime();
+const KUBA_PLAN_V5_START = KUBA_PLAN_V3_START;
 
 // Granice wcześniejszych zmian planu Kuby (odtworzone z historii i z danych):
 // - do 16.08.2026 wiosłowania miały po 4 serie,
@@ -269,7 +241,7 @@ const buildKubaHistoricalPlan = (weekStart, weekData = {}) => {
 
 let DAYS = PLAN_BARTEK;
 let CURRENT_PLAN = PLAN_BARTEK;
-const APP_VERSION = "v84";
+const APP_VERSION = "v85";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -282,8 +254,7 @@ const copyPlan = (plan) =>
 
 // Plan na dany tydzień zależy od daty jego rozpoczęcia:
 // - przed 8.11.2026: plan odtworzony historycznie,
-// - 8–14.11.2026: zamrożony plan v3,
-// - od 15.11.2026: najnowszy plan v5 (z ewentualnymi edycjami użytkownika).
+// - od 8.11.2026: najnowszy plan v5 (z ewentualnymi edycjami użytkownika).
 const fitPlanSetsToWeek = (plan, weekData = {}) => {
     (plan || []).forEach((day) => {
         day.exercises = (day.exercises || []).map((ex, exIdx) => {
@@ -305,9 +276,6 @@ const getPlanForWeekIndex = (weekIndex, weekData = {}, planKey = currentPlanKey)
 
     if (weekStart < KUBA_PLAN_V3_START) {
         return buildKubaHistoricalPlan(weekStart, weekData);
-    }
-    if (weekStart < KUBA_PLAN_V4_START) {
-        return fitPlanSetsToWeek(copyPlan(PLAN_KUBA_V3), weekData);
     }
     return copyPlan(CURRENT_PLAN);
 };
@@ -1195,6 +1163,7 @@ const runPlanMigrations = (planKey) => {
     const hadPlanV3 = state.migrations && state.migrations["kuba_plan_v3"];
     const hadPlanV4 = state.migrations && state.migrations["kuba_plan_v4"];
     const hadPlanV5 = state.migrations && state.migrations["kuba_plan_v5"];
+    const hadPlanV5Now = state.migrations && state.migrations["kuba_plan_v5_now"];
     const hadRepair = state.migrations && state.migrations["kuba_plan_v3_repair"];
     const hadHistory = state.migrations && state.migrations["kuba_plan_history_v1"];
     const hadHistoryV2 = state.migrations && state.migrations["kuba_plan_history_v2"];
@@ -1346,10 +1315,10 @@ const runPlanMigrations = (planKey) => {
         state.migrations["reps_sets_v3"] = true;
     }
 
-    // Plan Kuby v5 (poprawka v4 od 15.11.2026): Incline Hammer Curl trafia
-    // do PULL zaraz po EZ-bar Reverse Curl (3 x 8-12), a w nogach zostaje
-    // Hyperextension [SS] (2 x 10-12). Nadpisujemy tylko customPlan i przyszłe
-    // tygodnie — tydzień v3 (8–14.11.2026) zostaje bez zmian.
+    // Plan Kuby v5 (poprawka v4): Incline Hammer Curl trafia do PULL zaraz po
+    // EZ-bar Reverse Curl (3 x 8-12), a w nogach zostaje Hyperextension [SS]
+    // (2 x 10-12). Nadpisujemy tylko customPlan — tygodnie i ich zapisane serie
+    // przepina osobna migracja poniżej.
     if (planKey === "kuba" && state.migrations && !hadPlanV5) {
         if (state.customPlan && Object.keys(state.customPlan).length) {
             getPlanByKey("kuba").forEach((day) => {
@@ -1357,18 +1326,59 @@ const runPlanMigrations = (planKey) => {
             });
         }
 
-        if (state.startSunday && state.weekPlans && typeof state.weekPlans === "object") {
-            Object.keys(state.weekPlans).forEach((key) => {
-                const idx = Number(key);
-                if (!Number.isInteger(idx) || idx < 0) return;
-                const weekStart = kubaWeekStart(state.startSunday, idx);
-                if (weekStart !== null && weekStart >= KUBA_PLAN_V4_START) {
-                    state.weekPlans[idx] = copyPlan(getPlanByKey("kuba"));
+        state.migrations["kuba_plan_v5"] = true;
+    }
+
+    // Plan Kuby v5 obowiązuje już od bieżącego tygodnia (8.11.2026).
+    // Poprzednia migracja mogła zostawić ten tydzień na v3, dlatego tutaj
+    // podmieniamy plan tygodnia i przepinamy zapisane serie na nowe indeksy.
+    // PULL v3: [.., EZ-bar, Wrist Curl] -> v5: [.., EZ-bar, Incline Hammer, Wrist Curl]
+    // PULL v4: [.., Incline Hammer, EZ-bar, Wrist] -> v5: [.., EZ-bar, Incline Hammer, Wrist]
+    // LEGS v3: [.., Incline Hammer [SS], Calf] -> v5: [.., Hyperextension, Calf]
+    if (planKey === "kuba" && state.migrations && !hadPlanV5Now) {
+        const v5Plan = buildCurrentPlan();
+        const startIdx = state.startSunday
+            ? Math.max(0, Math.floor((KUBA_PLAN_V5_START - state.startSunday) / WEEK_MS))
+            : 0;
+
+        for (let idx = startIdx; idx < (state.weeks || []).length; idx++) {
+            const weekStart = kubaWeekStart(state.startSunday, idx);
+            if (weekStart === null || weekStart < KUBA_PLAN_V5_START) continue;
+
+            let weekData = state.weeks[idx] || {};
+            const oldPlan = state.weekPlans ? state.weekPlans[idx] : null;
+            const oldPull = oldPlan && oldPlan[1] ? oldPlan[1].exercises : null;
+            const oldLegs = oldPlan && oldPlan[2] ? oldPlan[2].exercises : null;
+
+            if (Array.isArray(oldPull) && oldPull.length) {
+                if (oldPull[5] && oldPull[5].name === "Barbell Wrist Curl") {
+                    // v3 -> v5
+                    weekData = window.Utils.reorderDayLogs(weekData, 1, [0, 1, 2, 3, 4, null, 5]);
+                } else if (oldPull[4] && oldPull[4].name === "Incline Hammer Curl") {
+                    // v4 -> v5
+                    weekData = window.Utils.reorderDayLogs(weekData, 1, [0, 1, 2, 3, 5, 4, 6]);
                 }
-            });
+            }
+
+            if (
+                Array.isArray(oldLegs) &&
+                oldLegs[6] &&
+                oldLegs[6].name === "Incline Hammer Curl [SS]"
+            ) {
+                // v3 -> v5. Hyperextension to nowe ćwiczenie, więc nie dziedziczy
+                // danych po usuniętym Incline Hammer Curl [SS].
+                weekData = window.Utils.reorderDayLogs(
+                    weekData,
+                    2,
+                    [0, 1, 2, 3, 4, 5, null, 7]
+                );
+            }
+
+            state.weeks[idx] = weekData;
+            state.weekPlans[idx] = fitPlanSetsToWeek(copyPlan(v5Plan), weekData);
         }
 
-        state.migrations["kuba_plan_v5"] = true;
+        state.migrations["kuba_plan_v5_now"] = true;
     }
 
     if (
@@ -1377,6 +1387,7 @@ const runPlanMigrations = (planKey) => {
             !hadPlanV3 ||
             !hadPlanV4 ||
             !hadPlanV5 ||
+            !hadPlanV5Now ||
             !hadRepair ||
             !hadHistory ||
             !hadHistoryV2 ||

@@ -96,29 +96,22 @@ describe("plan per tydzień", () => {
         expect(html).not.toContain("Face Pull");
     });
 
-    it("bieżący tydzień (8.11) pokazuje plan v3", () => {
+    it("bieżący tydzień (8.11) i następny (15.11) pokazują plan v5", () => {
         window.navigateTo("plan");
         window.setWeek(2);
-        const html = document.getElementById("screen-plan").innerHTML;
+        let html = document.getElementById("screen-plan").innerHTML;
         expect(html).toContain("Single-Arm Cable Row");
         expect(html).toContain("Face Pull");
         expect(html).not.toContain("Seated Cable Row");
-        expect(html).toContain("Incline Hammer Curl [SS]");
-        expect(html).not.toContain("Hyperextension");
-    });
-
-    it("nowy tydzień (15.11) pokazuje plan v5, nie nadpisując v3", () => {
-        window.navigateTo("plan");
-        window.setWeek(3);
-        const html = document.getElementById("screen-plan").innerHTML;
         expect(html).toContain("Incline Hammer Curl");
         expect(html).not.toContain("Incline Hammer Curl [SS]");
         expect(html).toContain("Hyperextension [SS]");
 
-        window.setWeek(2);
-        const previous = document.getElementById("screen-plan").innerHTML;
-        expect(previous).toContain("Incline Hammer Curl [SS]");
-        expect(previous).not.toContain("Hyperextension");
+        window.setWeek(3);
+        html = document.getElementById("screen-plan").innerHTML;
+        expect(html).toContain("Incline Hammer Curl");
+        expect(html).not.toContain("Incline Hammer Curl [SS]");
+        expect(html).toContain("Hyperextension [SS]");
     });
 
     it("naprawa przywraca właściwe dane w starych tygodniach", async () => {

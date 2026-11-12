@@ -82,6 +82,68 @@ describe("renderWorkout", () => {
         expect(html2).toContain("prog-card completed");
     });
 
+    it("matches previous week sets by exercise name when the plan changed", () => {
+        const set = (kg, reps) => ({ kg, reps, done: true });
+        const ctx = {
+            state: {
+                currentWeekIndex: 1,
+                weeks: [
+                    {
+                        d1_e0: [set(40, 8)],
+                        d1_e0_note: "stara notatka",
+                        d1_e1: [set(99, 5)],
+                        d1_e1_note: "inna notatka",
+                    },
+                    { d1_e0: [], d1_e1: [] },
+                ],
+                weekPlans: {
+                    0: [
+                        {
+                            id: 1,
+                            exercises: [{ name: "Stare Ćwiczenie" }, { name: "Inne Ćwiczenie" }],
+                        },
+                    ],
+                    1: [
+                        {
+                            id: 1,
+                            exercises: [{ name: "Nowe Ćwiczenie" }, { name: "Stare Ćwiczenie" }],
+                        },
+                    ],
+                },
+            },
+            currentWeekIndex: 1,
+            currentDayId: 1,
+            DAYS: [
+                {
+                    id: 1,
+                    label: "Poniedziałek",
+                    icon: "🔥",
+                    exercises: [
+                        { name: "Nowe Ćwiczenie", sets: 1, reps: "8-10", tag: "CHEST" },
+                        { name: "Stare Ćwiczenie", sets: 1, reps: "8-10", tag: "CHEST" },
+                    ],
+                },
+            ],
+            getDayDateKey: () => "_d1",
+            getExerciseKey: (dayId, ei) => `d${dayId}_e${ei}`,
+            getNoteKey: (dayId, ei) => `d${dayId}_e${ei}_note`,
+            ensureWorkoutDataExists: () => {},
+            getTrend: () => null,
+        };
+
+        window.Views.toggleExExpand(1, 1);
+        document.body.innerHTML = '<div id="screen-workout"></div>';
+        window.Views.renderWorkout(ctx);
+        const html = document.getElementById("screen-workout").innerHTML;
+
+        // Stare Ćwiczenie było w poprzednim tygodniu na e0, a teraz jest na e1.
+        expect(html).toContain("40 kg");
+        expect(html).toContain("stara notatka");
+        // Nie może dziedziczyć danych z e1 tylko dlatego, że ten sam indeks.
+        expect(html).not.toContain("99 kg");
+        expect(html).not.toContain("inna notatka");
+    });
+
     it("keeps the full card (with inputs) for an incomplete workout", () => {
         document.body.innerHTML = '<div id="screen-workout"></div>';
         window.Views.renderWorkout(makeCtx());

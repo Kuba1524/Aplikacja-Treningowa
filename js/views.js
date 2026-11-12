@@ -957,6 +957,14 @@ window.Views = (() => {
         const day = DAYS.find((d) => d && d.id === currentDayId) || null;
         const weekData = state.weeks[currentWeekIndex];
         const prevWeekData = currentWeekIndex > 0 ? state.weeks[currentWeekIndex - 1] : null;
+        const prevPlan =
+            currentWeekIndex > 0 && state.weekPlans
+                ? state.weekPlans[currentWeekIndex - 1]
+                : null;
+        const prevDay =
+            Array.isArray(prevPlan) && day
+                ? prevPlan.find((d) => d && d.id === day.id) || null
+                : null;
 
         const screen = document.getElementById("screen-workout");
         if (!day) {
@@ -1005,8 +1013,25 @@ ${day.exercises.map((ex, ei) => {
 
                     const sets = weekData[key];
                     const currentNote = weekData[noteKey] || "";
-                    const prevSets = prevWeekData ? prevWeekData[key] : null;
-                    const prevNote = prevWeekData ? (prevWeekData[noteKey] || "") : "";
+
+                    // Po zmianie planu ten sam indeks może oznaczać inne
+                    // ćwiczenie. Dlatego poprzedni tydzień dopasowujemy po
+                    // nazwie; dopiero gdy nie ma snapshotu planu, wracamy do
+                    // dopasowania po indeksie.
+                    let prevIndex = ei;
+                    if (prevDay) {
+                        prevIndex = prevDay.exercises.findIndex(
+                            (prevEx) => prevEx && prevEx.name === ex.name
+                        );
+                    }
+                    const prevDayId = prevDay ? prevDay.id : currentDayId;
+                    const prevKey =
+                        prevIndex >= 0 ? ctx.getExerciseKey(prevDayId, prevIndex) : null;
+                    const prevNoteKey =
+                        prevIndex >= 0 ? ctx.getNoteKey(prevDayId, prevIndex) : null;
+                    const prevSets = prevWeekData && prevKey ? prevWeekData[prevKey] : null;
+                    const prevNote =
+                        prevWeekData && prevNoteKey ? prevWeekData[prevNoteKey] || "" : "";
 
                     const exDone = Math.min(sets.filter((s) => s.done).length, ex.sets);
                     const exPct = ex.sets ? Math.round((exDone / ex.sets) * 100) : 0;
