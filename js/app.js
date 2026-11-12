@@ -117,8 +117,40 @@ PLAN_KUBA[1].exercises = KUBA_PULL.map((ex) => ({ ...ex }));
 PLAN_KUBA[2].exercises = KUBA_LEGS.map((ex) => ({ ...ex }));
 PLAN_KUBA[3].exercises = KUBA_UPPER.map((ex) => ({ ...ex }));
 
+// Plan Kuby sprzed zmiany (obowiązywał do tygodnia z 8.11.2026).
+// Trzymamy go zamrożonego, żeby stare tygodnie dalej pokazywały swoje ćwiczenia.
+const KUBA_LEGS_V1 = [
+    { name: "RDL", sets: 3, reps: "6-10", tag: "LEGS" },
+    { name: "Hack Squat / Leg Press", sets: 3, reps: "6-10", tag: "QUADS" },
+    { name: "Leg Extension", sets: 3, reps: "10-12", tag: "QUADS" },
+    { name: "Seated Leg Curl", sets: 3, reps: "8-12", tag: "HAM" },
+    { name: "Incline Dumbbell Curl [SS]", sets: 3, reps: "8-12", tag: "BICEPS" },
+    { name: "Single-Arm Cable Pushdown [SS]", sets: 3, reps: "8-12", tag: "TRICEPS" },
+    { name: "Incline Hammer Curl [SS]", sets: 3, reps: "8-10", tag: "BICEPS" },
+    { name: "Calf Raises [SS]", sets: 4, reps: "10-15", tag: "CALVES" }
+];
+const KUBA_PLAN_V1 = (() => {
+    const plan = PLAN_BARTEK.map((day) => ({
+        ...day,
+        exercises: day.exercises.map((ex) => ({ ...ex }))
+    }));
+    plan[0].exercises[0] = {
+        name: "Incline Smith Machine Press",
+        sets: 3,
+        reps: "6-8",
+        tag: "CHEST"
+    };
+    plan[2].exercises = KUBA_LEGS_V1.map((ex) => ({ ...ex }));
+    return plan;
+})();
+
+// Tydzień, od którego obowiązuje nowy plan Kuby (niedziela 8.11.2026).
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const KUBA_PLAN_V3_START = new Date(2026, 10, 8, 0, 0, 0, 0).getTime();
+
 let DAYS = PLAN_BARTEK;
-const APP_VERSION = "v75";
+let CURRENT_PLAN = PLAN_BARTEK;
+const APP_VERSION = "v76";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -135,10 +167,10 @@ const canonicalTag = (tag) => {
     return t;
 };
 
-const applyCustomPlan = () => {
+const applyCustomPlanTo = (plan) => {
     const overrides = state && state.customPlan;
     if (overrides && typeof overrides === "object") {
-        DAYS.forEach((day) => {
+        (plan || []).forEach((day) => {
             const custom = overrides[day.id];
             if (!Array.isArray(custom)) return;
             const cleaned = custom
@@ -158,13 +190,20 @@ const applyCustomPlan = () => {
 
     const meta = state && state.customPlanMeta;
     if (meta && typeof meta === "object") {
-        DAYS.forEach((day) => {
+        (plan || []).forEach((day) => {
             const m = meta[day.id];
             if (!m || typeof m !== "object") return;
             if (typeof m.color === "string" && /^#[0-9a-fA-F]{6}$/.test(m.color)) day.color = m.color;
             if (typeof m.icon === "string" && m.icon) day.icon = m.icon;
         });
     }
+};
+
+// Aktualny (najnowszy) plan profilu — z uwzględnieniem ręcznych edycji.
+const buildCurrentPlan = () => {
+    const plan = copyPlan(getPlanByKey(currentPlanKey));
+    applyCustomPlanTo(plan);
+    return plan;
 };
 
 let state = {
@@ -247,6 +286,9 @@ const ensureStateShape = () => {
     if (!state.migrations || typeof state.migrations !== "object") {
         state.migrations = {};
     }
+    if (!state.weekPlans || typeof state.weekPlans !== "object" || Array.isArray(state.weekPlans)) {
+        state.weekPlans = {};
+    }
 };
 
 const cloneWeekData = (prevWeek = {}) => {
@@ -272,9 +314,9 @@ const cloneWeekData = (prevWeek = {}) => {
     return newWeek;
 };
 
-const planSetLimits = () => {
+const planSetLimits = (plan = CURRENT_PLAN) => {
     const limits = {};
-    DAYS.forEach((day) => {
+    (plan || []).forEach((day) => {
         day.exercises.forEach((ex, ei) => {
             limits[getExerciseKey(day.id, ei)] = ex.sets;
         });
@@ -309,18 +351,27 @@ const updateTimeline = () => {
         state.startSunday = currentSundayTime;
         state.weeks = [normalizeWeek(state.weeks[0] || {})];
         state.currentWeekIndex = 0;
+        if (!state.weekPlans) state.weekPlans = {};
+        state.weekPlans[0] = copyPlan(CURRENT_PLAN);
         persistState();
         return;
     }
 
     if (currentSundayTime >= state.startSunday) {
-        const msPerWeek = 7 * 24 * 60 * 60 * 1000;
-        const elapsedWeeks = Math.floor((currentSundayTime - state.startSunday) / msPerWeek);
+        const elapsedWeeks = Math.floor((currentSundayTime - state.startSunday) / WEEK_MS);
 
         while (state.weeks.length <= elapsedWeeks) {
-            const prevWeek = state.weeks[state.weeks.length - 1] || {};
-            const newWeek = trimWeekToPlan(cloneWeekData(prevWeek), planSetLimits());
+            const newIdx = state.weeks.length;
+            const prevWeek = state.weeks[newIdx - 1] || {};
+            const prevPlan = getWeekPlan(newIdx - 1);
+            const samePlan = JSON.stringify(prevPlan) === JSON.stringify(CURRENT_PLAN);
+            const newWeek = trimWeekToPlan(
+                cloneWeekData(samePlan ? prevWeek : {}),
+                planSetLimits(CURRENT_PLAN)
+            );
             state.weeks.push(newWeek);
+            if (!state.weekPlans) state.weekPlans = {};
+            state.weekPlans[newIdx] = copyPlan(CURRENT_PLAN);
         }
 
         state.currentWeekIndex = Math.min(elapsedWeeks, state.weeks.length - 1);
@@ -445,6 +496,12 @@ const getTrend = (curr, prev) => {
 };
 
 const renderCurrentView = () => {
+    // Statystyki i zarządzanie planem zawsze patrzą na najnowszy plan.
+    // Plan/trening/home pokazują plan przypisany do wybranego tygodnia.
+    const usesLatestPlan =
+        currentView === "stats" || currentView === "manage" || currentView === "library";
+    DAYS = usesLatestPlan ? CURRENT_PLAN : getWeekPlan(state.currentWeekIndex);
+
     const ctx = {
         state,
         DAYS,
@@ -542,6 +599,7 @@ const navigateTo = (view) => {
 };
 
 const navigateToWorkoutFromNav = () => {
+    DAYS = getWeekPlan(state.currentWeekIndex);
     const todayPlan = getTodayPlan();
 
     if (todayPlan) {
@@ -913,11 +971,37 @@ const runPlanMigrations = (planKey) => {
     }
 };
 
+// Każdy tydzień ma zamrożoną kopię planu, który obowiązywał wtedy.
+// Dzięki temu zmiana planu nie przepisuje wyglądu starszych tygodni.
+const getWeekPlan = (weekIndex) => {
+    const snap = state && state.weekPlans ? state.weekPlans[weekIndex] : null;
+    if (Array.isArray(snap) && snap.length) return copyPlan(snap);
+    return copyPlan(CURRENT_PLAN);
+};
+
+const ensureWeekPlans = (planKey) => {
+    if (!state.weekPlans || typeof state.weekPlans !== "object" || Array.isArray(state.weekPlans)) {
+        state.weekPlans = {};
+    }
+
+    const boundary = planKey === "kuba" && state.startSunday
+        ? Math.floor((KUBA_PLAN_V3_START - state.startSunday) / WEEK_MS)
+        : Infinity;
+
+    state.weeks.forEach((_, idx) => {
+        const existing = state.weekPlans[idx];
+        if (Array.isArray(existing) && existing.length) return;
+        const useOldPlan = planKey === "kuba" && idx < boundary;
+        state.weekPlans[idx] = copyPlan(useOldPlan ? KUBA_PLAN_V1 : CURRENT_PLAN);
+    });
+
+    if (state.migrations) state.migrations["week_plans_v1"] = true;
+};
+
 const bootWithUser = async (storageKey, planKey = "bartek", profileName = "") => {
     currentUserId = storageKey;
     currentProfileName = profileName || "Użytkownik";
     currentPlanKey = planKey;
-    DAYS = copyPlan(getPlanByKey(planKey));
 
     const empty = { currentWeekIndex: 0, weeks: [{}], startSunday: 0 };
     const loaded = await window.StorageModule.load(storageKey, empty);
@@ -927,12 +1011,16 @@ const bootWithUser = async (storageKey, planKey = "bartek", profileName = "") =>
     if (!state.customPlan || typeof state.customPlan !== "object") {
         state.customPlan = {};
     }
-    applyCustomPlan();
+    CURRENT_PLAN = buildCurrentPlan();
     runPlanMigrations(planKey);
-    applyCustomPlan();
+    CURRENT_PLAN = buildCurrentPlan();
+    ensureWeekPlans(planKey);
     isLoaded = true;
     updateTimeline();
-    trimWeekToPlan(state.weeks[state.currentWeekIndex] || {}, planSetLimits());
+    trimWeekToPlan(
+        state.weeks[state.currentWeekIndex] || {},
+        planSetLimits(getWeekPlan(state.currentWeekIndex))
+    );
     persistState();
     restoreRestTimer();
 
@@ -1042,6 +1130,7 @@ const sanitizeBackupState = (incoming) => {
     if (incoming && typeof incoming.customPlanMeta === "object") clean.customPlanMeta = incoming.customPlanMeta;
     if (incoming && typeof incoming.weekSchedule === "object") clean.weekSchedule = incoming.weekSchedule;
     if (incoming && typeof incoming.migrations === "object") clean.migrations = incoming.migrations;
+    if (incoming && typeof incoming.weekPlans === "object") clean.weekPlans = incoming.weekPlans;
     if (Array.isArray(incoming && incoming.bodyWeight)) clean.bodyWeight = incoming.bodyWeight;
     return clean;
 };
@@ -1060,6 +1149,7 @@ const downloadBackup = () => {
             customPlanMeta: state.customPlanMeta || {},
             weekSchedule: state.weekSchedule || {},
             migrations: state.migrations || {},
+            weekPlans: state.weekPlans || {},
             bodyWeight: Array.isArray(state.bodyWeight) ? state.bodyWeight : []
         }
     };
@@ -1091,9 +1181,14 @@ const handleBackupImport = () => {
                 return;
             }
             state = sanitizeBackupState(data.state);
-            applyCustomPlan();
+            ensureStateShape();
+            if (!state.customPlan || typeof state.customPlan !== "object") {
+                state.customPlan = {};
+            }
+            CURRENT_PLAN = buildCurrentPlan();
             runPlanMigrations(currentPlanKey);
-            applyCustomPlan();
+            CURRENT_PLAN = buildCurrentPlan();
+            ensureWeekPlans(currentPlanKey);
             persistState();
             if (input) input.value = "";
             closeMoreSheet();
@@ -1205,7 +1300,13 @@ const manageSave = () => {
     });
     state.customPlan = customPlan;
     state.customPlanMeta = customPlanMeta;
-    applyCustomPlan();
+    CURRENT_PLAN = buildCurrentPlan();
+    // Edycja planu obowiązuje od bieżącego (ostatniego) tygodnia w przód.
+    // Wcześniejsze tygodnie zachowują swój zapisany plan.
+    const lastIdx = state.weeks.length - 1;
+    if (lastIdx >= 0 && state.weekPlans) {
+        state.weekPlans[lastIdx] = copyPlan(CURRENT_PLAN);
+    }
     persistState();
     managePlan = null;
     navigateTo("plan");
@@ -1221,7 +1322,12 @@ const manageEditDay = (dayIdx, field, value) => {
 const manageResetPlan = () => {
     state.customPlan = {};
     state.customPlanMeta = {};
-    applyCustomPlan();
+    CURRENT_PLAN = buildCurrentPlan();
+    const lastIdx = state.weeks.length - 1;
+    if (lastIdx >= 0 && state.weekPlans) {
+        state.weekPlans[lastIdx] = copyPlan(CURRENT_PLAN);
+    }
+    DAYS = CURRENT_PLAN;
     persistState();
     managePlan = managePlanFromDays();
     renderCurrentView();
