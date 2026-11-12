@@ -118,7 +118,7 @@ PLAN_KUBA[2].exercises = KUBA_LEGS.map((ex) => ({ ...ex }));
 PLAN_KUBA[3].exercises = KUBA_UPPER.map((ex) => ({ ...ex }));
 
 let DAYS = PLAN_BARTEK;
-const APP_VERSION = "v74";
+const APP_VERSION = "v75";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -865,19 +865,21 @@ const runPlanMigrations = (planKey) => {
         state.migrations["kuba_legs_v2"] = true;
     }
 
-    // Plan Kuby v3: nowe ćwiczenia + przeniesienie historii na właściwe sloty.
+    // Plan Kuby v3: nowe ćwiczenia od BIEŻĄCEGO tygodnia.
+    // Starszych tygodni nie ruszamy — historia sprzed zmiany zostaje bez zmian.
     if (planKey === "kuba" && state.migrations && !state.migrations["kuba_plan_v3"]) {
         const REORDER = {
             0: [0, 1, 2, 3, 4, 5, null], // PUSH — ostatni slot to nowe ćwiczenie
             1: [0, 1, 3, null, 5, 6], // PULL — Reverse Peck Deck wyżej, Face Pull nowy
         };
-        state.weeks = (state.weeks || []).map((week) => {
-            let out = week || {};
+        const lastIdx = (state.weeks || []).length - 1;
+        if (lastIdx >= 0) {
+            let out = state.weeks[lastIdx] || {};
             Object.keys(REORDER).forEach((dayId) => {
                 out = window.Utils.reorderDayLogs(out, Number(dayId), REORDER[dayId]);
             });
-            return out;
-        });
+            state.weeks[lastIdx] = out;
+        }
 
         // Jeśli profil ma własne edycje planu, nadpisz je nowym planem Kuby,
         // inaczej stare customPlan przesłoniłoby nowe ćwiczenia.
