@@ -1486,13 +1486,19 @@ ${day.exercises.map((ex, ei) => {
         libItemLimit += 40;
     };
 
-    const openLibraryExercise = (id) => {
+    const getLibrarySelectedId = () => libSelectedId;
+
+    const setLibrarySelectedId = (id) => {
         libSelectedId = id;
-        libMediaPlaying = true;
+        if (id !== null) libMediaPlaying = true;
+    };
+
+    const openLibraryExercise = (id) => {
+        setLibrarySelectedId(id);
     };
 
     const closeLibraryExercise = () => {
-        libSelectedId = null;
+        setLibrarySelectedId(null);
     };
 
     const toggleLibMedia = () => {
@@ -1655,6 +1661,8 @@ ${day.exercises.map((ex, ei) => {
         setLibQuery,
         setLibCategory,
         showMoreLib,
+        getLibrarySelectedId,
+        setLibrarySelectedId,
         openLibraryExercise,
         closeLibraryExercise,
         toggleLibMedia,

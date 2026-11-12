@@ -142,4 +142,50 @@ describe("plan per tydzień", () => {
 
         expect(saved.migrations.kuba_plan_v3_repair).toBe(true);
     });
+
+    const dispatchPopState = (state) => {
+        const event = new window.Event("popstate");
+        Object.defineProperty(event, "state", { value: state });
+        window.dispatchEvent(event);
+    };
+
+    it("wstecz przywraca poprzedni ekran zamiast zamykać aplikację", () => {
+        window.navigateTo("home");
+        window.navigateTo("plan");
+
+        dispatchPopState({
+            kubaNav: true,
+            view: "home",
+            dayId: null,
+            libId: null,
+            sheet: false,
+            week: 2,
+            fullPlanReturnView: "plan",
+            depth: 0
+        });
+
+        expect(document.getElementById("screen-home").classList.contains("hidden")).toBe(false);
+        expect(document.getElementById("screen-plan").classList.contains("hidden")).toBe(true);
+    });
+
+    it("wstecz zamyka trening i wraca do planu", () => {
+        window.navigateTo("plan");
+        window.openDay(1);
+
+        expect(document.getElementById("screen-workout").classList.contains("hidden")).toBe(false);
+
+        dispatchPopState({
+            kubaNav: true,
+            view: "plan",
+            dayId: null,
+            libId: null,
+            sheet: false,
+            week: 2,
+            fullPlanReturnView: "plan",
+            depth: 1
+        });
+
+        expect(document.getElementById("screen-plan").classList.contains("hidden")).toBe(false);
+        expect(document.getElementById("screen-workout").classList.contains("hidden")).toBe(true);
+    });
 });

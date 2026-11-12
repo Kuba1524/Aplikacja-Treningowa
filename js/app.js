@@ -269,7 +269,7 @@ const buildKubaHistoricalPlan = (weekStart, weekData = {}) => {
 
 let DAYS = PLAN_BARTEK;
 let CURRENT_PLAN = PLAN_BARTEK;
-const APP_VERSION = "v82";
+const APP_VERSION = "v83";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -751,10 +751,116 @@ const updateBottomNav = () => {
     });
 };
 
+/* ---- Historia przeglądarki = wstecz w aplikacji ---- */
+// Dzięki wpisom w history.pushState gest/klawisz wstecz na Androidzie i iOS
+// cofa ekran w aplikacji, zamiast od razu zamykać PWA.
+let navHistoryReady = false;
+let navApplyingHistory = false;
+
+const getLibrarySelectedId = () =>
+    window.Views && typeof window.Views.getLibrarySelectedId === "function"
+        ? window.Views.getLibrarySelectedId()
+        : null;
+
+const isMoreSheetOpen = () => {
+    const sheet = document.getElementById("more-sheet");
+    return !!(sheet && sheet.classList.contains("open"));
+};
+
+const currentNavState = () => ({
+    kubaNav: true,
+    view: currentView,
+    dayId: currentDayId,
+    libId: getLibrarySelectedId(),
+    sheet: isMoreSheetOpen(),
+    week: state.currentWeekIndex,
+    fullPlanReturnView
+});
+
+const writeNavState = (mode = "push") => {
+    if (!window.history || navApplyingHistory) return;
+    const prev = window.history.state;
+    const prevDepth =
+        prev && prev.kubaNav && typeof prev.depth === "number" ? prev.depth : 0;
+    const next = currentNavState();
+
+    if (mode === "reset") next.depth = 0;
+    else if (mode === "replace") next.depth = prevDepth;
+    else next.depth = prevDepth + 1;
+
+    const method = mode === "push" ? "pushState" : "replaceState";
+    window.history[method](next, "", window.location.href);
+    navHistoryReady = true;
+};
+
+const resetNavHistory = () => {
+    if (!window.history) return;
+    const next = currentNavState();
+    next.depth = 0;
+    window.history.replaceState(next, "", window.location.href);
+    navHistoryReady = true;
+};
+
+const syncNavHistory = () => {
+    if (!navHistoryReady || !window.history || navApplyingHistory) return;
+    const prev = window.history.state;
+    const next = currentNavState();
+    next.depth = prev && typeof prev.depth === "number" ? prev.depth : 0;
+    window.history.replaceState(next, "", window.location.href);
+};
+
+const canGoBackInApp = () => {
+    const st = window.history && window.history.state;
+    return !!(st && st.kubaNav && typeof st.depth === "number" && st.depth > 0);
+};
+
+const goBackInApp = (fallback) => {
+    if (navHistoryReady && canGoBackInApp()) {
+        window.history.back();
+        return true;
+    }
+    if (typeof fallback === "function") fallback();
+    return false;
+};
+
+const applyNavState = (st) => {
+    if (!st || !st.kubaNav) return false;
+    navApplyingHistory = true;
+    try {
+        if (window.Views && typeof window.Views.setLibrarySelectedId === "function") {
+            window.Views.setLibrarySelectedId(st.view === "library" ? st.libId || null : null);
+        }
+        if (typeof st.fullPlanReturnView === "string") {
+            fullPlanReturnView = st.fullPlanReturnView;
+        }
+        if (Number.isInteger(st.week) && st.week >= 0 && st.week < state.weeks.length) {
+            if (state.currentWeekIndex !== st.week) {
+                state.currentWeekIndex = st.week;
+                persistState();
+            }
+        }
+        currentDayId = typeof st.dayId === "number" ? st.dayId : null;
+        currentView = st.view || "home";
+        if (st.sheet) openMoreSheet({ skipHistory: true });
+        else closeMoreSheet({ skipHistory: true });
+        renderCurrentView();
+    } finally {
+        navApplyingHistory = false;
+    }
+    return true;
+};
+
 const navigateTo = (view) => {
+    const fromSheet = isMoreSheetOpen();
+    const sameView = currentView === view && !fromSheet;
     currentView = view;
-    closeMoreSheet();
+    if (view !== "library" && window.Views && window.Views.setLibrarySelectedId) {
+        window.Views.setLibrarySelectedId(null);
+    }
+    closeMoreSheet({ skipHistory: true });
     renderCurrentView();
+    if (sameView) syncNavHistory();
+    else writeNavState(fromSheet ? "replace" : "push");
 };
 
 const navigateToWorkoutFromNav = () => {
@@ -780,6 +886,7 @@ const setWeek = (w) => {
     state.currentWeekIndex = w;
     persistState();
     renderCurrentView();
+    syncNavHistory();
 };
 
 const setPlanMode = (fullPlan) => {
@@ -795,13 +902,18 @@ const openFullPlan = () => {
 };
 
 const closeFullPlan = () => {
-    navigateTo(fullPlanReturnView || "plan");
+    goBackInApp(() => {
+        currentView = fullPlanReturnView || "plan";
+        renderCurrentView();
+        writeNavState("replace");
+    });
 };
 
 const openDay = (id) => {
     const day = DAYS.find((d) => d.id === id);
     if (!day) return;
 
+    const sameWorkout = currentView === "workout" && currentDayId === id;
     currentDayId = id;
     const weekData = state.weeks[state.currentWeekIndex];
     const dayKey = getDayDateKey(id);
@@ -823,11 +935,16 @@ const openDay = (id) => {
     persistState();
     currentView = "workout";
     renderCurrentView();
+    if (sameWorkout) syncNavHistory();
+    else writeNavState("push");
 };
 
 const goBackFromWorkout = () => {
-    currentView = "plan";
-    renderCurrentView();
+    goBackInApp(() => {
+        currentView = "plan";
+        renderCurrentView();
+        writeNavState("replace");
+    });
 };
 
 const toggleNoteBox = (ei) => {
@@ -1053,6 +1170,7 @@ const resetWorkout = () => {
 const showProfileGate = () => {
     const gate = document.getElementById("profile-gate");
     if (gate) gate.classList.remove("hidden");
+    resetNavHistory();
 };
 
 const hideProfileGate = () => {
@@ -1295,12 +1413,13 @@ const bootWithUser = async (storageKey, planKey = "bartek", profileName = "") =>
         currentView = requestedView;
     }
     renderCurrentView();
+    resetNavHistory();
 };
 
 const switchProfile = () => {
     stopRestTimer(true);
     window.Views.clearExpanded();
-    closeMoreSheet();
+    closeMoreSheet({ skipHistory: true });
     managePlan = null;
     currentUserId = null;
     currentProfileName = "Użytkownik";
@@ -1330,7 +1449,8 @@ const toggleThemeSection = () => {
     }
 };
 
-const openMoreSheet = () => {
+const openMoreSheet = (options = {}) => {
+    const wasOpen = isMoreSheetOpen();
     const sheet = document.getElementById("more-sheet");
     const backdrop = document.getElementById("more-backdrop");
     const btn = document.getElementById("more-nav-btn");
@@ -1338,15 +1458,28 @@ const openMoreSheet = () => {
     if (backdrop) backdrop.classList.remove("hidden");
     if (btn) btn.classList.add("active");
     populateThemeSection();
+    if (!wasOpen && !options.skipHistory) writeNavState("push");
 };
 
-const closeMoreSheet = () => {
+const closeMoreSheet = (options = {}) => {
+    const wasOpen = isMoreSheetOpen();
     const sheet = document.getElementById("more-sheet");
     const backdrop = document.getElementById("more-backdrop");
     const btn = document.getElementById("more-nav-btn");
     if (sheet) sheet.classList.remove("open");
     if (backdrop) backdrop.classList.add("hidden");
     if (btn) btn.classList.remove("active");
+
+    if (
+        wasOpen &&
+        !options.skipHistory &&
+        navHistoryReady &&
+        canGoBackInApp() &&
+        window.history.state &&
+        window.history.state.sheet
+    ) {
+        window.history.back();
+    }
 };
 
 const toggleMoreSheet = () => {
@@ -1459,7 +1592,6 @@ const handleBackupImport = () => {
             ensureWeekPlans(currentPlanKey);
             persistState();
             if (input) input.value = "";
-            closeMoreSheet();
             navigateTo("plan");
             showToast("Kopia przywrócona");
         } catch (e) {
@@ -1488,10 +1620,14 @@ const managePlanFromDays = () =>
     }));
 
 const openManage = () => {
-    closeMoreSheet();
+    const fromSheet = isMoreSheetOpen();
+    closeMoreSheet({ skipHistory: true });
+    // Edycja zawsze dotyczy najnowszego planu, nie planu historycznego tygodnia.
+    DAYS = CURRENT_PLAN;
     managePlan = managePlanFromDays();
     currentView = "manage";
     renderCurrentView();
+    writeNavState(fromSheet ? "replace" : "push");
 };
 
 const manageEditField = (dayIdx, ei, field, value) => {
@@ -1525,6 +1661,15 @@ const manageAddExercise = (dayIdx) => {
             last.scrollIntoView({ behavior: "smooth", block: "center" });
         }, 60);
     }
+};
+
+const leaveManageView = () => {
+    managePlan = null;
+    goBackInApp(() => {
+        currentView = "plan";
+        renderCurrentView();
+        writeNavState("replace");
+    });
 };
 
 const manageRemoveExercise = (dayIdx, ei) => {
@@ -1576,8 +1721,7 @@ const manageSave = () => {
         state.weekPlans[lastIdx] = copyPlan(CURRENT_PLAN);
     }
     persistState();
-    managePlan = null;
-    navigateTo("plan");
+    leaveManageView();
     showToast("Plan zapisany");
 };
 
@@ -1603,8 +1747,7 @@ const manageResetPlan = () => {
 };
 
 const manageCancel = () => {
-    managePlan = null;
-    navigateTo("plan");
+    leaveManageView();
 };
 
 const initApp = async () => {
@@ -1736,12 +1879,18 @@ window.showMoreLib = () => {
     renderCurrentView();
 };
 window.openLibraryExercise = (id) => {
+    const same = getLibrarySelectedId() === id;
     window.Views.openLibraryExercise(id);
     renderCurrentView();
+    if (same) syncNavHistory();
+    else writeNavState("push");
 };
 window.closeLibraryExercise = () => {
-    window.Views.closeLibraryExercise();
-    renderCurrentView();
+    goBackInApp(() => {
+        window.Views.closeLibraryExercise();
+        renderCurrentView();
+        writeNavState("replace");
+    });
 };
 window.toggleLibMedia = () => {
     window.Views.toggleLibMedia();
@@ -1785,6 +1934,87 @@ window.manageMoveExercise = manageMoveExercise;
 window.manageSave = manageSave;
 window.manageResetPlan = manageResetPlan;
 window.manageCancel = manageCancel;
+
+window.addEventListener("popstate", (event) => {
+    if (!navHistoryReady) return;
+    if (event.state && event.state.kubaNav) {
+        applyNavState(event.state);
+        return;
+    }
+
+    currentView = "home";
+    currentDayId = null;
+    if (window.Views && window.Views.setLibrarySelectedId) {
+        window.Views.setLibrarySelectedId(null);
+    }
+    closeMoreSheet({ skipHistory: true });
+    renderCurrentView();
+});
+
+// iOS w trybie PWA nie zawsze ma systemowy gest wstecz. Dodajemy własny
+// gest przeciągnięcia od lewej krawędzi, który cofa ekran w aplikacji.
+const installIosSwipeBack = () => {
+    const ua = navigator.userAgent || "";
+    const isIOS =
+        /iPad|iPhone|iPod/.test(ua) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const isStandalone =
+        window.navigator.standalone === true ||
+        window.matchMedia("(display-mode: standalone)").matches;
+
+    if (!isIOS || !isStandalone) return;
+
+    let startX = 0;
+    let startY = 0;
+    let tracking = false;
+    const edge = 32;
+    const minDistance = 70;
+
+    document.addEventListener(
+        "touchstart",
+        (e) => {
+            if (e.touches.length !== 1) return;
+            const t = e.touches[0];
+            if (t.clientX > edge) return;
+            startX = t.clientX;
+            startY = t.clientY;
+            tracking = true;
+        },
+        { passive: true }
+    );
+
+    document.addEventListener(
+        "touchmove",
+        (e) => {
+            if (!tracking) return;
+            const t = e.touches[0];
+            if (!t || Math.abs(t.clientY - startY) > 45) tracking = false;
+        },
+        { passive: true }
+    );
+
+    document.addEventListener(
+        "touchend",
+        (e) => {
+            if (!tracking) return;
+            tracking = false;
+            const t = e.changedTouches[0];
+            if (!t) return;
+            const dx = t.clientX - startX;
+            const dy = Math.abs(t.clientY - startY);
+            if (dx >= minDistance && dy < 60) {
+                goBackInApp();
+            }
+        },
+        { passive: true }
+    );
+
+    document.addEventListener("touchcancel", () => {
+        tracking = false;
+    });
+};
+
+installIosSwipeBack();
 
 initTheme();
 initApp();
