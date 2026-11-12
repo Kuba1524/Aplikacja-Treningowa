@@ -129,28 +129,111 @@ const KUBA_LEGS_V1 = [
     { name: "Incline Hammer Curl [SS]", sets: 3, reps: "8-10", tag: "BICEPS" },
     { name: "Calf Raises [SS]", sets: 4, reps: "10-15", tag: "CALVES" }
 ];
-const KUBA_PLAN_V1 = (() => {
-    const plan = PLAN_BARTEK.map((day) => ({
-        ...day,
-        exercises: day.exercises.map((ex) => ({ ...ex }))
-    }));
-    plan[0].exercises[0] = {
-        name: "Incline Smith Machine Press",
-        sets: 3,
-        reps: "6-8",
-        tag: "CHEST"
-    };
-    plan[2].exercises = KUBA_LEGS_V1.map((ex) => ({ ...ex }));
-    return plan;
-})();
-
 // Tydzień, od którego obowiązuje nowy plan Kuby (niedziela 8.11.2026).
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const KUBA_PLAN_V3_START = new Date(2026, 10, 8, 0, 0, 0, 0).getTime();
 
+// Granice wcześniejszych zmian planu Kuby (odtworzone z historii i z danych):
+// - do 16.08.2026 wiosłowania miały po 4 serie,
+// - od 20.09.2026 Incline Dumbbell Press zastąpił Incline Smith Machine Press,
+// - od 27.09.2026 Weighted Pull Ups mają 3 serie (wcześniej 4).
+const KUBA_ROWS4_UNTIL = new Date(2026, 7, 16, 0, 0, 0, 0).getTime();
+const KUBA_SMITH_FROM = new Date(2026, 8, 20, 0, 0, 0, 0).getTime();
+const KUBA_WPU3_FROM = new Date(2026, 8, 27, 0, 0, 0, 0).getTime();
+
+// Data początku tygodnia liczona po dniach kalendarzowych (bez dryfu DST).
+const kubaWeekStart = (startSunday, weekIndex) => {
+    if (!startSunday) return null;
+    const d = new Date(startSunday);
+    d.setDate(d.getDate() + weekIndex * 7);
+    return d.getTime();
+};
+
+// Plan Kuby obowiązujący w danym tygodniu (przed nowym planem z 8.11.2026).
+// Ćwiczenia nóg zostają w układzie po migracji z 28.09.2026, bo dane w
+// starych tygodniach są do niego dopasowane.
+const buildKubaHistoricalPlan = (weekStart, weekData = {}) => {
+    const rows4 = weekStart < KUBA_ROWS4_UNTIL;
+    const smith = weekStart >= KUBA_SMITH_FROM;
+    const late = weekStart >= KUBA_WPU3_FROM;
+
+    const day0 = [
+        smith
+            ? { name: "Incline Smith Machine Press", sets: 3, reps: "6-8", tag: "CHEST" }
+            : { name: "Incline Dumbbell Press", sets: 4, reps: "6-10", tag: "CHEST" },
+        { name: "Seated Dumbbell OHP", sets: 3, reps: "6-10", tag: "SHOULDER" },
+        { name: "Machine Chest Press", sets: 3, reps: smith ? "8-10" : "6-10", tag: "CHEST" },
+        { name: "Chest Dips", sets: 3, reps: "6-10", tag: "CHEST" },
+        {
+            name: "Dumbbell Lateral Raises",
+            sets: 4,
+            reps: "8-12",
+            tag: late ? "SHOULDER" : "DELTS"
+        },
+        { name: "Ab Wheel", sets: 3, reps: "8-12", tag: "CORE" },
+        smith
+            ? { name: "Decline Oblique Crunches", sets: 3, reps: "8-12", tag: "CORE" }
+            : { name: "Pallof Press", sets: 3, reps: "8-12", tag: "CORE" }
+    ];
+
+    const day1 = [
+        { name: "Weighted Pull Ups", sets: late ? 3 : 4, reps: "6-8", tag: "BACK" },
+        {
+            name: "Single-Arm Dumbbell Row",
+            sets: rows4 ? 4 : 3,
+            reps: "6-10",
+            tag: "BACK"
+        },
+        { name: "Seated Cable Row", sets: rows4 ? 4 : 3, reps: "6-10", tag: "BACK" },
+        { name: "Reverse Peck Deck", sets: 4, reps: "8-12", tag: "REAR" },
+        { name: "Dumbbell Shrugs", sets: 3, reps: "8-12", tag: "TRAPS" },
+        { name: "Ez-bar Reverse Curl", sets: 3, reps: "8-12", tag: "FOREARMS" },
+        { name: "Barbell Wrist Curl", sets: 3, reps: "10-15", tag: "FOREARMS" }
+    ];
+
+    const day2 = KUBA_LEGS_V1.map((ex) => ({
+        ...ex,
+        reps: !late && /Hammer Curl/.test(ex.name) ? "8-12" : ex.reps
+    }));
+
+    const day3 = [
+        { name: "Bench Press", sets: 3, reps: "5-8", tag: "CHEST" },
+        { name: "Cable Flyes (Low to High)", sets: 3, reps: "8-12", tag: "CHEST" },
+        { name: "Single-Arm Lat Pulldown", sets: 3, reps: "6-10", tag: "BACK" },
+        {
+            name: "Cable Lateral Raise",
+            sets: 4,
+            reps: "8-12",
+            tag: late ? "SHOULDER" : "DELTS"
+        },
+        { name: "EZ-bar Preacher Curl", sets: 3, reps: "8-12", tag: "BICEPS" },
+        { name: "Incline Skull Crushers", sets: 3, reps: late ? "8-10" : "8-12", tag: "TRICEPS" },
+        { name: "Cable Crunch", sets: 4, reps: "8-12", tag: "CORE" }
+    ];
+
+    const plan = [
+        { ...PLAN_BARTEK[0], exercises: day0 },
+        { ...PLAN_BARTEK[1], exercises: day1 },
+        { ...PLAN_BARTEK[2], exercises: day2 },
+        { ...PLAN_BARTEK[3], exercises: day3 }
+    ];
+
+    // Nie pozwól, żeby plan miał mniej serii niż dane zapisane w tygodniu —
+    // inaczej otwarcie treningu obcięłoby starsze serie (i pokazywało 4/3).
+    plan.forEach((day, dayIdx) => {
+        day.exercises = day.exercises.map((ex, exIdx) => {
+            const stored = weekData[`d${dayIdx}_e${exIdx}`];
+            const storedCount = Array.isArray(stored) ? stored.length : 0;
+            return { ...ex, sets: Math.min(10, Math.max(ex.sets, storedCount)) };
+        });
+    });
+
+    return plan;
+};
+
 let DAYS = PLAN_BARTEK;
 let CURRENT_PLAN = PLAN_BARTEK;
-const APP_VERSION = "v77";
+const APP_VERSION = "v78";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -381,16 +464,18 @@ const updateTimeline = () => {
 
 const getWeekCompletion = (weekIndex) => {
     const weekData = state.weeks[weekIndex] || {};
+    const plan = getWeekPlan(weekIndex);
     let total = 0;
     let done = 0;
 
-    Object.keys(weekData).forEach((key) => {
-        if (key.startsWith("d") && !key.endsWith("_note") && Array.isArray(weekData[key])) {
-            weekData[key].forEach((set) => {
-                total++;
-                if (set.done) done++;
-            });
-        }
+    (plan || []).forEach((day) => {
+        (day.exercises || []).forEach((ex, ei) => {
+            const planned = Math.max(0, Number(ex.sets) || 0);
+            const sets = weekData[getExerciseKey(day.id, ei)] || [];
+            const completed = sets.filter((s) => s && s.done).length;
+            total += planned;
+            done += Math.min(completed, planned);
+        });
     });
 
     return {
@@ -413,8 +498,9 @@ const getDayProgress = (dayId) => {
     day.exercises.forEach((ex, ei) => {
         const key = getExerciseKey(dayId, ei);
         const sets = weekData[key] || [];
-        total += ex.sets || sets.length || 0;
-        done += sets.filter((s) => s && s.done).length;
+        const planned = Math.max(0, Number(ex.sets) || sets.length || 0);
+        total += planned;
+        done += Math.min(sets.filter((s) => s && s.done).length, planned);
     });
 
     return {
@@ -911,6 +997,7 @@ const runPlanMigrations = (planKey) => {
     const hadLegs = state.migrations && state.migrations["kuba_legs_v2"];
     const hadPlanV3 = state.migrations && state.migrations["kuba_plan_v3"];
     const hadRepair = state.migrations && state.migrations["kuba_plan_v3_repair"];
+    const hadHistory = state.migrations && state.migrations["kuba_plan_history_v1"];
 
     if (planKey === "kuba" && !hadLegs) {
         state.weeks = (state.weeks || []).map((week) =>
@@ -956,10 +1043,8 @@ const runPlanMigrations = (planKey) => {
     // żeby nazwy z zamrożonego planu trafiały na właściwe wpisy. Ćwiczenia
     // usunięte z planu (Seated Cable Row, Dumbbell Shrugs) były już wtedy
     // skasowane — ich sloty zostają puste, reszta wraca na swoje miejsce.
-    if (planKey === "kuba" && state.migrations && !hadRepair) {
-        const boundary = state.startSunday
-            ? Math.floor((KUBA_PLAN_V3_START - state.startSunday) / WEEK_MS)
-            : (state.weeks || []).length;
+    if (planKey === "kuba" && state.startSunday && state.migrations && !hadRepair) {
+        const boundary = Math.floor((KUBA_PLAN_V3_START - state.startSunday) / WEEK_MS);
 
         const hasLoad = (arr) =>
             Array.isArray(arr) &&
@@ -983,6 +1068,29 @@ const runPlanMigrations = (planKey) => {
         state.migrations["kuba_plan_v3_repair"] = true;
     }
 
+    // Odtworzenie właściwego planu dla każdego starego tygodnia. Jeden
+    // zamrożony plan nie wystarczał, bo Kuba zmieniał plan kilka razy
+    // (Incline Dumbbell Press, liczba serii wiosłowań, Weighted Pull Ups).
+    if (planKey === "kuba" && state.startSunday && state.migrations && !hadHistory) {
+        if (!state.weekPlans || typeof state.weekPlans !== "object" || Array.isArray(state.weekPlans)) {
+            state.weekPlans = {};
+        }
+
+        const boundary = Math.max(
+            0,
+            Math.floor((KUBA_PLAN_V3_START - state.startSunday) / WEEK_MS)
+        );
+
+        (state.weeks || []).forEach((week, idx) => {
+            if (idx >= boundary) return;
+            const weekStart = kubaWeekStart(state.startSunday, idx);
+            if (weekStart === null) return;
+            state.weekPlans[idx] = buildKubaHistoricalPlan(weekStart, week || {});
+        });
+
+        state.migrations["kuba_plan_history_v1"] = true;
+    }
+
     if (state.migrations && !state.migrations["reps_sets_v3"]) {
         if (state.customPlan && typeof state.customPlan === "object") {
             Object.keys(state.customPlan).forEach((dayKey) => {
@@ -1001,7 +1109,11 @@ const runPlanMigrations = (planKey) => {
 
     if (
         state.migrations &&
-        (!hadLegs || !hadPlanV3 || !hadRepair || !state.migrations["reps_sets_v3"])
+        (!hadLegs ||
+            !hadPlanV3 ||
+            !hadRepair ||
+            !hadHistory ||
+            !state.migrations["reps_sets_v3"])
     ) {
         persistState();
     }
@@ -1024,11 +1136,19 @@ const ensureWeekPlans = (planKey) => {
         ? Math.floor((KUBA_PLAN_V3_START - state.startSunday) / WEEK_MS)
         : Infinity;
 
-    state.weeks.forEach((_, idx) => {
+    state.weeks.forEach((week, idx) => {
         const existing = state.weekPlans[idx];
         if (Array.isArray(existing) && existing.length) return;
         const useOldPlan = planKey === "kuba" && idx < boundary;
-        state.weekPlans[idx] = copyPlan(useOldPlan ? KUBA_PLAN_V1 : CURRENT_PLAN);
+        if (useOldPlan) {
+            const weekStart = kubaWeekStart(state.startSunday, idx);
+            state.weekPlans[idx] =
+                weekStart === null
+                    ? copyPlan(CURRENT_PLAN)
+                    : buildKubaHistoricalPlan(weekStart, week || {});
+            return;
+        }
+        state.weekPlans[idx] = copyPlan(CURRENT_PLAN);
     });
 
     if (state.migrations) state.migrations["week_plans_v1"] = true;

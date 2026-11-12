@@ -308,10 +308,11 @@ window.Views = (() => {
         DAYS.forEach((day) => {
             totalExercises += day.exercises.length;
             day.exercises.forEach((ex, ei) => {
-                totalSets += ex.sets;
+                const planned = Math.max(0, Number(ex.sets) || 0);
+                totalSets += planned;
                 const key = getExerciseKey(day.id, ei);
                 const sets = weekData[key] || [];
-                doneSets += sets.filter((s) => s && s.done).length;
+                doneSets += Math.min(sets.filter((s) => s && s.done).length, planned);
             });
         });
 
@@ -378,7 +379,10 @@ window.Views = (() => {
                                 ${day.exercises.map((ex, ei) => {
                                     const key = getExerciseKey(day.id, ei);
                                     const sets = weekData[key] || [];
-                                    const exDone = sets.filter((s) => s && s.done).length;
+                                    const exDone = Math.min(
+                                        sets.filter((s) => s && s.done).length,
+                                        ex.sets
+                                    );
                                     return `
                                         <div class="full-plan-exercise ${exDone === ex.sets ? "completed" : ""}">
                                             <span class="tag-badge tag-${ex.tag}">${ex.tag}</span>
@@ -872,10 +876,11 @@ window.Views = (() => {
         let doneSets = 0;
 
         day.exercises.forEach((ex, ei) => {
-            totalSets += ex.sets;
+            const planned = Math.max(0, Number(ex.sets) || 0);
+            totalSets += planned;
             const key = ctx.getExerciseKey(currentDayId, ei);
             const sets = weekData[key] || [];
-            doneSets += sets.filter((s) => s.done).length;
+            doneSets += Math.min(sets.filter((s) => s.done).length, planned);
         });
 
         const progressPct = totalSets ? Math.round((doneSets / totalSets) * 100) : 0;
@@ -908,7 +913,7 @@ ${day.exercises.map((ex, ei) => {
                     const prevSets = prevWeekData ? prevWeekData[key] : null;
                     const prevNote = prevWeekData ? (prevWeekData[noteKey] || "") : "";
 
-                    const exDone = sets.filter((s) => s.done).length;
+                    const exDone = Math.min(sets.filter((s) => s.done).length, ex.sets);
                     const exPct = ex.sets ? Math.round((exDone / ex.sets) * 100) : 0;
                     const isComplete = ex.sets > 0 && exDone === ex.sets;
 

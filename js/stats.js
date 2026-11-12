@@ -127,8 +127,13 @@ window.StatsModule = (() => {
         const history = [];
 
         state.weeks.forEach((weekData, weekIndex) => {
-            DAYS.forEach((day) => {
-                day.exercises.forEach((ex, ei) => {
+            const weekPlan =
+                state.weekPlans && Array.isArray(state.weekPlans[weekIndex]) && state.weekPlans[weekIndex].length
+                    ? state.weekPlans[weekIndex]
+                    : DAYS;
+
+            (weekPlan || []).forEach((day) => {
+                (day.exercises || []).forEach((ex, ei) => {
                     if (ex.name !== exerciseName) return;
 
                     const key = getExerciseKey(day.id, ei);
