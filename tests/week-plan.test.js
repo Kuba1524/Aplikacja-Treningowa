@@ -24,8 +24,22 @@ const setupStorage = () => {
         currentWeekIndex: 2,
         startSunday,
         weeks: [
-            { d1_e0: [{ kg: 50, reps: 8, done: true }] },
-            { d1_e0: [{ kg: 55, reps: 8, done: true }] },
+            {
+                // Stan po wadliwej migracji v74: dane PULL w nowym układzie
+                // (e2 = Reverse Peck Deck, e4 = EZ-bar, e5 = Wrist Curl),
+                // a stare sloty e3/e6 puste.
+                d1_e0: [{ kg: 50, reps: 8, done: true }],
+                d1_e1: [{ kg: 32, reps: 8, done: true }],
+                d1_e2: [{ kg: 59.1, reps: 9, done: true }],
+                d1_e4: [{ kg: 15, reps: 12, done: true }],
+                d1_e5: [{ kg: 12.5, reps: 10, done: true }]
+            },
+            {
+                d1_e0: [{ kg: 55, reps: 8, done: true }],
+                d1_e2: [{ kg: 60, reps: 9, done: true }],
+                d1_e4: [{ kg: 16, reps: 12, done: true }],
+                d1_e5: [{ kg: 13, reps: 10, done: true }]
+            },
             { d1_e0: [{ kg: 60, reps: 8, done: false }] }
         ],
         bodyWeight: [],
@@ -86,5 +100,27 @@ describe("plan per tydzień", () => {
         expect(html).toContain("Single-Arm Cable Row");
         expect(html).toContain("Face Pull");
         expect(html).not.toContain("Seated Cable Row");
+    });
+
+    it("naprawa przywraca właściwe dane w starych tygodniach", async () => {
+        await new Promise((resolve) => setTimeout(resolve, 450));
+
+        const key = Object.keys(localStorage).find((k) => k.includes(KUBA_ID));
+        expect(key).toBeTruthy();
+
+        const saved = JSON.parse(localStorage.getItem(key));
+        const week = saved.weeks[0];
+
+        // Reverse Peck Deck (e3), EZ-bar (e5) i Wrist Curl (e6) wracają
+        // na swoje stare pozycje.
+        expect(week.d1_e3[0].kg).toBe(59.1);
+        expect(week.d1_e5[0].kg).toBe(15);
+        expect(week.d1_e6[0].kg).toBe(12.5);
+
+        // Usunięte z planu ćwiczenia nie mają już danych.
+        expect(week.d1_e2).toBeUndefined();
+        expect(week.d1_e4).toBeUndefined();
+
+        expect(saved.migrations.kuba_plan_v3_repair).toBe(true);
     });
 });

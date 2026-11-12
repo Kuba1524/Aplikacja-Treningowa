@@ -150,7 +150,7 @@ const KUBA_PLAN_V3_START = new Date(2026, 10, 8, 0, 0, 0, 0).getTime();
 
 let DAYS = PLAN_BARTEK;
 let CURRENT_PLAN = PLAN_BARTEK;
-const APP_VERSION = "v76";
+const APP_VERSION = "v77";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -910,6 +910,7 @@ const KUBA_LEGS_V2_MAP = [2, 1, null, 3, 4, 5, 6, 7];
 const runPlanMigrations = (planKey) => {
     const hadLegs = state.migrations && state.migrations["kuba_legs_v2"];
     const hadPlanV3 = state.migrations && state.migrations["kuba_plan_v3"];
+    const hadRepair = state.migrations && state.migrations["kuba_plan_v3_repair"];
 
     if (planKey === "kuba" && !hadLegs) {
         state.weeks = (state.weeks || []).map((week) =>
@@ -950,6 +951,38 @@ const runPlanMigrations = (planKey) => {
         state.migrations["kuba_plan_v3"] = true;
     }
 
+    // Naprawa po v74: tamta migracja przestawiła dane we WSZYSTKICH tygodniach
+    // na nowy układ PULL. Przywracamy stary układ w tygodniach sprzed zmiany,
+    // żeby nazwy z zamrożonego planu trafiały na właściwe wpisy. Ćwiczenia
+    // usunięte z planu (Seated Cable Row, Dumbbell Shrugs) były już wtedy
+    // skasowane — ich sloty zostają puste, reszta wraca na swoje miejsce.
+    if (planKey === "kuba" && state.migrations && !hadRepair) {
+        const boundary = state.startSunday
+            ? Math.floor((KUBA_PLAN_V3_START - state.startSunday) / WEEK_MS)
+            : (state.weeks || []).length;
+
+        const hasLoad = (arr) =>
+            Array.isArray(arr) &&
+            arr.some((s) => s && (Number(s.kg) > 0 || Number(s.reps) > 0 || s.done));
+
+        const looksShifted = (week) => {
+            if (!week) return false;
+            const hasPull = Object.keys(week).some(
+                (k) => k.startsWith("d1_e") && !k.endsWith("_note")
+            );
+            if (!hasPull) return false;
+            // Po przestawieniu Reverse Peck Deck (e3) i Wrist Curl (e6) są puste.
+            return !hasLoad(week["d1_e3"]) && !hasLoad(week["d1_e6"]);
+        };
+
+        state.weeks = (state.weeks || []).map((week, idx) => {
+            if (idx >= boundary || !looksShifted(week)) return week;
+            return window.Utils.reorderDayLogs(week, 1, [0, 1, null, 2, null, 4, 5]);
+        });
+
+        state.migrations["kuba_plan_v3_repair"] = true;
+    }
+
     if (state.migrations && !state.migrations["reps_sets_v3"]) {
         if (state.customPlan && typeof state.customPlan === "object") {
             Object.keys(state.customPlan).forEach((dayKey) => {
@@ -966,7 +999,10 @@ const runPlanMigrations = (planKey) => {
         state.migrations["reps_sets_v3"] = true;
     }
 
-    if (state.migrations && (!hadLegs || !hadPlanV3 || !state.migrations["reps_sets_v3"])) {
+    if (
+        state.migrations &&
+        (!hadLegs || !hadPlanV3 || !hadRepair || !state.migrations["reps_sets_v3"])
+    ) {
         persistState();
     }
 };
