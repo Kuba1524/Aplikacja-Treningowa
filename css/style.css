@@ -2720,6 +2720,14 @@ html[data-theme="proton"] .full-plan-overview {
     gap: 14px;
 }
 
+/* Na komputerze cały plan mieści się w dwóch kolumnach. */
+@media (min-width: 900px) {
+    .full-plan-days {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+    }
+}
+
 .full-plan-day {
     background:
         linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.01)),

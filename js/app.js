@@ -74,24 +74,51 @@ const PLAN_KUBA = PLAN_BARTEK.map((day) => ({
     ...day,
     exercises: day.exercises.map((ex) => ({ ...ex }))
 }));
-const kubaIncline = PLAN_KUBA[0].exercises[0];
-kubaIncline.name = "Incline Smith Machine Press";
-kubaIncline.sets = 3;
-kubaIncline.reps = "6-8";
-const KUBA_LEGS_V2 = [
-    { name: "RDL", sets: 3, reps: "6-10", tag: "LEGS" },
+
+// Plan Kuby (v3) — pełne listy ćwiczeń per dzień.
+const KUBA_PUSH = [
+    { name: "Incline Smith Machine Press", sets: 3, reps: "6-8", tag: "CHEST" },
+    { name: "Seated Dumbbell OHP", sets: 3, reps: "6-10", tag: "SHOULDER" },
+    { name: "Machine Chest Press", sets: 3, reps: "8-10", tag: "CHEST" },
+    { name: "Chest Dips", sets: 2, reps: "6-10", tag: "CHEST" },
+    { name: "Dumbbell Lateral Raises", sets: 3, reps: "8-12", tag: "SHOULDER" },
+    { name: "Ab Wheel", sets: 3, reps: "8-12", tag: "CORE" },
+    { name: "Dragon Flag (negatywy)", sets: 2, reps: "8-12", tag: "CORE" }
+];
+const KUBA_PULL = [
+    { name: "Weighted Pull Ups", sets: 3, reps: "6-8", tag: "BACK" },
+    { name: "Single-Arm Cable Row", sets: 3, reps: "8-10", tag: "BACK" },
+    { name: "Reverse Peck Deck", sets: 2, reps: "8-12", tag: "REAR" },
+    { name: "Face Pull", sets: 3, reps: "12-15", tag: "REAR" },
+    { name: "EZ-bar Reverse Curl", sets: 3, reps: "8-12", tag: "FOREARMS" },
+    { name: "Barbell Wrist Curl", sets: 3, reps: "10-15", tag: "FOREARMS" }
+];
+const KUBA_LEGS = [
+    { name: "RDL (sztanga)", sets: 3, reps: "6-10", tag: "LEGS" },
     { name: "Hack Squat / Leg Press", sets: 3, reps: "6-10", tag: "QUADS" },
     { name: "Leg Extension", sets: 3, reps: "10-12", tag: "QUADS" },
     { name: "Seated Leg Curl", sets: 3, reps: "8-12", tag: "HAM" },
     { name: "Incline Dumbbell Curl [SS]", sets: 3, reps: "8-12", tag: "BICEPS" },
     { name: "Single-Arm Cable Pushdown [SS]", sets: 3, reps: "8-12", tag: "TRICEPS" },
     { name: "Incline Hammer Curl [SS]", sets: 3, reps: "8-10", tag: "BICEPS" },
-    { name: "Calf Raises [SS]", sets: 4, reps: "10-15", tag: "CALVES" }
+    { name: "Calf Raises [SS]", sets: 4, reps: "10-12", tag: "CALVES" }
 ];
-PLAN_KUBA[2].exercises = KUBA_LEGS_V2.map((ex) => ({ ...ex }));
+const KUBA_UPPER = [
+    { name: "Bench Press", sets: 3, reps: "5-8", tag: "CHEST" },
+    { name: "Cable Flyes (Low to High)", sets: 3, reps: "8-12", tag: "CHEST" },
+    { name: "Lat Pulldown", sets: 3, reps: "8-12", tag: "BACK" },
+    { name: "Cable Lateral Raise", sets: 3, reps: "8-10", tag: "SHOULDER" },
+    { name: "EZ-bar Preacher Curl", sets: 3, reps: "8-12", tag: "BICEPS" },
+    { name: "Incline Skull Crushers", sets: 3, reps: "8-10", tag: "TRICEPS" },
+    { name: "Cable Crunch", sets: 3, reps: "8-12", tag: "CORE" }
+];
+PLAN_KUBA[0].exercises = KUBA_PUSH.map((ex) => ({ ...ex }));
+PLAN_KUBA[1].exercises = KUBA_PULL.map((ex) => ({ ...ex }));
+PLAN_KUBA[2].exercises = KUBA_LEGS.map((ex) => ({ ...ex }));
+PLAN_KUBA[3].exercises = KUBA_UPPER.map((ex) => ({ ...ex }));
 
 let DAYS = PLAN_BARTEK;
-const APP_VERSION = "v73";
+const APP_VERSION = "v74";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -824,6 +851,7 @@ const KUBA_LEGS_V2_MAP = [2, 1, null, 3, 4, 5, 6, 7];
 
 const runPlanMigrations = (planKey) => {
     const hadLegs = state.migrations && state.migrations["kuba_legs_v2"];
+    const hadPlanV3 = state.migrations && state.migrations["kuba_plan_v3"];
 
     if (planKey === "kuba" && !hadLegs) {
         state.weeks = (state.weeks || []).map((week) =>
@@ -831,10 +859,35 @@ const runPlanMigrations = (planKey) => {
         );
 
         if (state.customPlan && Array.isArray(state.customPlan[KUBA_LEGS_V2_DAY])) {
-            state.customPlan[KUBA_LEGS_V2_DAY] = KUBA_LEGS_V2.map((ex) => ({ ...ex }));
+            state.customPlan[KUBA_LEGS_V2_DAY] = KUBA_LEGS.map((ex) => ({ ...ex }));
         }
 
         state.migrations["kuba_legs_v2"] = true;
+    }
+
+    // Plan Kuby v3: nowe ćwiczenia + przeniesienie historii na właściwe sloty.
+    if (planKey === "kuba" && state.migrations && !state.migrations["kuba_plan_v3"]) {
+        const REORDER = {
+            0: [0, 1, 2, 3, 4, 5, null], // PUSH — ostatni slot to nowe ćwiczenie
+            1: [0, 1, 3, null, 5, 6], // PULL — Reverse Peck Deck wyżej, Face Pull nowy
+        };
+        state.weeks = (state.weeks || []).map((week) => {
+            let out = week || {};
+            Object.keys(REORDER).forEach((dayId) => {
+                out = window.Utils.reorderDayLogs(out, Number(dayId), REORDER[dayId]);
+            });
+            return out;
+        });
+
+        // Jeśli profil ma własne edycje planu, nadpisz je nowym planem Kuby,
+        // inaczej stare customPlan przesłoniłoby nowe ćwiczenia.
+        if (state.customPlan && Object.keys(state.customPlan).length) {
+            getPlanByKey("kuba").forEach((day) => {
+                state.customPlan[day.id] = day.exercises.map((ex) => ({ ...ex }));
+            });
+        }
+
+        state.migrations["kuba_plan_v3"] = true;
     }
 
     if (state.migrations && !state.migrations["reps_sets_v3"]) {
@@ -853,7 +906,7 @@ const runPlanMigrations = (planKey) => {
         state.migrations["reps_sets_v3"] = true;
     }
 
-    if (state.migrations && (!hadLegs || !state.migrations["reps_sets_v3"])) {
+    if (state.migrations && (!hadLegs || !hadPlanV3 || !state.migrations["reps_sets_v3"])) {
         persistState();
     }
 };
