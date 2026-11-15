@@ -1665,6 +1665,10 @@ button {
     align-items: center;
 }
 
+.vol-row .tag-badge {
+    justify-self: start;
+}
+
 .vol-track {
     height: 8px;
     border-radius: 999px;
@@ -2762,6 +2766,10 @@ html[data-theme="proton"] .full-plan-overview {
 
 .fullplan-day:active {
     transform: none;
+}
+
+.fullplan-day .full-plan-day-header {
+    margin-bottom: 14px;
 }
 
 .full-plan-day {

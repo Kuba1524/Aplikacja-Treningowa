@@ -110,7 +110,7 @@ const KUBA_PULL = [
     { name: "Barbell Wrist Curl", sets: 3, reps: "10-15", tag: "FOREARMS" }
 ];
 const KUBA_LEGS = [
-    { name: "RDL (sztanga)", sets: 3, reps: "6-10", tag: "LEGS" },
+    { name: "RDL (sztanga)", sets: 3, reps: "6-10", tag: "HAM" },
     { name: "Hack Squat / Leg Press", sets: 3, reps: "6-10", tag: "QUADS" },
     { name: "Leg Extension", sets: 3, reps: "10-12", tag: "QUADS" },
     { name: "Seated Leg Curl", sets: 3, reps: "8-12", tag: "HAM" },
@@ -126,7 +126,7 @@ const PLAN_KUBA = makeKubaPlan([KUBA_PUSH, KUBA_PULL, KUBA_LEGS, KUBA_UPPER]);
 // Plan Kuby sprzed zmiany (obowiązywał do tygodnia z 8.11.2026).
 // Trzymamy go zamrożonego, żeby stare tygodnie dalej pokazywały swoje ćwiczenia.
 const KUBA_LEGS_V1 = [
-    { name: "RDL", sets: 3, reps: "6-10", tag: "LEGS" },
+    { name: "RDL", sets: 3, reps: "6-10", tag: "HAM" },
     { name: "Hack Squat / Leg Press", sets: 3, reps: "6-10", tag: "QUADS" },
     { name: "Leg Extension", sets: 3, reps: "10-12", tag: "QUADS" },
     { name: "Seated Leg Curl", sets: 3, reps: "8-12", tag: "HAM" },
@@ -241,7 +241,7 @@ const buildKubaHistoricalPlan = (weekStart, weekData = {}) => {
 
 let DAYS = PLAN_BARTEK;
 let CURRENT_PLAN = PLAN_BARTEK;
-const APP_VERSION = "v86";
+const APP_VERSION = "v87";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -1206,6 +1206,7 @@ const runPlanMigrations = (planKey) => {
     const hadRepair = state.migrations && state.migrations["kuba_plan_v3_repair"];
     const hadHistory = state.migrations && state.migrations["kuba_plan_history_v1"];
     const hadHistoryV2 = state.migrations && state.migrations["kuba_plan_history_v2"];
+    const hadRdlHam = state.migrations && state.migrations["kuba_rdl_ham_v1"];
 
     if (planKey === "kuba" && !hadLegs) {
         state.weeks = (state.weeks || []).map((week) =>
@@ -1420,6 +1421,39 @@ const runPlanMigrations = (planKey) => {
         state.migrations["kuba_plan_v5_now"] = true;
     }
 
+    // v87: RDL to ćwiczenie dwugłowych, a nie osobna partia "LEGS".
+    // Usuwamy sztuczną kategorię z objętości i ze starych snapshotów planu.
+    if (planKey === "kuba" && state.migrations && !hadRdlHam) {
+        const isRdlWithLegsTag = (ex) => {
+            if (!ex || typeof ex.name !== "string") return false;
+            if (!/^RDL(\s|\(|$)/i.test(ex.name.trim())) return false;
+            return String(ex.tag || "").trim().toUpperCase() === "LEGS";
+        };
+
+        if (state.customPlan && typeof state.customPlan === "object") {
+            Object.keys(state.customPlan).forEach((dayKey) => {
+                const list = state.customPlan[dayKey];
+                if (!Array.isArray(list)) return;
+                state.customPlan[dayKey] = list.map((ex) =>
+                    isRdlWithLegsTag(ex) ? { ...ex, tag: "HAM" } : ex
+                );
+            });
+        }
+
+        Object.keys(state.weekPlans || {}).forEach((weekKey) => {
+            const plan = state.weekPlans[weekKey];
+            if (!Array.isArray(plan)) return;
+            plan.forEach((day) => {
+                if (!day || !Array.isArray(day.exercises)) return;
+                day.exercises = day.exercises.map((ex) =>
+                    isRdlWithLegsTag(ex) ? { ...ex, tag: "HAM" } : ex
+                );
+            });
+        });
+
+        state.migrations["kuba_rdl_ham_v1"] = true;
+    }
+
     if (
         state.migrations &&
         (!hadLegs ||
@@ -1430,6 +1464,7 @@ const runPlanMigrations = (planKey) => {
             !hadRepair ||
             !hadHistory ||
             !hadHistoryV2 ||
+            !hadRdlHam ||
             !state.migrations["reps_sets_v3"])
     ) {
         persistState();

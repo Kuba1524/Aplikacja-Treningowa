@@ -233,6 +233,10 @@ describe("historyczny plan Kuby per tydzień", () => {
         expect(saved.weekPlans[27][1].exercises[5].reps).toBe("8-12");
         expect(saved.weekPlans[27][2].exercises[6].name).toBe("Hyperextension [SS]");
 
+        const rdl = saved.weekPlans[26][2].exercises.find((ex) => /^RDL/i.test(ex.name));
+        expect(rdl.tag).toBe("HAM");
+        expect(saved.weekPlans[27][2].exercises.some((ex) => ex.tag === "LEGS")).toBe(false);
+
         // Barbell Wrist Curl przenosi się z PULL e5 na e6, a nowy Incline
         // Hammer Curl na e5 nie dziedziczy po nim danych.
         expect(saved.weeks[26].d1_e5).toBeUndefined();
@@ -396,5 +400,45 @@ describe("historyczny plan Kuby per tydzień", () => {
         expect(saved.weeks[27].d1_e5[0].kg).toBe(12);
         expect(saved.weeks[27].d1_e6[0].kg).toBe(20);
         expect(saved.weekPlans[27][1].exercises[5].reps).toBe("8-12");
+    });
+
+    it("v87 zmienia tag RDL z LEGS na HAM w customPlan i zapisanych planach", async () => {
+        const fixture = globalThis.__kubaFixture;
+        const plan27 = JSON.parse(JSON.stringify(saved.weekPlans[27]));
+        const plan0 = JSON.parse(JSON.stringify(saved.weekPlans[0]));
+        const findRdl = (plan) =>
+            plan[2].exercises.find((ex) => /^RDL/i.test(ex.name));
+
+        findRdl(plan27).tag = "LEGS";
+        findRdl(plan0).tag = "LEGS";
+
+        fixture.customPlan = { 2: JSON.parse(JSON.stringify(plan27[2].exercises)) };
+        fixture.weekPlans = { ...fixture.weekPlans, 0: plan0, 27: plan27 };
+        fixture.weeks[27] = {};
+        fixture.migrations = {
+            kuba_legs_v2: true,
+            kuba_plan_v3: true,
+            kuba_plan_v3_repair: true,
+            kuba_plan_v4: true,
+            kuba_plan_v5: true,
+            kuba_plan_v5_now: true,
+            kuba_plan_history_v1: true,
+            kuba_plan_history_v2: true,
+            reps_sets_v3: true,
+            week_plans_v1: true,
+            kuba_week_seed_v1: true,
+        };
+
+        await window.chooseProfile(KUBA_ID);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        saved = readSavedState();
+
+        expect(saved.migrations.kuba_rdl_ham_v1).toBe(true);
+        expect(saved.customPlan[2].find((ex) => /^RDL/i.test(ex.name)).tag).toBe("HAM");
+        expect(findRdl(saved.weekPlans[0]).tag).toBe("HAM");
+        expect(findRdl(saved.weekPlans[27]).tag).toBe("HAM");
+        expect(
+            saved.weekPlans[27][2].exercises.some((ex) => ex.tag === "LEGS")
+        ).toBe(false);
     });
 });
