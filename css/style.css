@@ -1660,13 +1660,17 @@ button {
 
 .vol-row {
     display: grid;
-    grid-template-columns: 78px minmax(0, 1fr) 58px;
+    grid-template-columns: 96px minmax(0, 1fr) 58px;
     gap: 10px;
     align-items: center;
 }
 
 .vol-row .tag-badge {
     justify-self: start;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .vol-track {
