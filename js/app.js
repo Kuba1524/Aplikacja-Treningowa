@@ -241,7 +241,7 @@ const buildKubaHistoricalPlan = (weekStart, weekData = {}) => {
 
 let DAYS = PLAN_BARTEK;
 let CURRENT_PLAN = PLAN_BARTEK;
-const APP_VERSION = "v85";
+const APP_VERSION = "v86";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -411,27 +411,45 @@ const ensureStateShape = () => {
     }
 };
 
-const cloneWeekData = (prevWeek = {}) => {
-    const newWeek = {};
+// Wypełnia nowy tydzień wartościami z poprzedniego treningu, dopasowując
+// ćwiczenia po nazwie. Dzięki temu zmiana planu nie kasuje podpowiedzi
+// ciężaru i powtórzeń. Istniejących wpisów nie nadpisuje.
+const seedWeekFromPrevious = (prevWeek = {}, prevPlan = [], newPlan = [], currentWeek = {}) => {
+    const out = { ...currentWeek };
 
-    Object.keys(prevWeek).forEach((key) => {
-        const value = prevWeek[key];
+    (newPlan || []).forEach((day) => {
+        const prevDay = (prevPlan || []).find((d) => d && d.id === day.id);
+        if (!prevDay) return;
 
-        if (key.endsWith("_note")) {
-            newWeek[key] = value || "";
-            return;
-        }
+        (day.exercises || []).forEach((ex, ei) => {
+            const prevIdx = (prevDay.exercises || []).findIndex(
+                (prevEx) => prevEx && prevEx.name === ex.name
+            );
+            if (prevIdx < 0) return;
 
-        if (key.startsWith("d") && Array.isArray(value)) {
-            newWeek[key] = value.map((set) => ({
-                kg: Number(set?.kg) || 0,
-                reps: Number(set?.reps) || 0,
-                done: false
-            }));
-        }
+            const fromKey = getExerciseKey(prevDay.id, prevIdx);
+            const toKey = getExerciseKey(day.id, ei);
+            const currentSets = currentWeek[toKey];
+            const hasCurrent = Array.isArray(currentSets) && currentSets.some(
+                (set) => set && (Number(set.kg) > 0 || Number(set.reps) > 0 || set.done)
+            );
+            const prevSets = prevWeek[fromKey];
+
+            if (!hasCurrent && Array.isArray(prevSets) && prevSets.length) {
+                out[toKey] = prevSets.map((set) => ({
+                    kg: Number(set?.kg) || 0,
+                    reps: Number(set?.reps) || 0,
+                    done: false
+                }));
+            }
+
+            const currentNote = currentWeek[toKey + "_note"];
+            const prevNote = prevWeek[fromKey + "_note"];
+            if (!currentNote && prevNote) out[toKey + "_note"] = prevNote;
+        });
     });
 
-    return newWeek;
+    return out;
 };
 
 const planSetLimits = (plan = CURRENT_PLAN) => {
@@ -485,9 +503,8 @@ const updateTimeline = () => {
             const prevWeek = state.weeks[newIdx - 1] || {};
             const prevPlan = getWeekPlan(newIdx - 1);
             const newPlan = getPlanForWeekIndex(newIdx, {}, currentPlanKey);
-            const samePlan = JSON.stringify(prevPlan) === JSON.stringify(newPlan);
             const newWeek = trimWeekToPlan(
-                cloneWeekData(samePlan ? prevWeek : {}),
+                seedWeekFromPrevious(prevWeek, prevPlan, newPlan),
                 planSetLimits(newPlan)
             );
             state.weeks.push(newWeek);
@@ -498,6 +515,28 @@ const updateTimeline = () => {
         state.currentWeekIndex = Math.min(elapsedWeeks, state.weeks.length - 1);
         persistState();
     }
+};
+
+// Jednorazowe dopełnienie bieżącego tygodnia po zmianie planu. Tydzień mógł
+// powstać wcześniej jako pusty, więc kopiujemy tylko brakujące ćwiczenia
+// z poprzedniego tygodnia (po nazwie). Reszta zostaje bez zmian.
+const seedCurrentWeekFromPrevious = () => {
+    if (!state.migrations || state.migrations["kuba_week_seed_v1"]) return;
+
+    state.migrations["kuba_week_seed_v1"] = true;
+    if (currentPlanKey !== "kuba") return;
+
+    const idx = state.currentWeekIndex;
+    if (idx <= 0 || !state.weeks || !state.weeks[idx]) return;
+
+    const currentWeek = state.weeks[idx] || {};
+    const prevWeek = state.weeks[idx - 1] || {};
+    state.weeks[idx] = seedWeekFromPrevious(
+        prevWeek,
+        getWeekPlan(idx - 1),
+        getWeekPlan(idx),
+        currentWeek
+    );
 };
 
 const getWeekCompletion = (weekIndex) => {
@@ -1438,6 +1477,7 @@ const bootWithUser = async (storageKey, planKey = "bartek", profileName = "") =>
     ensureWeekPlans(planKey);
     isLoaded = true;
     updateTimeline();
+    seedCurrentWeekFromPrevious();
     trimWeekToPlan(
         state.weeks[state.currentWeekIndex] || {},
         planSetLimits(getWeekPlan(state.currentWeekIndex))
