@@ -258,7 +258,7 @@ const buildKubaHistoricalPlan = (weekStart, weekData = {}) => {
 
 let DAYS = PLAN_BARTEK;
 let CURRENT_PLAN = PLAN_BARTEK;
-const APP_VERSION = "v89";
+const APP_VERSION = "v90";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -528,6 +528,110 @@ const seedWeekFromPrevious = (prevWeek = {}, prevPlan = [], newPlan = [], curren
     return out;
 };
 
+// Jednorazowe dopełnienie bieżącego tygodnia Bartka. Szukamy ostatnich
+// zapisanych serii tego samego ćwiczenia w jego historii, ale tylko uzupełniamy
+// brakujące kilogramy/powtórzenia. Istniejących wpisów nie nadpisujemy.
+const seedCurrentWeekFromHistory = () => {
+    const idx = state.currentWeekIndex;
+    if (idx <= 0 || !state.weeks || !state.weeks[idx]) return;
+
+    const currentWeek = state.weeks[idx] || {};
+    const plan = getWeekPlan(idx);
+    const history = [];
+
+    for (let wi = idx - 1; wi >= 0; wi -= 1) {
+        const weekPlan = state.weekPlans && state.weekPlans[wi];
+        if (!Array.isArray(weekPlan) || !weekPlan.length) continue;
+        history.push({
+            weekPlan,
+            week: state.weeks[wi] || {}
+        });
+    }
+
+    if (!history.length) return;
+
+    const out = { ...currentWeek };
+
+    (plan || []).forEach((day) => {
+        (day.exercises || []).forEach((ex, ei) => {
+            const toKey = getExerciseKey(day.id, ei);
+            const currentSets = Array.isArray(out[toKey]) ? out[toKey] : [];
+            const nameKey = exerciseNameKey(ex.name);
+            const matches = [];
+
+            history.forEach(({ weekPlan, week }) => {
+                const oldDay = (weekPlan || []).find((d) => d && d.id === day.id);
+                if (!oldDay) return;
+
+                const oldIdx = (oldDay.exercises || []).findIndex(
+                    (oldEx) => exerciseNameKey(oldEx && oldEx.name) === nameKey
+                );
+                if (oldIdx < 0) return;
+
+                const fromKey = getExerciseKey(day.id, oldIdx);
+                const sets = week[fromKey];
+                if (Array.isArray(sets)) {
+                    matches.push({
+                        sets,
+                        note: week[fromKey + "_note"]
+                    });
+                }
+            });
+
+            if (!matches.length) return;
+
+            const targetCount = Math.max(
+                Number(ex.sets) || 0,
+                currentSets.length,
+                ...matches.map((entry) => entry.sets.length)
+            );
+
+            let changed = false;
+            const merged = Array.from({ length: targetCount }, (_, si) => {
+                const cur = currentSets[si] || { kg: 0, reps: 0, done: false };
+                let source = null;
+
+                // Najpierw szukamy ostatniej serii z zapisanymi powtórzeniami,
+                // żeby nie kopiować pustych wpisów (0 powtórzeń).
+                for (const entry of matches) {
+                    const candidate = entry.sets[si];
+                    if (candidate && Number(candidate.reps) > 0) {
+                        source = candidate;
+                        break;
+                    }
+                }
+                if (!source) {
+                    for (const entry of matches) {
+                        const candidate = entry.sets[si];
+                        if (candidate && Number(candidate.kg) > 0) {
+                            source = candidate;
+                            break;
+                        }
+                    }
+                }
+
+                const curKg = Number(cur.kg) || 0;
+                const curReps = Number(cur.reps) || 0;
+                const kg = curKg > 0 ? curKg : Number(source && source.kg) || 0;
+                const reps = curReps > 0 ? curReps : Number(source && source.reps) || 0;
+                const done = !!cur.done;
+
+                if (kg !== curKg || reps !== curReps) changed = true;
+                return { kg, reps, done };
+            });
+
+            if (changed) out[toKey] = merged;
+
+            if (!currentWeek[toKey + "_note"]) {
+                const noteEntry = matches.find((entry) => entry.note);
+                if (noteEntry) out[toKey + "_note"] = noteEntry.note;
+            }
+        });
+    });
+
+    state.weeks[idx] = out;
+};
+
 const planSetLimits = (plan = CURRENT_PLAN) => {
     const limits = {};
     (plan || []).forEach((day) => {
@@ -597,8 +701,16 @@ const updateTimeline = () => {
 // powstać wcześniej jako pusty, więc kopiujemy tylko brakujące ćwiczenia
 // z poprzedniego tygodnia (po nazwie). Reszta zostaje bez zmian.
 const seedCurrentWeekFromPrevious = () => {
-    if (!state.migrations || state.migrations["kuba_week_seed_v1"]) return;
+    if (!state.migrations) return;
 
+    if (currentPlanKey === "bartek") {
+        if (state.migrations["bartek_week_seed_v1"]) return;
+        state.migrations["bartek_week_seed_v1"] = true;
+        seedCurrentWeekFromHistory();
+        return;
+    }
+
+    if (state.migrations["kuba_week_seed_v1"]) return;
     state.migrations["kuba_week_seed_v1"] = true;
     if (currentPlanKey !== "kuba") return;
 

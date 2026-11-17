@@ -100,6 +100,10 @@ const setupStorage = () => {
     // Poprzedni tydzień (8.11) zostaje na starym planie Bartka.
     weeks[26] = {
         d0_e0: set(60, 8, 3),
+        d1_e0: set(20, 5, 3),
+        d1_e5: set(30, 13, 3),
+        d3_e1: set(7.5, 12, 3),
+        d3_e5: set(16, 9, 3),
     };
 
     // Bieżący tydzień (15.11) ma już wpisane serie w starym układzie.
@@ -265,6 +269,18 @@ describe("Bartek dostaje ćwiczenia Kuby od bieżącego tygodnia", () => {
         // Przyszły tydzień również ma przepięte dane.
         expect(saved.weeks[28].d0_e0[0].kg).toBe(70);
         expect(saved.weeks[28].d1_e4[0].kg).toBe(32);
+    });
+
+    it("uzupełnia brakujące ciężary i powtórzenia z historii Bartka", () => {
+        expect(saved.migrations.bartek_week_seed_v1).toBe(true);
+
+        // Puste pola dostały wartości z ostatniego zapisanego treningu.
+        expect(saved.weeks[27].d1_e0[0]).toMatchObject({ kg: 20, reps: 5, done: false });
+        expect(saved.weeks[27].d3_e1[0]).toMatchObject({ kg: 7.5, reps: 12, done: false });
+        expect(saved.weeks[27].d3_e5[0]).toMatchObject({ kg: 16, reps: 9, done: false });
+
+        // Istniejący wpis z bieżącego tygodnia nie został nadpisany historią.
+        expect(saved.weeks[27].d1_e4[0]).toMatchObject({ kg: 30, reps: 12, done: true });
     });
 
     it("czyści stare edycje planu, żeby nie przesłaniały planu Kuby", () => {
