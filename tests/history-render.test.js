@@ -176,7 +176,7 @@ describe("renderHistory", () => {
         window.Views.setHistoryFilter("all");
     });
 
-    it("renders summary, filters and expandable session cards", () => {
+    it("renders a simple exercise picker and expandable session cards", () => {
         const state = makeState();
         window.Views.renderHistory(makeCtx(state));
 
@@ -185,13 +185,15 @@ describe("renderHistory", () => {
         expect(screen.textContent).toContain("Bench Press");
         expect(screen.textContent).toContain("50 kg × 8");
         expect(screen.textContent).toContain("Spokojne tempo");
-        expect(screen.textContent).toContain("Częściowy");
-        expect(screen.textContent).toContain("PR × 1");
+        expect(screen.textContent).not.toContain("Częściowy");
+        expect(screen.textContent).not.toContain("1 390 kg");
+        expect(screen.textContent).not.toContain("1390 kg");
+        expect(screen.querySelector(".history-summary")).toBeNull();
         expect(screen.querySelectorAll("details.history-session")).toHaveLength(3);
-        expect(screen.querySelectorAll("[data-history-filter]").length).toBeGreaterThan(1);
+        expect(screen.querySelectorAll("#history-exercise-select option")).toHaveLength(5);
     });
 
-    it("filters sessions by exercise name", () => {
+    it("filters sessions by exercise name and shows only that exercise", () => {
         const state = makeState();
         window.Views.setHistoryFilter("RDL");
         window.Views.renderHistory(makeCtx(state));
@@ -204,20 +206,23 @@ describe("renderHistory", () => {
         expect(screen.querySelectorAll(".history-session")).toHaveLength(1);
         expect(cards).toContain("RDL");
         expect(cards).not.toContain("Bench Press");
+        expect(cards).not.toContain("Weighted Pull Ups");
     });
 
-    it("changes the filter when a chip is clicked", () => {
+    it("changes the filter from the exercise picker", () => {
         const state = makeState();
         window.Views.renderHistory(makeCtx(state));
 
         const screen = document.getElementById("screen-history");
-        const rdlChip = Array.from(screen.querySelectorAll("[data-history-filter]")).find(
-            (button) => button.getAttribute("data-history-filter") === "RDL"
-        );
-        rdlChip.click();
+        const select = screen.querySelector("#history-exercise-select");
+        select.value = "RDL";
+        select.dispatchEvent(new Event("change"));
 
         expect(screen.querySelectorAll(".history-session")).toHaveLength(1);
         expect(screen.querySelector(".history-session").textContent).toContain("RDL");
+        expect(screen.querySelector(".history-session").textContent).not.toContain(
+            "Weighted Pull Ups"
+        );
     });
 
     it("shows an empty state without sessions", () => {
