@@ -152,4 +152,87 @@ describe("renderWorkout", () => {
         expect(html).toContain('type="number"');
         expect(html).not.toContain("ex-expand-btn");
     });
+
+    it("groups superset pairs and points to the partner exercise", () => {
+        const set = (kg, reps, done) => ({ kg, reps, done });
+        const ctx = makeCtx();
+        ctx.DAYS = [{
+            id: 1,
+            label: "Środa",
+            icon: "🦵",
+            exercises: [
+                { name: "Incline Dumbbell Curl [SS]", sets: 2, reps: "8-12", tag: "BICEPS" },
+                { name: "Single-Arm Cable Pushdown [SS]", sets: 2, reps: "8-12", tag: "TRICEPS" },
+                { name: "Calf Raises", sets: 1, reps: "10-12", tag: "CALVES" }
+            ]
+        }];
+        ctx.state.weeks[1] = {
+            d1_e0: [set(14, 12, true), set(0, 0, false)],
+            d1_e1: [set(0, 0, false), set(0, 0, false)],
+            d1_e2: [set(0, 0, false)]
+        };
+        ctx.getExerciseKey = (dayId, ei) => `d${dayId}_e${ei}`;
+        ctx.getNoteKey = (dayId, ei) => `d${dayId}_e${ei}_note`;
+        ctx.getWorkoutSessionSummary = () => ({
+            isLive: true,
+            startedAt: Date.now() - 60_000,
+            endedAt: 0,
+            durationMs: 60_000,
+            doneSets: 1,
+            totalSets: 5,
+            totalExercises: 3,
+            completedExercises: 0,
+            volume: 168,
+            prs: []
+        });
+        ctx.isSessionSummaryOpen = () => false;
+
+        document.body.innerHTML = '<div id="screen-workout"></div>';
+        window.Views.renderWorkout(ctx);
+        const html = document.getElementById("screen-workout").innerHTML;
+
+        expect(html).toContain("SUPERSET A");
+        expect(html).toContain("ss-pos-badge");
+        expect(html).toContain(">A1<");
+        expect(html).toContain(">A2<");
+        expect(html).toContain("superset-next");
+        expect(html).toContain("set-row superset-target");
+        expect(html).toContain("Następna w superserie");
+        expect(html).not.toContain("[SS]");
+        expect(html).toContain("workout-session-time");
+    });
+
+    it("renders the finished session summary with PRs", () => {
+        const ctx = makeCtx({ allDone: true });
+        ctx.getWorkoutSessionSummary = () => ({
+            isLive: true,
+            startedAt: 1,
+            endedAt: 2,
+            durationMs: 930_000,
+            doneSets: 3,
+            totalSets: 3,
+            totalExercises: 1,
+            completedExercises: 1,
+            volume: 1500,
+            prs: [{
+                name: "Wyciskanie",
+                current: { kg: 100, reps: 5 },
+                previous: { kg: 95, reps: 5 },
+                gain: "+5 kg"
+            }]
+        });
+        ctx.isSessionSummaryOpen = () => true;
+
+        document.body.innerHTML = '<div id="screen-workout"></div>';
+        window.Views.renderWorkout(ctx);
+        const html = document.getElementById("screen-workout").innerHTML;
+
+        expect(html).toContain("Sesja zakończona");
+        expect(html).toContain("15:30");
+        expect(html).toContain("Nowe rekordy");
+        expect(html).toContain("Wyciskanie");
+        expect(html).toContain("100 kg × 5");
+        expect(html).toContain("+5 kg");
+        expect(html).toContain("openWorkoutSummary()");
+    });
 });

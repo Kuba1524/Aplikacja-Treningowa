@@ -704,7 +704,7 @@ window.Views = (() => {
                 <div class="pr-card">
                     <div class="pr-card-top">
                         <div>
-                            <div class="pr-name">${window.Utils.escapeHtml(pr.name)}</div>
+                            <div class="pr-name">${window.Utils.escapeHtml(U.stripSupersetTag(pr.name))}</div>
                             <div class="pr-sub">${routeTxt || "Najlepszy wynik"}</div>
                         </div>
                         <div class="pr-badge ${badgeClass}">${badgeLabel}</div>
@@ -811,7 +811,7 @@ window.Views = (() => {
                                 <div class="stale-row">
                                     <span class="stale-ico">⚠</span>
                                     <div class="stale-main">
-                                        <div class="stale-name">${window.Utils.escapeHtml(s.name)}${s.bodyweight ? ' <span class="stale-bw">masa własna</span>' : ""}</div>
+                                        <div class="stale-name">${window.Utils.escapeHtml(U.stripSupersetTag(s.name))}${s.bodyweight ? ' <span class="stale-bw">masa własna</span>' : ""}</div>
                                         ${s.bodyweight
                                             ? `<div class="stale-sub">bez zmian w powtórzeniach od ${s.streak} sesji (${s.reps} powt.)</div>`
                                             : `<div class="stale-sub">bez zmian od ${s.streak} sesji</div>`}
@@ -988,6 +988,127 @@ window.Views = (() => {
 
         const progressPct = totalSets ? Math.round((doneSets / totalSets) * 100) : 0;
 
+        day.exercises.forEach((ex, ei) => {
+            ctx.ensureWorkoutDataExists(currentDayId, ei, ex.sets);
+        });
+
+        const session = ctx.getWorkoutSessionSummary
+            ? ctx.getWorkoutSessionSummary(currentDayId)
+            : null;
+        const summaryOpen = ctx.isSessionSummaryOpen
+            ? ctx.isSessionSummaryOpen(currentDayId)
+            : false;
+
+        const ssGroups = window.Utils.getSupersetGroups(day.exercises);
+        const ssInfo = {};
+        const ssTargets = {};
+        ssGroups.forEach((group) => {
+            group.indices.forEach((idx, position) => {
+                ssInfo[idx] = {
+                    label: group.label,
+                    position: position + 1,
+                    size: group.indices.length
+                };
+            });
+
+            if (group.indices.length !== 2) return;
+            const [a, b] = group.indices;
+            const setsA = weekData[ctx.getExerciseKey(currentDayId, a)] || [];
+            const setsB = weekData[ctx.getExerciseKey(currentDayId, b)] || [];
+
+            const markTargets = (sourceSets, targetSets, targetIndex) => {
+                sourceSets.forEach((set, setIndex) => {
+                    if (!set || !set.done) return;
+                    const partnerSet = targetSets[setIndex];
+                    if (!partnerSet || partnerSet.done) return;
+                    if (!ssTargets[targetIndex]) ssTargets[targetIndex] = new Set();
+                    ssTargets[targetIndex].add(setIndex);
+                });
+            };
+
+            markTargets(setsA, setsB, b);
+            markTargets(setsB, setsA, a);
+        });
+
+        const formatSessionSet = (set) => {
+            if (!set) return "—";
+            return set.kg > 0
+                ? `${window.Utils.formatNumberPL(set.kg)} kg × ${set.reps}`
+                : `${set.reps} powt.`;
+        };
+
+        const sessionTime = session && session.startedAt
+            ? window.Utils.formatDuration(session.durationMs)
+            : "00:00";
+
+        const sessionBar = session && session.isLive && session.startedAt
+            ? `<div class="workout-session-row">
+                    <div id="workout-session-timer" class="workout-session-timer ${session.endedAt ? "done" : "running"}">
+                        <span class="workout-session-ico" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                        </span>
+                        <span class="workout-session-meta">
+                            <span class="wst-label">Czas sesji</span>
+                            <span id="workout-session-time" class="wst-time">${sessionTime}</span>
+                        </span>
+                    </div>
+                    ${session.endedAt
+                        ? `<button type="button" class="workout-session-btn" onclick="openWorkoutSummary()">Podsumowanie</button>`
+                        : doneSets > 0
+                            ? `<button type="button" class="workout-session-btn finish" onclick="finishWorkout()">Zakończ</button>`
+                            : `<span class="workout-session-hint">Timer startuje z treningiem</span>`}
+                </div>`
+            : "";
+
+        let summaryHtml = "";
+        if (summaryOpen && session) {
+            summaryHtml = `
+                <div class="session-summary-card">
+                    <div class="session-summary-head">
+                        <div>
+                            <div class="session-summary-kicker">Sesja zakończona</div>
+                            <div class="session-summary-title">${window.Utils.escapeHtml(day.label)} · ${window.Utils.escapeHtml(dayDateText)}</div>
+                        </div>
+                        <button type="button" class="session-summary-close" onclick="dismissWorkoutSummary()" aria-label="Zamknij podsumowanie">×</button>
+                    </div>
+
+                    <div class="session-summary-grid">
+                        <div class="session-summary-stat">
+                            <span class="sss-num">${window.Utils.formatDuration(session.durationMs)}</span>
+                            <span class="sss-lab">Czas</span>
+                        </div>
+                        <div class="session-summary-stat">
+                            <span class="sss-num">${session.doneSets}/${session.totalSets}</span>
+                            <span class="sss-lab">Serie</span>
+                        </div>
+                        <div class="session-summary-stat">
+                            <span class="sss-num">${session.completedExercises}/${session.totalExercises}</span>
+                            <span class="sss-lab">Ćwiczenia</span>
+                        </div>
+                        <div class="session-summary-stat">
+                            <span class="sss-num">${window.Utils.formatNumberPL(Math.round(session.volume))}</span>
+                            <span class="sss-lab">Objętość kg</span>
+                        </div>
+                    </div>
+
+                    ${session.prs.length ? `
+                        <div class="session-pr-box">
+                            <div class="session-pr-head">🏆 Nowe rekordy</div>
+                            ${session.prs.map((pr) => `
+                                <div class="session-pr-row">
+                                    <span class="session-pr-name">${window.Utils.escapeHtml(pr.name)}</span>
+                                    <span class="session-pr-value">${formatSessionSet(pr.current)}</span>
+                                    <span class="session-pr-gain">${pr.gain}</span>
+                                </div>
+                            `).join("")}
+                        </div>
+                    ` : `
+                        <div class="session-pr-empty">Bez nowych rekordów — solidna robota!</div>
+                    `}
+                </div>
+            `;
+        }
+
         screen.innerHTML = `
             <div class="workout-shell">
                 <div class="workout-top">
@@ -1005,14 +1126,18 @@ window.Views = (() => {
                     <div class="workout-progress-fill" style="width:${progressPct}%;"></div>
                 </div>
 
+                ${sessionBar}
+                ${summaryHtml}
+
 ${day.exercises.map((ex, ei) => {
                     const key = ctx.getExerciseKey(currentDayId, ei);
                     const noteKey = ctx.getNoteKey(currentDayId, ei);
 
-                    ctx.ensureWorkoutDataExists(currentDayId, ei, ex.sets);
-
                     const sets = weekData[key];
                     const currentNote = weekData[noteKey] || "";
+                    const ss = ssInfo[ei] || null;
+                    const targetSets = ssTargets[ei] || null;
+                    const displayName = window.Utils.stripSupersetTag(ex.name);
 
                     // Po zmianie planu ten sam indeks może oznaczać inne
                     // ćwiczenie. Dlatego poprzedni tydzień dopasowujemy po
@@ -1073,8 +1198,12 @@ ${day.exercises.map((ex, ei) => {
                         <div class="exercise-title-wrap">
                             <span class="tag-badge tag-${ex.tag}">${ex.tag}</span>
                             <div class="exercise-main">
-                                <span class="ex-title">${window.Utils.escapeHtml(ex.name)}</span>
+                                <div class="ex-title-line">
+                                    <span class="ex-title">${window.Utils.escapeHtml(displayName)}</span>
+                                    ${ss ? `<span class="ss-pos-badge">${ss.label}${ss.position}</span>` : ""}
+                                </div>
                                 <div class="ex-reps-range">${ex.sets} serie × ${ex.reps} powtórzeń</div>
+                                ${targetSets ? `<span class="ss-next-badge">Następna w superserie</span>` : ""}
                                 ${aggHtml}
                             </div>
                         </div>
@@ -1140,6 +1269,7 @@ ${day.exercises.map((ex, ei) => {
                                 const trendHtml = showSetTrend && TREND_META[trendKey]
                                     ? `<span class="trend-badge ${TREND_META[trendKey].cls}">${TREND_META[trendKey].label}</span>`
                                     : "";
+                                const isSupersetTarget = !!(targetSets && targetSets.has(i));
 
                                 if (s.done) {
                                     return `
@@ -1155,7 +1285,7 @@ ${day.exercises.map((ex, ei) => {
                                 }
 
                                 return `
-                                    <div class="set-row">
+                                    <div class="set-row ${isSupersetTarget ? "superset-target" : ""}">
                                         <div class="set-top-row">
                                             <span class="set-pill">S${i + 1}</span>
                                             ${goalReps ? `<span class="set-goal" title="Cel na dziś: ${goalReps} powtórzeń w serii">→ ${goalReps}</span>`
@@ -1199,12 +1329,31 @@ ${day.exercises.map((ex, ei) => {
                     `;
 
                     return `
-                        <div class="exercise-card ${isComplete ? "complete" : ""}">
+                        <div class="exercise-card ${isComplete ? "complete" : ""} ${ss ? "superset-card" : ""} ${targetSets ? "superset-next" : ""}">
                             ${headerPart}
                             ${expandBtn}
                             ${collapsedCard ? "" : bodyPart}
                         </div>
                     `;
+                }).map((card, ei) => {
+                    const info = ssInfo[ei];
+                    let prefix = "";
+                    let suffix = "";
+
+                    if (info && info.position === 1) {
+                        prefix = `
+                            <div class="superset-group">
+                                <div class="superset-band">
+                                    <span class="superset-pill">SUPERSET ${info.label}</span>
+                                    <span class="superset-hint">${info.size === 2 ? "wykonuj na zmianę · odpocznij po obu" : "wykonuj na zmianę"}</span>
+                                </div>
+                        `;
+                    }
+                    if (info && info.position === info.size) {
+                        suffix = "</div>";
+                    }
+
+                    return prefix + card + suffix;
                 }).join("")}
 
                 <div class="workout-footer">

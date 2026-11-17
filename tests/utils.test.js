@@ -70,6 +70,60 @@ describe("defaultRestSeconds", () => {
     });
 });
 
+describe("formatDuration", () => {
+    it("formats minutes and seconds", () => {
+        expect(U().formatDuration(0)).toBe("00:00");
+        expect(U().formatDuration(65_000)).toBe("01:05");
+    });
+
+    it("adds hours for long sessions", () => {
+        expect(U().formatDuration(3_725_000)).toBe("1:02:05");
+    });
+
+    it("never returns negative time", () => {
+        expect(U().formatDuration(-5000)).toBe("00:00");
+    });
+});
+
+describe("superset helpers", () => {
+    const exercises = [
+        { name: "RDL" },
+        { name: "Incline Dumbbell Curl [SS]" },
+        { name: "Single-Arm Cable Pushdown [SS]" },
+        { name: "Hyperextension [SS]" },
+        { name: "Calf Raises [SS]" },
+        { name: "Cable Crunch" }
+    ];
+
+    it("pairs adjacent [SS] exercises and ignores normal ones", () => {
+        const groups = U().getSupersetGroups(exercises);
+        expect(groups).toEqual([
+            { label: "A", indices: [1, 2] },
+            { label: "B", indices: [3, 4] }
+        ]);
+    });
+
+    it("finds a partner and position for each member", () => {
+        expect(U().getSupersetInfo(exercises, 1)).toMatchObject({
+            label: "A",
+            position: 1,
+            size: 2,
+            partnerIndex: 2
+        });
+        expect(U().getSupersetInfo(exercises, 2)).toMatchObject({
+            label: "A",
+            position: 2,
+            partnerIndex: 1
+        });
+        expect(U().getSupersetInfo(exercises, 0)).toBeNull();
+    });
+
+    it("strips the [SS] suffix from display names", () => {
+        expect(U().stripSupersetTag("Calf Raises [SS]")).toBe("Calf Raises");
+        expect(U().stripSupersetTag("RDL")).toBe("RDL");
+    });
+});
+
 describe("reorderDayLogs", () => {
     it("moves history to target slots and drops removed slots", () => {
         const week = {

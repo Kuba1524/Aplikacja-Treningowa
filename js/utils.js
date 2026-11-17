@@ -62,6 +62,72 @@ window.Utils = (() => {
     // tak aby historia podążała za ćwiczeniami po zmianie układu planu.
     // fromByNewIndex: dla każdej nowej pozycji podaje starą pozycję, z której
     // ma być wzięte ćwiczenie (null/niedefined = nowe ćwiczenie, bez historii).
+    const formatDuration = (ms) => {
+        const total = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
+        const hours = Math.floor(total / 3600);
+        const minutes = Math.floor((total % 3600) / 60);
+        const seconds = total % 60;
+
+        if (hours > 0) {
+            return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+        }
+        return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    };
+
+    const hasSupersetTag = (name) => /\[SS\]/i.test(String(name || ""));
+
+    const stripSupersetTag = (name) =>
+        String(name || "")
+            .replace(/\s*\[SS\]\s*$/i, "")
+            .trim();
+
+    // Ćwiczenia oznaczone [SS] łączymy w pary w obrębie sąsiadujących ze sobą
+    // pozycji planu. Etykiety A/B/C pozwalają pokazać, które serie wykonuje się
+    // naprzemiennie, zanim zacznie się odpoczynek.
+    const getSupersetGroups = (exercises = []) => {
+        const groups = [];
+        let run = [];
+
+        const flush = () => {
+            for (let i = 0; i < run.length; i += 2) {
+                const indices = run.slice(i, i + 2);
+                const labelIndex = groups.length;
+                groups.push({
+                    label: labelIndex < 26 ? String.fromCharCode(65 + labelIndex) : String(labelIndex + 1),
+                    indices
+                });
+            }
+            run = [];
+        };
+
+        (exercises || []).forEach((ex, index) => {
+            if (hasSupersetTag(ex && ex.name)) {
+                run.push(index);
+            } else {
+                flush();
+            }
+        });
+        flush();
+
+        return groups;
+    };
+
+    const getSupersetInfo = (exercises = [], index) => {
+        const groups = getSupersetGroups(exercises);
+        for (const group of groups) {
+            const position = group.indices.indexOf(index);
+            if (position === -1) continue;
+            return {
+                label: group.label,
+                position: position + 1,
+                size: group.indices.length,
+                members: group.indices.slice(),
+                partnerIndex: group.indices.length === 2 ? group.indices[1 - position] : null
+            };
+        }
+        return null;
+    };
+
     const reorderDayLogs = (week = {}, dayId, fromByNewIndex = []) => {
         const out = { ...week };
         const keyFor = (j) => `d${dayId}_e${j}`;
@@ -101,6 +167,11 @@ window.Utils = (() => {
         getCurrentSunday,
         getWeekRangeLabel,
         defaultRestSeconds,
+        formatDuration,
+        hasSupersetTag,
+        stripSupersetTag,
+        getSupersetGroups,
+        getSupersetInfo,
         reorderDayLogs
     };
 })();

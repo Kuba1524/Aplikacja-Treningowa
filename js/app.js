@@ -258,7 +258,7 @@ const buildKubaHistoricalPlan = (weekStart, weekData = {}) => {
 
 let DAYS = PLAN_BARTEK;
 let CURRENT_PLAN = PLAN_BARTEK;
-const APP_VERSION = "v91";
+const APP_VERSION = "v92";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -970,6 +970,11 @@ const renderCurrentView = () => {
         logBodyWeight,
         getTrend,
         currentProfileName,
+        getWorkoutSessionSummary,
+        isSessionSummaryOpen,
+        openWorkoutSummary,
+        dismissWorkoutSummary,
+        finishWorkout,
         getManagePlan: () => managePlan
     };
 
@@ -1007,6 +1012,9 @@ const renderCurrentView = () => {
                 '<div class="container" style="padding:24px"><div class="card"><p>Błąd ekranu. Kliknij Plan albo Home jeszcze raz.</p></div></div>';
         }
     }
+
+    if (currentView === "workout") startSessionTicker();
+    else stopSessionTicker();
 
     updateVisibleScreen();
     updateBottomNav();
@@ -1224,6 +1232,7 @@ const openDay = (id) => {
     day.exercises.forEach((ex, ei) => {
         ensureWorkoutDataExists(id, ei, ex.sets);
     });
+    ensureSessionStart(id);
 
     persistState();
     currentView = "workout";
@@ -1389,27 +1398,449 @@ const attachTimerWakeHandler = () => {
 };
 attachTimerWakeHandler();
 
+/* ---- Sesja treningowa: czas, rekordy i podsumowanie ---- */
+const getSessionStartKey = (dayId) => `day_${dayId}_sessionStart`;
+const getSessionEndKey = (dayId) => `day_${dayId}_sessionEnd`;
+
+let sessionSummaryKey = null;
+let sessionTickerId = null;
+const prAnnounced = new Set();
+
+const isLiveWeek = () => {
+    if (!state || !state.startSunday) return false;
+    const weekStart = kubaWeekStart(state.startSunday, state.currentWeekIndex);
+    return weekStart !== null && weekStart === window.Utils.getCurrentSunday().getTime();
+};
+
+const getBestDoneSet = (sets = []) => {
+    let best = null;
+    (sets || []).forEach((set) => {
+        if (!set || !set.done) return;
+        const kg = Number(set.kg) || 0;
+        const reps = Number(set.reps) || 0;
+        if (kg <= 0 && reps <= 0) return;
+        if (!best || kg > best.kg || (kg === best.kg && reps > best.reps)) {
+            best = { kg, reps };
+        }
+    });
+    return best;
+};
+
+const isBetterSet = (current, previous) => {
+    if (!current || !previous) return false;
+    return current.kg > previous.kg || (current.kg === previous.kg && current.reps > previous.reps);
+};
+
+const getPreviousExerciseBest = (exerciseName, beforeWeekIndex) => {
+    const nameKey = exerciseNameKey(exerciseName);
+    let best = null;
+
+    for (let wi = 0; wi < beforeWeekIndex; wi += 1) {
+        const weekData = state.weeks[wi] || {};
+        const plan =
+            state.weekPlans && Array.isArray(state.weekPlans[wi]) && state.weekPlans[wi].length
+                ? state.weekPlans[wi]
+                : getPlanForWeekIndex(wi, weekData);
+
+        (plan || []).forEach((day) => {
+            (day.exercises || []).forEach((ex, ei) => {
+                if (exerciseNameKey(ex && ex.name) !== nameKey) return;
+                const candidate = getBestDoneSet(weekData[getExerciseKey(day.id, ei)] || []);
+                if (candidate && (!best || isBetterSet(candidate, best))) best = candidate;
+            });
+        });
+    }
+
+    return best;
+};
+
+const formatSessionSet = (set) =>
+    set && set.kg > 0
+        ? `${window.Utils.formatNumberPL(set.kg)} kg × ${set.reps}`
+        : set
+            ? `${set.reps} powt.`
+            : "—";
+
+const describeSetGain = (current, previous) => {
+    if (!current || !previous) return "";
+    if (current.kg > previous.kg) {
+        return `+${window.Utils.formatNumberPL(current.kg - previous.kg)} kg`;
+    }
+    if (current.reps > previous.reps) {
+        return `+${current.reps - previous.reps} powt.`;
+    }
+    return "";
+};
+
+const getWorkoutSessionSummary = (dayId) => {
+    const day = DAYS.find((d) => d && d.id === dayId) || null;
+    const weekData = state.weeks[state.currentWeekIndex] || {};
+    if (!day) return null;
+
+    const startedAt = Number(weekData[getSessionStartKey(dayId)]) || 0;
+    const endedAt = Number(weekData[getSessionEndKey(dayId)]) || 0;
+    const durationMs = startedAt ? Math.max(0, (endedAt || Date.now()) - startedAt) : 0;
+
+    let totalSets = 0;
+    let doneSets = 0;
+    const totalExercises = day.exercises.length;
+    let completedExercises = 0;
+    let volume = 0;
+    const prs = [];
+
+    day.exercises.forEach((ex, ei) => {
+        const planned = Math.max(0, Number(ex.sets) || 0);
+        const sets = weekData[getExerciseKey(dayId, ei)] || [];
+        const done = Math.min(sets.filter((s) => s && s.done).length, planned);
+        totalSets += planned;
+        doneSets += done;
+        if (planned > 0 && done >= planned) completedExercises += 1;
+
+        sets.forEach((set) => {
+            if (!set || !set.done) return;
+            volume += (Number(set.kg) || 0) * (Number(set.reps) || 0);
+        });
+
+        const currentBest = getBestDoneSet(sets);
+        const previousBest = getPreviousExerciseBest(ex.name, state.currentWeekIndex);
+        if (currentBest && isBetterSet(currentBest, previousBest)) {
+            prs.push({
+                name: window.Utils.stripSupersetTag(ex.name),
+                current: currentBest,
+                previous: previousBest,
+                gain: describeSetGain(currentBest, previousBest)
+            });
+        }
+    });
+
+    return {
+        isLive: isLiveWeek(),
+        startedAt,
+        endedAt,
+        durationMs,
+        doneSets,
+        totalSets,
+        totalExercises,
+        completedExercises,
+        volume,
+        prs
+    };
+};
+
+// Start licznika przy wejściu w trening. Jeśli poprzednia sesja zaczęła się
+// innego dnia i nie zapisano żadnej serii, traktujemy ją jako porzuconą.
+const ensureSessionStart = (dayId) => {
+    if (!isLiveWeek()) return;
+    const weekData = state.weeks[state.currentWeekIndex] || {};
+    const startKey = getSessionStartKey(dayId);
+    const day = DAYS.find((d) => d && d.id === dayId) || null;
+    if (!day) return;
+
+    const hasDone = day.exercises.some((ex, ei) => {
+        const sets = weekData[getExerciseKey(dayId, ei)] || [];
+        return sets.some((set) => set && set.done);
+    });
+    const allDone = day.exercises.every((ex, ei) => {
+        const planned = Math.max(0, Number(ex.sets) || 0);
+        const sets = weekData[getExerciseKey(dayId, ei)] || [];
+        return sets.filter((set) => set && set.done).length >= planned;
+    });
+
+    if (!weekData[startKey]) {
+        // Dzień ukończony przed wprowadzeniem timera nie dostaje sztucznej sesji.
+        if (!allDone) weekData[startKey] = Date.now();
+        return;
+    }
+
+    if (hasDone) return;
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    if ((Number(weekData[startKey]) || 0) < todayStart.getTime()) {
+        weekData[startKey] = Date.now();
+    }
+};
+
+const sessionKeyFor = (dayId) => `${state.currentWeekIndex}|${dayId}`;
+
+const isSessionSummaryOpen = (dayId) => sessionSummaryKey === sessionKeyFor(dayId);
+
+const openWorkoutSummary = (dayId = currentDayId) => {
+    if (dayId === null || dayId === undefined) return;
+    sessionSummaryKey = sessionKeyFor(dayId);
+    renderCurrentView();
+};
+
+const dismissWorkoutSummary = () => {
+    sessionSummaryKey = null;
+    renderCurrentView();
+};
+
+const finishWorkout = () => {
+    if (currentDayId === null) return;
+    const weekData = state.weeks[state.currentWeekIndex] || {};
+    const startKey = getSessionStartKey(currentDayId);
+    const endKey = getSessionEndKey(currentDayId);
+
+    if (!weekData[startKey]) weekData[startKey] = Date.now();
+    if (!weekData[endKey]) weekData[endKey] = Date.now();
+    sessionSummaryKey = sessionKeyFor(currentDayId);
+
+    stopRestTimer(true);
+    persistState();
+    launchConfetti(110);
+    renderCurrentView();
+};
+
+// Automatyczne zakończenie sesji, gdy ostatnia zaplanowana seria jest gotowa.
+const checkSessionCompletion = (showCompletionToast = true) => {
+    if (currentDayId === null || !isLiveWeek()) return false;
+    const day = DAYS.find((d) => d && d.id === currentDayId) || null;
+    if (!day) return false;
+
+    const weekData = state.weeks[state.currentWeekIndex] || {};
+    const allDone = day.exercises.every((ex, ei) => {
+        const planned = Math.max(0, Number(ex.sets) || 0);
+        const sets = weekData[getExerciseKey(currentDayId, ei)] || [];
+        return sets.filter((set) => set && set.done).length >= planned;
+    });
+    if (!allDone) return false;
+
+    const startKey = getSessionStartKey(currentDayId);
+    const endKey = getSessionEndKey(currentDayId);
+    if (!weekData[startKey]) weekData[startKey] = Date.now();
+    if (weekData[endKey]) return false;
+
+    weekData[endKey] = Date.now();
+    sessionSummaryKey = sessionKeyFor(currentDayId);
+    launchConfetti(130);
+    if (showCompletionToast) {
+        showToast("Trening ukończony!", {
+            type: "success",
+            icon: "✅",
+            sub: "Wszystkie serie zaliczone — zobacz podsumowanie",
+            duration: 3600
+        });
+    }
+    return true;
+};
+
+const updateSessionTimerUI = () => {
+    const timeEl = document.getElementById("workout-session-time");
+    const timerEl = document.getElementById("workout-session-timer");
+    if (!timeEl || currentDayId === null) return;
+
+    const weekData = state.weeks[state.currentWeekIndex] || {};
+    const startedAt = Number(weekData[getSessionStartKey(currentDayId)]) || 0;
+    const endedAt = Number(weekData[getSessionEndKey(currentDayId)]) || 0;
+
+    if (!startedAt) {
+        timeEl.textContent = "00:00";
+        if (timerEl) timerEl.classList.remove("running", "done");
+        return;
+    }
+
+    const end = endedAt || Date.now();
+    timeEl.textContent = window.Utils.formatDuration(end - startedAt);
+    if (timerEl) {
+        timerEl.classList.toggle("running", !endedAt);
+        timerEl.classList.toggle("done", !!endedAt);
+    }
+};
+
+const stopSessionTicker = () => {
+    if (sessionTickerId) {
+        clearInterval(sessionTickerId);
+        sessionTickerId = null;
+    }
+};
+
+const startSessionTicker = () => {
+    stopSessionTicker();
+    updateSessionTimerUI();
+    if (currentView === "workout" && currentDayId !== null) {
+        sessionTickerId = setInterval(updateSessionTimerUI, 1000);
+    }
+};
+
+/* ---- Konfetti (bez dźwięku) ---- */
+let confettiRaf = null;
+const launchConfetti = (count = 120) => {
+    if (
+        typeof document === "undefined" ||
+        (typeof window.matchMedia === "function" &&
+            window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+    ) {
+        return;
+    }
+
+    let canvas = document.getElementById("confetti-canvas");
+    if (!canvas) {
+        canvas = document.createElement("canvas");
+        canvas.id = "confetti-canvas";
+        canvas.className = "confetti-canvas";
+        canvas.setAttribute("aria-hidden", "true");
+        document.body.appendChild(canvas);
+    }
+
+    if (confettiRaf) {
+        cancelAnimationFrame(confettiRaf);
+        confettiRaf = null;
+    }
+
+    const ctx = canvas.getContext && canvas.getContext("2d");
+    if (!ctx) {
+        canvas.remove();
+        return;
+    }
+
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    canvas.width = Math.floor(width * dpr);
+    canvas.height = Math.floor(height * dpr);
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const colors = ["#60a5fa", "#a78bfa", "#34d399", "#fbbf24", "#fb7185", "#22d3ee", "#f0abfc"];
+    const particles = Array.from({ length: count }, () => {
+        const angle = (-110 + Math.random() * 40) * (Math.PI / 180);
+        const speed = 8 + Math.random() * 10;
+        return {
+            x: width * (0.18 + Math.random() * 0.64),
+            y: height * (0.62 + Math.random() * 0.18),
+            vx: Math.cos(angle) * speed + (Math.random() - 0.5) * 4,
+            vy: Math.sin(angle) * speed - Math.random() * 5,
+            w: 5 + Math.random() * 6,
+            h: 8 + Math.random() * 8,
+            rot: Math.random() * Math.PI,
+            spin: (Math.random() - 0.5) * 0.32,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            wobble: Math.random() * Math.PI * 2
+        };
+    });
+
+    const started = performance.now();
+    const tick = (now) => {
+        const elapsed = now - started;
+        ctx.clearRect(0, 0, width, height);
+        particles.forEach((p) => {
+            p.vy += 0.24;
+            p.vx *= 0.992;
+            p.x += p.vx + Math.sin((now - started) / 180 + p.wobble) * 0.35;
+            p.y += p.vy;
+            p.rot += p.spin;
+
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot);
+            ctx.globalAlpha = Math.max(0, 1 - elapsed / 3200);
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+            ctx.restore();
+        });
+
+        if (elapsed < 3200) {
+            confettiRaf = requestAnimationFrame(tick);
+        } else {
+            confettiRaf = null;
+            ctx.clearRect(0, 0, width, height);
+            canvas.remove();
+        }
+    };
+    confettiRaf = requestAnimationFrame(tick);
+};
+
 const toggleSet = (ei, i) => {
     if (currentDayId === null) return;
 
+    const weekData = state.weeks[state.currentWeekIndex];
     const key = getExerciseKey(currentDayId, ei);
-    const set = state.weeks[state.currentWeekIndex][key][i];
+    const set = weekData[key][i];
     set.done = !set.done;
 
-    if (set.done) {
-        const settings = state.settings || {};
-        if (settings.restEnabled !== false) {
-            const day = DAYS.find((d) => d && d.id === currentDayId) || null;
-            const ex = day ? day.exercises[ei] : null;
-            let seconds = window.Utils.defaultRestSeconds(ex && ex.reps);
-            if (ex && Number(ex.rest) > 0) seconds = Number(ex.rest);
-            if (!(seconds > 0)) seconds = Number(settings.restSeconds) > 0 ? Number(settings.restSeconds) : 90;
-            startRestTimer(seconds);
+    const day = DAYS.find((d) => d && d.id === currentDayId) || null;
+    const ex = day ? day.exercises[ei] : null;
+
+    if (isLiveWeek()) {
+        delete weekData[getSessionEndKey(currentDayId)];
+        if (isSessionSummaryOpen(currentDayId)) sessionSummaryKey = null;
+
+        if (!weekData[getSessionStartKey(currentDayId)]) {
+            weekData[getSessionStartKey(currentDayId)] = Date.now();
         }
     }
 
+    let supersetPending = null;
+    let newPR = null;
+
+    if (set.done && ex) {
+        if (day) {
+            const info = window.Utils.getSupersetInfo(day.exercises, ei);
+            if (info && info.partnerIndex !== null) {
+                const partnerKey = getExerciseKey(currentDayId, info.partnerIndex);
+                const partnerSet = (weekData[partnerKey] || [])[i];
+                if (partnerSet && !partnerSet.done) {
+                    supersetPending = {
+                        name: window.Utils.stripSupersetTag(day.exercises[info.partnerIndex].name),
+                        setIndex: i
+                    };
+                }
+            }
+        }
+
+        if (isLiveWeek()) {
+            const currentBest = getBestDoneSet([set]);
+            const previousBest = getPreviousExerciseBest(ex.name, state.currentWeekIndex);
+            const prKey = `${state.currentWeekIndex}|${currentDayId}|${exerciseNameKey(ex.name)}`;
+            if (isBetterSet(currentBest, previousBest) && !prAnnounced.has(prKey)) {
+                prAnnounced.add(prKey);
+                newPR = { current: currentBest, previous: previousBest };
+            }
+        }
+    }
+
+    if (set.done) {
+        if (!supersetPending) {
+            const settings = state.settings || {};
+            if (settings.restEnabled !== false) {
+                let seconds = window.Utils.defaultRestSeconds(ex && ex.reps);
+                if (ex && Number(ex.rest) > 0) seconds = Number(ex.rest);
+                if (!(seconds > 0)) seconds = Number(settings.restSeconds) > 0 ? Number(settings.restSeconds) : 90;
+                startRestTimer(seconds);
+            }
+        }
+
+        if (newPR && ex) {
+            showToast("Nowy rekord!", {
+                type: "pr",
+                icon: "🏆",
+                sub: `${window.Utils.stripSupersetTag(ex.name)} · ${formatSessionSet(newPR.current)}${newPR && describeSetGain(newPR.current, newPR.previous) ? ` · ${describeSetGain(newPR.current, newPR.previous)}` : ""}`,
+                duration: 4300
+            });
+            launchConfetti(120);
+        } else if (supersetPending) {
+            showToast(`Superset · teraz ${supersetPending.name}`, {
+                type: "ss",
+                icon: "⇄",
+                sub: `Seria ${supersetPending.setIndex + 1}`,
+                duration: 2400
+            });
+        }
+    }
+
+    const completedNow = checkSessionCompletion(!newPR);
+    if (completedNow) stopRestTimer(true);
     persistState();
     renderCurrentView();
+
+    if (isSessionSummaryOpen(currentDayId)) {
+        document.querySelector(".session-summary-card")?.scrollIntoView({
+            behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+            block: "start"
+        });
+    }
 };
 
 const toggleExerciseExpand = (ei) => {
@@ -1450,10 +1881,21 @@ const resetWorkout = () => {
     delete weekData[getDayTimestampKey(currentDayId)];
 
     Object.keys(weekData).forEach((key) => {
-        if (key.startsWith(`d${currentDayId}_`)) {
+        if (
+            key.startsWith(`d${currentDayId}_`) ||
+            key.startsWith(`day_${currentDayId}_`)
+        ) {
             delete weekData[key];
         }
     });
+
+    sessionSummaryKey = null;
+    if (state.currentWeekIndex >= 0) {
+        const prefix = `${state.currentWeekIndex}|${currentDayId}|`;
+        Array.from(prAnnounced).forEach((key) => {
+            if (key.startsWith(prefix)) prAnnounced.delete(key);
+        });
+    }
 
     persistState();
     if (window.Views.clearExpanded) window.Views.clearExpanded();
@@ -1862,12 +2304,15 @@ const bootWithUser = async (storageKey, planKey = "bartek", profileName = "") =>
 
 const switchProfile = () => {
     stopRestTimer(true);
+    stopSessionTicker();
     window.Views.clearExpanded();
     closeMoreSheet({ skipHistory: true });
     managePlan = null;
     currentUserId = null;
     currentProfileName = "Użytkownik";
     currentView = "home";
+    sessionSummaryKey = null;
+    prAnnounced.clear();
     isLoaded = false;
     state = { currentWeekIndex: 0, weeks: [{}], startSunday: 0 };
     showProfileGate();
@@ -1935,18 +2380,50 @@ const toggleMoreSheet = () => {
     }
 };
 
-const showToast = (msg) => {
+const showToast = (msg, options = {}) => {
     let toast = document.getElementById("toast");
     if (!toast) {
         toast = document.createElement("div");
         toast.id = "toast";
         toast.className = "toast";
+        toast.setAttribute("role", "status");
         document.body.appendChild(toast);
     }
-    toast.textContent = msg;
+
+    const type = options.type ? ` toast-${options.type}` : "";
+    toast.className = `toast${type}`;
+    toast.textContent = "";
+
+    if (options.icon || options.sub) {
+        if (options.icon) {
+            const icon = document.createElement("span");
+            icon.className = "toast-ico";
+            icon.textContent = options.icon;
+            toast.appendChild(icon);
+        }
+        const body = document.createElement("span");
+        body.className = "toast-body";
+        const title = document.createElement("span");
+        title.className = "toast-title";
+        title.textContent = msg;
+        body.appendChild(title);
+        if (options.sub) {
+            const sub = document.createElement("span");
+            sub.className = "toast-sub";
+            sub.textContent = options.sub;
+            body.appendChild(sub);
+        }
+        toast.appendChild(body);
+    } else {
+        toast.textContent = msg;
+    }
+
     toast.classList.add("show");
     clearTimeout(showToast._t);
-    showToast._t = setTimeout(() => toast.classList.remove("show"), 2200);
+    showToast._t = setTimeout(
+        () => toast.classList.remove("show"),
+        Number(options.duration) > 0 ? Number(options.duration) : 2200
+    );
 };
 
 const toggleBackupSection = () => {
@@ -2358,6 +2835,9 @@ window.updateNote = updateNote;
 window.updateSet = updateSet;
 window.toggleSet = toggleSet;
 window.toggleExerciseExpand = toggleExerciseExpand;
+window.openWorkoutSummary = openWorkoutSummary;
+window.dismissWorkoutSummary = dismissWorkoutSummary;
+window.finishWorkout = finishWorkout;
 window.resetWorkout = resetWorkout;
 window.chooseProfile = chooseProfile;
 window.switchProfile = switchProfile;
