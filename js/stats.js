@@ -193,6 +193,192 @@ window.StatsModule = (() => {
         return history.sort((a, b) => a.weekIndex - b.weekIndex);
     };
 
+    // Pełna historia sesji treningowych. Każdy dzień z co najmniej jedną
+    // ukończoną serią staje się osobną sesją. Plan czytamy z migawki danego
+    // tygodnia, więc starsze treningi nie zależą od aktualnego układu ćwiczeń.
+    const getWorkoutHistory = (
+        state,
+        DAYS,
+        getWeekPlan,
+        getExerciseKey,
+        getDayTimestampKey,
+        getNoteKey,
+        getNameKey
+    ) => {
+        const weeks = Array.isArray(state && state.weeks) ? state.weeks : [];
+        const sessions = [];
+        const bestByName = new Map();
+        const nameKeyOf =
+            typeof getNameKey === "function"
+                ? getNameKey
+                : (name) => String(name || "").trim().toLowerCase();
+        const stripTag =
+            window.Utils && typeof window.Utils.stripSupersetTag === "function"
+                ? window.Utils.stripSupersetTag
+                : (name) => String(name || "").trim();
+        const weekMs = 7 * 24 * 60 * 60 * 1000;
+        const dayMs = 24 * 60 * 60 * 1000;
+        const currentWeekIndex = Number(state && state.currentWeekIndex) || 0;
+
+        const isBetter = (candidate, previous) =>
+            !!candidate &&
+            !!previous &&
+            (candidate.kg > previous.kg ||
+                (candidate.kg === previous.kg && candidate.reps > previous.reps));
+
+        weeks.forEach((weekData, weekIndex) => {
+            if (!weekData || typeof weekData !== "object") return;
+
+            const plan =
+                (typeof getWeekPlan === "function" ? getWeekPlan(weekIndex) : null) ||
+                DAYS ||
+                [];
+            const weekBests = new Map();
+            const weekSessions = [];
+
+            (plan || []).forEach((day) => {
+                if (!day || !Array.isArray(day.exercises)) return;
+
+                const exercises = [];
+                const prs = [];
+                let doneSets = 0;
+                let totalSets = 0;
+                let totalReps = 0;
+                let volume = 0;
+                let completedExercises = 0;
+
+                day.exercises.forEach((ex, exerciseIndex) => {
+                    const planned = Math.max(0, Number(ex && ex.sets) || 0);
+                    const sets = Array.isArray(weekData[getExerciseKey(day.id, exerciseIndex)])
+                        ? weekData[getExerciseKey(day.id, exerciseIndex)]
+                        : [];
+                    const done = sets.filter((set) => set && set.done);
+                    const countedDone = planned > 0 ? Math.min(done.length, planned) : done.length;
+
+                    totalSets += planned;
+                    doneSets += countedDone;
+                    if (planned > 0 && done.length >= planned) completedExercises += 1;
+
+                    if (!done.length) return;
+
+                    let bestSet = null;
+                    done.forEach((set) => {
+                        const kg = Number(set.kg) || 0;
+                        const reps = Number(set.reps) || 0;
+                        totalReps += reps;
+                        volume += kg * reps;
+                        if (
+                            !bestSet ||
+                            kg > bestSet.kg ||
+                            (kg === bestSet.kg && reps > bestSet.reps)
+                        ) {
+                            bestSet = { kg, reps };
+                        }
+                    });
+
+                    const displayName = stripTag(ex.name);
+                    const nameKey = nameKeyOf(ex.name);
+                    const previousBest = bestByName.get(nameKey) || null;
+                    const isPR = isBetter(bestSet, previousBest);
+
+                    if (isPR) {
+                        prs.push({
+                            name: displayName,
+                            current: bestSet,
+                            previous: previousBest,
+                            gain:
+                                bestSet.kg > previousBest.kg
+                                    ? `+${window.Utils.formatNumberPL(bestSet.kg - previousBest.kg)} kg`
+                                    : `+${bestSet.reps - previousBest.reps} powt.`
+                        });
+                    }
+
+                    if (
+                        bestSet &&
+                        (!weekBests.has(nameKey) || isBetter(bestSet, weekBests.get(nameKey)))
+                    ) {
+                        weekBests.set(nameKey, bestSet);
+                    }
+
+                    exercises.push({
+                        name: ex.name,
+                        displayName,
+                        nameKey,
+                        tag: String(ex.tag || "OTHER").trim().toUpperCase() || "OTHER",
+                        plannedSets: planned,
+                        doneSets: countedDone,
+                        bestSet,
+                        isPR,
+                        note: getNoteKey ? weekData[getNoteKey(day.id, exerciseIndex)] || "" : "",
+                        sets: done.map((set) => ({
+                            kg: Number(set.kg) || 0,
+                            reps: Number(set.reps) || 0
+                        }))
+                    });
+                });
+
+                if (!doneSets) return;
+
+                const startedAt = Number(weekData[`day_${day.id}_sessionStart`]) || 0;
+                const endedAt = Number(weekData[`day_${day.id}_sessionEnd`]) || 0;
+                const isActive = !!startedAt && !endedAt && weekIndex === currentWeekIndex;
+                const durationMs = startedAt
+                    ? Math.max(0, (endedAt || (isActive ? Date.now() : startedAt)) - startedAt)
+                    : 0;
+
+                let ts = 0;
+                if (getDayTimestampKey) {
+                    const raw = weekData[getDayTimestampKey(day.id)];
+                    const parsed = raw ? new Date(raw) : null;
+                    if (parsed && !Number.isNaN(parsed.getTime())) ts = parsed.getTime();
+                }
+                if (!ts && state.startSunday) {
+                    ts =
+                        state.startSunday +
+                        weekIndex * weekMs +
+                        (Number(day.weekday) || 0) * dayMs;
+                }
+
+                weekSessions.push({
+                    id: `${weekIndex}-${day.id}`,
+                    weekIndex,
+                    dayId: day.id,
+                    dayLabel: day.label || "",
+                    dayName: day.name || "",
+                    icon: day.icon || "",
+                    ts,
+                    startedAt,
+                    endedAt,
+                    durationMs,
+                    isActive,
+                    doneSets,
+                    totalSets,
+                    completedExercises,
+                    totalExercises: day.exercises.length,
+                    totalReps,
+                    volume,
+                    prs,
+                    exercises
+                });
+            });
+
+            // Rekordy porównujemy tylko z poprzednimi tygodniami, tak samo jak
+            // podsumowanie pojedynczej sesji.
+            weekBests.forEach((best, key) => {
+                const previous = bestByName.get(key);
+                if (!previous || isBetter(best, previous)) bestByName.set(key, best);
+            });
+            sessions.push(...weekSessions);
+        });
+
+        return sessions.sort(
+            (a, b) =>
+                (b.ts || 0) - (a.ts || 0) ||
+                b.weekIndex - a.weekIndex ||
+                Number(b.dayId) - Number(a.dayId)
+        );
+    };
+
     const PRIMARY_EXERCISE_NAMES = [
         "Bench Press",
         "Weighted Pull Ups",
@@ -611,6 +797,7 @@ window.StatsModule = (() => {
         getWeeklyVolume,
         getLastPR,
         getExerciseHistory,
+        getWorkoutHistory,
         createWeightChartSVG
     };
 })();

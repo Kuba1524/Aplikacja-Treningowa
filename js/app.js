@@ -258,7 +258,7 @@ const buildKubaHistoricalPlan = (weekStart, weekData = {}) => {
 
 let DAYS = PLAN_BARTEK;
 let CURRENT_PLAN = PLAN_BARTEK;
-const APP_VERSION = "v94";
+const APP_VERSION = "v95";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -966,6 +966,8 @@ const renderCurrentView = () => {
         getDayProgress,
         getTodayPlan,
         getWeekDaysUI,
+        getWeekPlan,
+        exerciseNameKey,
         ensureWorkoutDataExists,
         logBodyWeight,
         getTrend,
@@ -984,6 +986,7 @@ const renderCurrentView = () => {
         if (currentView === "plan") window.Views.renderPlan(ctx);
         if (currentView === "fullplan") window.Views.renderFullPlanPage(ctx);
         if (currentView === "stats") window.Views.renderStats(ctx);
+        if (currentView === "history") window.Views.renderHistory(ctx);
         if (currentView === "library") {
             window.Views.renderLibrary(ctx);
             if (!window.ExerciseLib.isReady() && !window.ExerciseLib.getError()) {
@@ -1027,6 +1030,7 @@ const updateVisibleScreen = () => {
         plan: document.getElementById("screen-plan"),
         fullplan: document.getElementById("screen-fullplan"),
         stats: document.getElementById("screen-stats"),
+        history: document.getElementById("screen-history"),
         workout: document.getElementById("screen-workout"),
         library: document.getElementById("screen-library"),
         manage: document.getElementById("screen-manage")
@@ -1049,7 +1053,8 @@ const updateBottomNav = () => {
         if (currentView === "home" && view === "home") btn.classList.add("active");
         if ((currentView === "plan" || currentView === "fullplan") && view === "plan")
             btn.classList.add("active");
-        if (currentView === "stats" && view === "stats") btn.classList.add("active");
+        if ((currentView === "stats" || currentView === "history") && view === "stats")
+            btn.classList.add("active");
     });
 };
 
@@ -1206,6 +1211,14 @@ const openFullPlan = () => {
 const closeFullPlan = () => {
     goBackInApp(() => {
         currentView = fullPlanReturnView || "plan";
+        renderCurrentView();
+        writeNavState("replace");
+    });
+};
+
+const goBackFromHistory = () => {
+    goBackInApp(() => {
+        currentView = "stats";
         renderCurrentView();
         writeNavState("replace");
     });
@@ -2311,7 +2324,11 @@ const bootWithUser = async (storageKey, planKey = "bartek", profileName = "") =>
     currentView = "home";
     currentDayId = null;
     const requestedView = new URLSearchParams(window.location.search).get("view");
-    if (requestedView === "plan" || requestedView === "stats") {
+    if (
+        requestedView === "plan" ||
+        requestedView === "stats" ||
+        requestedView === "history"
+    ) {
         currentView = requestedView;
     }
     renderCurrentView();
@@ -2801,6 +2818,7 @@ window.setWeek = setWeek;
 window.setPlanMode = setPlanMode;
 window.openFullPlan = openFullPlan;
 window.closeFullPlan = closeFullPlan;
+window.goBackFromHistory = goBackFromHistory;
 window.openDay = openDay;
 window.goBackFromWorkout = goBackFromWorkout;
 window.setLibQuery = (v) => {

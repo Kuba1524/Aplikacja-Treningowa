@@ -3,6 +3,13 @@ window.Views = (() => {
         "styczniu", "lutym", "marcu", "kwietniu", "maju", "czerwcu",
         "lipcu", "sierpniu", "wrześniu", "październiku", "listopadzie", "grudniu"
     ];
+    const PL_MONTHS_SHORT = [
+        "sty", "lut", "mar", "kwi", "maj", "cze",
+        "lip", "sie", "wrz", "paź", "lis", "gru"
+    ];
+
+    let historyFilter = "all";
+    let historyLimit = 12;
 
     let libReady = false;
     let libError = false;
@@ -72,7 +79,12 @@ window.Views = (() => {
             '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
         sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
         wifiOff:
-            '<path d="M2 22 22 2"/><path d="M5.78 5.78A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.3-.19"/><path d="M21.53 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7.01 7.01 0 0 0 10 5.07"/>'
+            '<path d="M2 22 22 2"/><path d="M5.78 5.78A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.3-.19"/><path d="M21.53 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7.01 7.01 0 0 0 10 5.07"/>',
+        history:
+            '<path d="M3 12a9 9 0 1 0 2.64-6.36L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>',
+        clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+        trophy:
+            '<path d="M8 21h8M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/>'
     };
 
     const miscIcon = (name) => {
@@ -780,6 +792,14 @@ window.Views = (() => {
                                 </div>
                             </div>
                         </div>
+                        <button type="button" class="history-entry-btn" onclick="navigateTo('history')">
+                            <span class="history-entry-ico">${miscIcon("history")}</span>
+                            <span class="history-entry-main">
+                                <span class="history-entry-title">Historia treningów</span>
+                                <span class="history-entry-sub">Wszystkie sesje, ciężary, notatki i PR-y</span>
+                            </span>
+                            <span class="history-entry-arrow" aria-hidden="true">›</span>
+                        </button>
                     </div>
 
                     <section class="stats-section">
@@ -922,6 +942,361 @@ window.Views = (() => {
                 </div>
             </div>
         `;
+    };
+
+    const plural = (n, one, few, many) => {
+        const abs = Math.abs(Number(n) || 0);
+        const last = abs % 10;
+        const lastTwo = abs % 100;
+        if (abs === 1) return one;
+        if (last >= 2 && last <= 4 && !(lastTwo >= 12 && lastTwo <= 14)) return few;
+        return many;
+    };
+
+    const renderHistory = (ctx) => {
+        const { state, DAYS } = ctx;
+        const screen = document.getElementById("screen-history");
+        if (!screen || !window.StatsModule) return;
+
+        const S = window.StatsModule;
+        const U = window.Utils;
+        const sessions =
+            typeof S.getWorkoutHistory === "function"
+                ? S.getWorkoutHistory(
+                      state,
+                      DAYS,
+                      ctx.getWeekPlan,
+                      ctx.getExerciseKey,
+                      ctx.getDayTimestampKey,
+                      ctx.getNoteKey,
+                      ctx.exerciseNameKey
+                  )
+                : [];
+
+        const now = new Date();
+        const monthSessions = sessions.filter((session) => {
+            if (!session.ts) return false;
+            const d = new Date(session.ts);
+            return (
+                d.getFullYear() === now.getFullYear() &&
+                d.getMonth() === now.getMonth()
+            );
+        });
+        const timedSessions = sessions.filter((session) => session.durationMs > 0);
+        const avgDuration = timedSessions.length
+            ? timedSessions.reduce((sum, session) => sum + session.durationMs, 0) /
+              timedSessions.length
+            : 0;
+        const totalPrs = sessions.reduce((sum, session) => sum + session.prs.length, 0);
+
+        const filterMap = new Map();
+        sessions.forEach((session) => {
+            session.exercises.forEach((exercise) => {
+                const name = exercise.displayName || exercise.name;
+                if (!name) return;
+                filterMap.set(name, (filterMap.get(name) || 0) + 1);
+            });
+        });
+        const filterOptions = Array.from(filterMap.entries())
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "pl"));
+
+        if (
+            historyFilter !== "all" &&
+            !filterOptions.some((option) => option.name === historyFilter)
+        ) {
+            historyFilter = "all";
+        }
+
+        const filteredSessions =
+            historyFilter === "all"
+                ? sessions
+                : sessions.filter((session) =>
+                      session.exercises.some(
+                          (exercise) =>
+                              (exercise.displayName || exercise.name) === historyFilter
+                      )
+                  );
+        const visibleSessions = filteredSessions.slice(0, historyLimit);
+
+        const formatVolume = (value) =>
+            `${Math.round(Number(value) || 0).toLocaleString("pl-PL")} kg`;
+
+        const formatSet = (set) => {
+            if (!set) return "—";
+            const kg = Number(set.kg) || 0;
+            const reps = Number(set.reps) || 0;
+            return kg > 0
+                ? `${U.formatNumberPL(kg)} kg × ${reps}`
+                : `${reps} powt.`;
+        };
+
+        const dateParts = (ts) => {
+            if (!ts) return { day: "—", month: "", full: "" };
+            const d = new Date(ts);
+            if (Number.isNaN(d.getTime())) return { day: "—", month: "", full: "" };
+            return {
+                day: String(d.getDate()),
+                month: PL_MONTHS_SHORT[d.getMonth()] || "",
+                full: d.toLocaleDateString("pl-PL", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric"
+                })
+            };
+        };
+
+        const summaryCard = (icon, value, label) => `
+            <div class="history-summary-card">
+                <span class="history-summary-ico">${miscIcon(icon)}</span>
+                <div class="history-summary-copy">
+                    <div class="history-summary-val">${value}</div>
+                    <div class="history-summary-lab">${label}</div>
+                </div>
+            </div>
+        `;
+
+        const filterChip = (name, label, count, active) => `
+            <button
+                type="button"
+                class="history-filter-btn ${active ? "active" : ""}"
+                data-history-filter="${U.escapeHtml(name)}"
+            >
+                <span>${U.escapeHtml(label)}</span>
+                ${count !== "" ? `<span class="history-filter-count">${count}</span>` : ""}
+            </button>
+        `;
+
+        const sessionHtml = (session) => {
+            const date = dateParts(session.ts);
+            const title = session.dayLabel || session.dayName || "Trening";
+            const subtitle = [session.dayName, date.full, `tydz. ${session.weekIndex + 1}`]
+                .filter(Boolean)
+                .join(" · ");
+            const setsLabel =
+                session.totalSets > 0
+                    ? `${session.doneSets}/${session.totalSets}`
+                    : String(session.doneSets);
+            const badges = [
+                session.isActive
+                    ? '<span class="history-badge active">W trakcie</span>'
+                    : "",
+                session.doneSets < session.totalSets
+                    ? '<span class="history-badge partial">Częściowy</span>'
+                    : "",
+                session.prs.length
+                    ? `<span class="history-badge pr">PR × ${session.prs.length}</span>`
+                    : ""
+            ].join("");
+
+            const exerciseHtml = session.exercises
+                .map((exercise) => {
+                    const prInfo = session.prs.find(
+                        (pr) => pr.name === exercise.displayName
+                    );
+                    const count =
+                        exercise.plannedSets > 0
+                            ? `${exercise.doneSets}/${exercise.plannedSets}`
+                            : String(exercise.doneSets);
+                    const sets = exercise.sets.length
+                        ? `<div class="history-sets">${exercise.sets
+                              .map(
+                                  (set) =>
+                                      `<span class="history-set">${formatSet(set)}</span>`
+                              )
+                              .join("")}</div>`
+                        : "";
+                    const note = exercise.note
+                        ? `<div class="history-ex-note">${miscIcon("message")}<span>${U.escapeHtml(
+                              exercise.note
+                          )}</span></div>`
+                        : "";
+                    return `
+                        <div class="history-ex">
+                            <div class="history-ex-head">
+                                <span class="tag-badge tag-${U.escapeHtml(
+                                    exercise.tag
+                                )}">${U.escapeHtml(exercise.tag)}</span>
+                                <div class="history-ex-main">
+                                    <div class="history-ex-name">
+                                        ${U.escapeHtml(exercise.displayName || exercise.name)}
+                                        <span class="history-ex-count">${count}</span>
+                                        ${
+                                            exercise.isPR
+                                                ? `<span class="history-ex-pr">PR${
+                                                      prInfo && prInfo.gain
+                                                          ? ` ${U.escapeHtml(prInfo.gain)}`
+                                                          : ""
+                                                  }</span>`
+                                                : ""
+                                        }
+                                    </div>
+                                    ${sets}
+                                    ${note}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                })
+                .join("");
+
+            return `
+                <details class="history-session">
+                    <summary class="history-session-summary">
+                        <span class="history-date">
+                            <span class="history-date-day">${date.day}</span>
+                            <span class="history-date-month">${date.month || "—"}</span>
+                        </span>
+                        <span class="history-main">
+                            <span class="history-title-row">
+                                <span class="history-day">${U.escapeHtml(title)}</span>
+                                ${badges}
+                            </span>
+                            <span class="history-sub">${U.escapeHtml(subtitle)}</span>
+                            <span class="history-meta">
+                                <span class="history-stat-chip">${setsLabel} serii</span>
+                                ${
+                                    session.volume > 0
+                                        ? `<span class="history-stat-chip">${formatVolume(
+                                              session.volume
+                                          )}</span>`
+                                        : ""
+                                }
+                                ${
+                                    session.durationMs > 0
+                                        ? `<span class="history-stat-chip">${U.formatDuration(
+                                              session.durationMs
+                                          )}</span>`
+                                        : ""
+                                }
+                            </span>
+                        </span>
+                        <span class="history-chevron" aria-hidden="true">›</span>
+                    </summary>
+                    <div class="history-details">
+                        <div class="history-details-head">
+                            <span>${session.completedExercises}/${session.totalExercises} ćwiczeń</span>
+                            <span>${session.totalReps} powt.</span>
+                        </div>
+                        <div class="history-ex-list">${exerciseHtml}</div>
+                    </div>
+                </details>
+            `;
+        };
+
+        const summaryHtml = sessions.length
+            ? `
+                <div class="history-summary">
+                    ${summaryCard("history", sessions.length, "treningi")}
+                    ${summaryCard("calendar", monthSessions.length, "ten miesiąc")}
+                    ${summaryCard(
+                        "clock",
+                        avgDuration > 0 ? U.formatDuration(avgDuration) : "—",
+                        "średni czas"
+                    )}
+                    ${summaryCard("trophy", totalPrs, "PR-y")}
+                </div>
+            `
+            : "";
+
+        const filtersHtml = sessions.length
+            ? `
+                <div class="history-filter-wrap">
+                    <div class="history-filter-row">
+                        ${filterChip(
+                            "all",
+                            "Wszystkie",
+                            sessions.length,
+                            historyFilter === "all"
+                        )}
+                        ${filterOptions
+                            .map((option) =>
+                                filterChip(
+                                    option.name,
+                                    option.name,
+                                    option.count,
+                                    historyFilter === option.name
+                                )
+                            )
+                            .join("")}
+                    </div>
+                </div>
+            `
+            : "";
+
+        const listHtml = visibleSessions.length
+            ? visibleSessions.map(sessionHtml).join("")
+            : `<div class="history-empty">
+                   <div class="history-empty-ico">${miscIcon("history")}</div>
+                   <div class="history-empty-title">${
+                       sessions.length
+                           ? "Brak sesji z tym ćwiczeniem"
+                           : "Brak zapisanych treningów"
+                   }</div>
+                   <div class="history-empty-sub">${
+                       sessions.length
+                           ? "Wybierz inne ćwiczenie albo pokaż wszystkie sesje."
+                           : "Ukończ pierwszą serię treningu, a sesja pojawi się tutaj automatycznie."
+                   }</div>
+               </div>`;
+
+        const moreHtml =
+            filteredSessions.length > visibleSessions.length
+                ? `<button type="button" class="history-more" data-history-more>
+                       Pokaż więcej (${filteredSessions.length - visibleSessions.length})
+                   </button>`
+                : "";
+
+        screen.innerHTML = `
+            <div class="container history-page">
+                <div class="fullplan-top history-top">
+                    <button type="button" class="icon-btn" onclick="goBackFromHistory()" aria-label="Wstecz">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M19 12H5M12 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
+                    <div class="fullplan-top-info">
+                        <div class="header-title">Historia</div>
+                        <div class="header-sub">${
+                            sessions.length
+                                ? `${sessions.length} ${plural(
+                                      sessions.length,
+                                      "sesja",
+                                      "sesje",
+                                      "sesji"
+                                  )} · ${filterOptions.length} ${plural(
+                                      filterOptions.length,
+                                      "ćwiczenie",
+                                      "ćwiczenia",
+                                      "ćwiczeń"
+                                  )}`
+                                : "Tu pojawią się Twoje ukończone treningi"
+                        }</div>
+                    </div>
+                </div>
+
+                ${summaryHtml}
+                ${filtersHtml}
+                <div class="history-list">${listHtml}</div>
+                ${moreHtml}
+            </div>
+        `;
+
+        screen.querySelectorAll("[data-history-filter]").forEach((button) => {
+            button.addEventListener("click", () => {
+                historyFilter = button.getAttribute("data-history-filter") || "all";
+                historyLimit = 12;
+                renderHistory(ctx);
+            });
+        });
+
+        const moreButton = screen.querySelector("[data-history-more]");
+        if (moreButton) {
+            moreButton.addEventListener("click", () => {
+                historyLimit += 12;
+                renderHistory(ctx);
+            });
+        }
     };
 
     const buildProgUI = (prog) => {
@@ -1838,6 +2213,11 @@ ${day.exercises.map((ex, ei) => {
         `;
     };
 
+    const setHistoryFilter = (name) => {
+        historyFilter = name || "all";
+        historyLimit = 12;
+    };
+
     const setLibraryLoaded = (ready, error) => {
         libReady = ready;
         libError = !!error;
@@ -1852,9 +2232,11 @@ ${day.exercises.map((ex, ei) => {
         renderPlan,
         renderFullPlanPage,
         renderStats,
+        renderHistory,
         renderWorkout,
         renderLibrary,
         renderManage,
+        setHistoryFilter,
         themePickerHTML: renderThemePicker,
         setLibQuery,
         setLibCategory,
