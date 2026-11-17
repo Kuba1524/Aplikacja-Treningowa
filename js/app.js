@@ -341,7 +341,7 @@ const buildKubaHistoricalPlan = (weekStart, weekData = {}) => {
 
 let DAYS = PLAN_BARTEK;
 let CURRENT_PLAN = PLAN_BARTEK;
-const APP_VERSION = "v100";
+const APP_VERSION = "v102";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -1104,6 +1104,9 @@ const renderCurrentView = () => {
     else stopSessionTicker();
 
     updateVisibleScreen();
+    if (currentView === "plan" || currentView === "fullplan") {
+        window.Views?.refreshWeekTabs?.();
+    }
     updateBottomNav();
 };
 

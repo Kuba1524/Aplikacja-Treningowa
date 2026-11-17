@@ -53,7 +53,7 @@ window.Views = (() => {
     // Aktywny tydzień ma być widoczny od razu po wejściu w Plan. Gdy wybrany
     // jest ostatni tydzień, pasek startuje przewinięty do końca.
     const scrollActiveWeekIntoView = (tabs) => {
-        if (!tabs) return;
+        if (!tabs || !tabs.isConnected) return;
         const max = tabs.scrollWidth - tabs.clientWidth;
         if (max <= 1) {
             updateTabEdges(tabs);
@@ -184,13 +184,66 @@ window.Views = (() => {
         tabs.addEventListener("pointercancel", stopDragging);
     };
 
+    // Pasek tygodni może powstać, zanim ekran dostanie swoją szerokość.
+    // ResizeObserver dociąga widok aktywnego tygodnia w momencie, gdy pasek
+    // faktycznie staje się widoczny i przewijalny.
+    const observeWeekTabs = (tabs) => {
+        if (tabs.dataset.weekTabsObserved === "1") return;
+        tabs.dataset.weekTabsObserved = "1";
+        if (typeof ResizeObserver !== "function") return;
+
+        const observer = new ResizeObserver(() => {
+            const max = tabs.scrollWidth - tabs.clientWidth;
+            if (max <= 1) return;
+
+            const active = tabs.querySelector(".week-btn.active");
+            if (!active) return;
+
+            const tabsRect = tabs.getBoundingClientRect();
+            const activeRect = active.getBoundingClientRect();
+            const fullyVisible =
+                activeRect.left >= tabsRect.left - 1 &&
+                activeRect.right <= tabsRect.right + 1;
+            if (!fullyVisible) scrollActiveWeekIntoView(tabs);
+        });
+        observer.observe(tabs);
+    };
+
     const setupWeekTabs = (screen) => {
         const tabs = screen.querySelector(".plan-week-tabs");
         if (!tabs) return;
-        tabs.addEventListener("scroll", () => updateTabEdges(tabs), { passive: true });
-        enableWeekTabsScroll(tabs);
+        if (tabs.dataset.weekTabsReady !== "1") {
+            tabs.dataset.weekTabsReady = "1";
+            tabs.addEventListener(
+                "scroll",
+                () => updateTabEdges(tabs),
+                { passive: true }
+            );
+            enableWeekTabsScroll(tabs);
+            observeWeekTabs(tabs);
+        }
         scrollActiveWeekIntoView(tabs);
+        // Po pierwszym renderze przeglądarka może jeszcze nie znać pełnej
+        // szerokości paska (np. gdy plan wczytuje się przed stylami).
+        window.setTimeout(() => scrollActiveWeekIntoView(tabs), 60);
     };
+
+    const refreshVisibleWeekTabs = () => {
+        const visibleScreen = Array.from(document.querySelectorAll(".screen")).find(
+            (screen) => !screen.classList.contains("hidden")
+        );
+        if (!visibleScreen) return;
+        const tabs = visibleScreen.querySelector(".plan-week-tabs");
+        if (!tabs) return;
+        if (tabs.dataset.weekTabsReady === "1") {
+            scrollActiveWeekIntoView(tabs);
+        } else {
+            setupWeekTabs(visibleScreen);
+        }
+    };
+
+    window.addEventListener("load", refreshVisibleWeekTabs);
+    window.addEventListener("pageshow", refreshVisibleWeekTabs);
 
     // Etykiety statusu serii vs poprzedni tydzień (klucz -> klasa + tekst).
     const TREND_META = {
@@ -439,6 +492,7 @@ window.Views = (() => {
             </div>
         `;
 
+        setupWeekTabs(screen);
         requestAnimationFrame(() => setupWeekTabs(screen));
     };
 
@@ -626,6 +680,7 @@ window.Views = (() => {
             </div>
         `;
 
+        setupWeekTabs(screen);
         requestAnimationFrame(() => setupWeekTabs(screen));
     };
 
@@ -2346,6 +2401,7 @@ ${day.exercises.map((ex, ei) => {
         renderHome,
         renderPlan,
         renderFullPlanPage,
+        refreshWeekTabs: refreshVisibleWeekTabs,
         renderStats,
         renderHistory,
         renderWorkout,
