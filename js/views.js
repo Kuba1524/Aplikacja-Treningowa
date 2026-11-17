@@ -50,6 +50,148 @@ window.Views = (() => {
     };
     window.updateTabEdges = updateTabEdges;
 
+    // Aktywny tydzień ma być widoczny od razu po wejściu w Plan. Gdy wybrany
+    // jest ostatni tydzień, pasek startuje przewinięty do końca.
+    const scrollActiveWeekIntoView = (tabs) => {
+        if (!tabs) return;
+        const max = tabs.scrollWidth - tabs.clientWidth;
+        if (max <= 1) {
+            updateTabEdges(tabs);
+            return;
+        }
+
+        const active = tabs.querySelector(".week-btn.active");
+        if (!active) {
+            tabs.scrollLeft = max;
+            updateTabEdges(tabs);
+            return;
+        }
+
+        const pad = 10;
+        const tabsRect = tabs.getBoundingClientRect();
+        const activeRect = active.getBoundingClientRect();
+        const activeLeft =
+            activeRect.left - tabsRect.left + tabs.scrollLeft;
+        const activeRight = activeLeft + activeRect.width;
+        const viewLeft = tabs.scrollLeft;
+        const viewRight = viewLeft + tabs.clientWidth;
+        let next = viewLeft;
+
+        if (activeRight > viewRight - pad) {
+            next = Math.min(max, activeRight - tabs.clientWidth + pad);
+        } else if (activeLeft < viewLeft + pad) {
+            next = Math.max(0, activeLeft - pad);
+        }
+
+        tabs.scrollLeft = next;
+        updateTabEdges(tabs);
+    };
+
+    // Na PC pionowe kółko myszy przewija tygodnie w poziomie, a przytrzymanie
+    // lewego przycisku pozwala przeciągnąć pasek. Na końcach paska gest wraca
+    // do normalnego przewijania strony.
+    const enableWeekTabsScroll = (tabs) => {
+        if (!tabs || tabs.dataset.weekScrollReady === "1") return;
+        tabs.dataset.weekScrollReady = "1";
+
+        tabs.addEventListener(
+            "wheel",
+            (event) => {
+                const max = tabs.scrollWidth - tabs.clientWidth;
+                if (max <= 1) return;
+
+                const raw =
+                    Math.abs(event.deltaY) > Math.abs(event.deltaX)
+                        ? event.deltaY
+                        : event.deltaX;
+                if (!raw) return;
+
+                const unit =
+                    event.deltaMode === 1
+                        ? 16
+                        : event.deltaMode === 2
+                          ? tabs.clientWidth
+                          : 1;
+                const next = Math.max(
+                    0,
+                    Math.min(max, tabs.scrollLeft + raw * unit)
+                );
+                if (next === tabs.scrollLeft) return;
+
+                tabs.scrollLeft = next;
+                event.preventDefault();
+            },
+            { passive: false }
+        );
+
+        let dragging = false;
+        let moved = false;
+        let startX = 0;
+        let startLeft = 0;
+
+        tabs.addEventListener("pointerdown", (event) => {
+            if (event.pointerType === "mouse" && event.button !== 0) return;
+            dragging = true;
+            moved = false;
+            startX = event.clientX;
+            startLeft = tabs.scrollLeft;
+        });
+
+        tabs.addEventListener("pointermove", (event) => {
+            if (!dragging) return;
+            const dx = event.clientX - startX;
+            if (!moved && Math.abs(dx) <= 5) return;
+
+            if (!moved) {
+                moved = true;
+                tabs.classList.add("dragging");
+                if (typeof tabs.setPointerCapture === "function") {
+                    tabs.setPointerCapture(event.pointerId);
+                }
+            }
+
+            tabs.scrollLeft = startLeft - dx;
+            event.preventDefault();
+        });
+
+        const stopDragging = (event) => {
+            if (!dragging) return;
+            dragging = false;
+            tabs.classList.remove("dragging");
+
+            if (moved) {
+                const suppressClick = (clickEvent) => {
+                    clickEvent.preventDefault();
+                    clickEvent.stopPropagation();
+                };
+                tabs.addEventListener("click", suppressClick, true);
+                window.setTimeout(
+                    () => tabs.removeEventListener("click", suppressClick, true),
+                    0
+                );
+            }
+
+            if (
+                typeof tabs.releasePointerCapture === "function" &&
+                typeof tabs.hasPointerCapture === "function" &&
+                tabs.hasPointerCapture(event.pointerId)
+            ) {
+                tabs.releasePointerCapture(event.pointerId);
+            }
+        };
+
+        tabs.addEventListener("pointerup", stopDragging);
+        tabs.addEventListener("pointercancel", stopDragging);
+    };
+
+    const setupWeekTabs = (screen) => {
+        const tabs = screen.querySelector(".plan-week-tabs");
+        if (!tabs) return;
+        tabs.addEventListener("scroll", () => updateTabEdges(tabs), { passive: true });
+        enableWeekTabsScroll(tabs);
+        scrollActiveWeekIntoView(tabs);
+    };
+
     // Etykiety statusu serii vs poprzedni tydzień (klucz -> klasa + tekst).
     const TREND_META = {
         "w-up": { cls: "t-up", label: "▲ CIĘŻAR" },
@@ -297,13 +439,7 @@ window.Views = (() => {
             </div>
         `;
 
-        requestAnimationFrame(() => {
-            const tabs = screen.querySelector(".plan-week-tabs");
-            if (tabs) {
-                tabs.addEventListener("scroll", () => updateTabEdges(tabs), { passive: true });
-                updateTabEdges(tabs);
-            }
-        });
+        requestAnimationFrame(() => setupWeekTabs(screen));
     };
 
     const renderFullPlan = (DAYS, getDayProgress, getExerciseKey, ctx) => {
@@ -490,13 +626,7 @@ window.Views = (() => {
             </div>
         `;
 
-        requestAnimationFrame(() => {
-            const tabs = screen.querySelector(".plan-week-tabs");
-            if (tabs) {
-                tabs.addEventListener("scroll", () => updateTabEdges(tabs), { passive: true });
-                updateTabEdges(tabs);
-            }
-        });
+        requestAnimationFrame(() => setupWeekTabs(screen));
     };
 
     const renderCompactPlan = (DAYS, getDayProgress) => {
@@ -1098,6 +1228,22 @@ window.Views = (() => {
                       .join("")}</span>`
                 : "";
 
+            const detailSetCount = matchingExercises.reduce(
+                (sum, exercise) => sum + (exercise.sets ? exercise.sets.length : 0),
+                0
+            );
+            const detailCount = `${matchingExercises.length} ${plural(
+                matchingExercises.length,
+                "ćwiczenie",
+                "ćwiczenia",
+                "ćwiczeń"
+            )} · ${detailSetCount} ${plural(
+                detailSetCount,
+                "seria",
+                "serie",
+                "serii"
+            )}`;
+
             const exerciseHtml = matchingExercises
                 .map((exercise) => {
                     const prInfo = session.prs.find(
@@ -1156,6 +1302,10 @@ window.Views = (() => {
                         <span class="history-chevron" aria-hidden="true">›</span>
                     </summary>
                     <div class="history-details">
+                        <div class="history-details-head">
+                            <span class="history-details-title">Szczegóły sesji</span>
+                            <span class="history-details-count">${detailCount}</span>
+                        </div>
                         <div class="history-ex-list">${exerciseHtml}</div>
                     </div>
                 </details>

@@ -2662,6 +2662,42 @@ html[data-theme="proton"] .plan-mode-toggle {
     flex-shrink: 0;
 }
 
+@media (hover: hover) and (pointer: fine) {
+    .plan-week-tabs {
+        padding-bottom: 5px;
+        cursor: grab;
+        scrollbar-width: thin;
+        scrollbar-color: color-mix(in srgb, var(--accent-2) 38%, transparent)
+            transparent;
+    }
+
+    .plan-week-tabs.dragging {
+        cursor: grabbing;
+    }
+
+    .plan-week-tabs.dragging .week-btn {
+        pointer-events: none;
+    }
+
+    .plan-week-tabs::-webkit-scrollbar {
+        display: block;
+        height: 6px;
+    }
+
+    .plan-week-tabs::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .plan-week-tabs::-webkit-scrollbar-thumb {
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--accent-2) 38%, transparent);
+    }
+
+    .plan-week-tabs::-webkit-scrollbar-thumb:hover {
+        background: color-mix(in srgb, var(--accent-2) 58%, transparent);
+    }
+}
+
 .full-plan-overview {
     margin-bottom: 18px;
     padding: 18px 16px;
@@ -5482,6 +5518,7 @@ html[data-theme="light"] .toast.toast-pr {
     background:
         linear-gradient(180deg, color-mix(in srgb, var(--text-main) 2.5%, transparent), transparent),
         var(--card-bg);
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .history-session[open] {
@@ -5497,6 +5534,17 @@ html[data-theme="light"] .toast.toast-pr {
     list-style: none;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
+    transition: background 0.16s ease;
+}
+
+.history-session[open] .history-session-summary {
+    background: color-mix(in srgb, var(--accent) 4%, transparent);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .history-session-summary:hover {
+        background: color-mix(in srgb, var(--accent) 5%, transparent);
+    }
 }
 
 .history-session-summary::-webkit-details-marker {
@@ -5613,20 +5661,78 @@ html[data-theme="light"] .toast.toast-pr {
 }
 
 .history-chevron {
+    width: 26px;
+    height: 26px;
     flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--card-2);
     color: var(--text-dim);
-    font-size: 21px;
-    font-weight: 400;
+    font-size: 18px;
+    font-weight: 500;
     line-height: 1;
-    transition: transform 0.18s ease;
+    transition:
+        transform 0.18s ease,
+        color 0.18s ease,
+        background 0.18s ease,
+        border-color 0.18s ease;
 }
 
 .history-session[open] .history-chevron {
     transform: rotate(90deg);
+    color: var(--accent-2);
+    background: color-mix(in srgb, var(--accent) 13%, var(--card-2));
+    border-color: color-mix(in srgb, var(--accent-2) 24%, var(--border));
 }
 
 .history-details {
     padding: 0 13px 13px;
+    animation: historyDetailsIn 0.22s ease both;
+}
+
+@keyframes historyDetailsIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.history-details-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 9px;
+    padding-top: 9px;
+    border-top: 1px solid var(--border);
+}
+
+.history-details-title {
+    color: var(--text-dim);
+    font-size: 9px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+}
+
+.history-details-count {
+    flex-shrink: 0;
+    padding: 3px 7px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--accent-2) 15%, var(--border));
+    background: color-mix(in srgb, var(--accent) 9%, transparent);
+    color: var(--accent-2);
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
 }
 
 .history-ex-list {
@@ -5635,10 +5741,28 @@ html[data-theme="light"] .toast.toast-pr {
 }
 
 .history-ex {
-    padding: 9px 10px;
+    position: relative;
+    overflow: hidden;
+    padding: 9px 10px 9px 13px;
     border-radius: 12px;
     border: 1px solid var(--border);
     background: var(--card-2);
+}
+
+.history-ex::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    border-radius: 0 999px 999px 0;
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--accent-2) 70%, transparent),
+        color-mix(in srgb, var(--accent) 30%, transparent)
+    );
+    opacity: 0.7;
 }
 
 .history-ex-name {
@@ -5685,15 +5809,31 @@ html[data-theme="light"] .toast.toast-pr {
 .history-ex-note {
     display: flex;
     align-items: flex-start;
-    gap: 5px;
-    margin-top: 7px;
-    padding-top: 6px;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 6px 0 0 9px;
     border-top: 1px dashed var(--border);
-    color: var(--text-dim);
+    border-left: 2px solid color-mix(in srgb, var(--accent-2) 32%, transparent);
+    color: var(--text-soft);
     font-size: 10px;
     font-weight: 600;
-    line-height: 1.4;
+    line-height: 1.45;
     white-space: pre-wrap;
+}
+
+.history-ex-note::before {
+    content: "„";
+    flex-shrink: 0;
+    color: var(--accent-2);
+    font-size: 15px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .history-details {
+        animation: none;
+    }
 }
 
 .history-empty {

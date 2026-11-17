@@ -191,6 +191,12 @@ describe("renderHistory", () => {
         expect(screen.querySelector(".history-summary")).toBeNull();
         expect(screen.querySelectorAll("details.history-session")).toHaveLength(3);
         expect(screen.querySelectorAll("#history-exercise-select option")).toHaveLength(5);
+        expect(screen.querySelector(".history-details-title").textContent).toBe(
+            "Szczegóły sesji"
+        );
+        expect(screen.querySelector(".history-details-count").textContent).toMatch(
+            /ćwicze/
+        );
     });
 
     it("filters sessions by exercise name and shows only that exercise", () => {
