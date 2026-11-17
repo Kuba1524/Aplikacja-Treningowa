@@ -258,7 +258,7 @@ const buildKubaHistoricalPlan = (weekStart, weekData = {}) => {
 
 let DAYS = PLAN_BARTEK;
 let CURRENT_PLAN = PLAN_BARTEK;
-const APP_VERSION = "v93";
+const APP_VERSION = "v94";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -1890,22 +1890,15 @@ const updateSummary = () => {
     if (pctEl) pctEl.textContent = total ? `${Math.round((done / total) * 100)}%` : "0%";
 };
 
-const resetWorkout = () => {
+const resetWorkoutSession = () => {
     if (currentDayId === null) return;
 
-    const weekData = state.weeks[state.currentWeekIndex];
+    const weekData = state.weeks[state.currentWeekIndex] || {};
 
-    delete weekData[getDayDateKey(currentDayId)];
-    delete weekData[getDayTimestampKey(currentDayId)];
-
-    Object.keys(weekData).forEach((key) => {
-        if (
-            key.startsWith(`d${currentDayId}_`) ||
-            key.startsWith(`day_${currentDayId}_`)
-        ) {
-            delete weekData[key];
-        }
-    });
+    // Reset dotyczy tylko sesji (timera), nie wywala zaliczonych serii,
+    // notatek ani ciezarow. Dzieki temu mozna zaczac sesje od nowa.
+    delete weekData[getSessionStartKey(currentDayId)];
+    delete weekData[getSessionEndKey(currentDayId)];
 
     sessionSummaryKey = null;
     if (state.currentWeekIndex >= 0) {
@@ -1915,9 +1908,14 @@ const resetWorkout = () => {
         });
     }
 
+    stopRestTimer(true);
     persistState();
-    if (window.Views.clearExpanded) window.Views.clearExpanded();
-    openDay(currentDayId);
+    renderCurrentView();
+    showToast("Sesja zresetowana", {
+        icon: "↺",
+        sub: "Serie i notatki zostały zachowane",
+        duration: 2200
+    });
 };
 
 const showProfileGate = () => {
@@ -2857,7 +2855,7 @@ window.startWorkoutSession = startWorkoutSession;
 window.openWorkoutSummary = openWorkoutSummary;
 window.dismissWorkoutSummary = dismissWorkoutSummary;
 window.finishWorkout = finishWorkout;
-window.resetWorkout = resetWorkout;
+window.resetWorkoutSession = resetWorkoutSession;
 window.chooseProfile = chooseProfile;
 window.switchProfile = switchProfile;
 window.openMoreSheet = openMoreSheet;

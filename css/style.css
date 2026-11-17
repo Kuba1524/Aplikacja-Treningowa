@@ -886,6 +886,12 @@ button {
     flex-shrink: 0;
 }
 
+.workout-top-spacer {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+}
+
 .workout-head-center {
     text-align: center;
     flex: 1;

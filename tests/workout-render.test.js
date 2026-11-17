@@ -183,6 +183,33 @@ describe("renderWorkout", () => {
         expect(html).toContain("startWorkoutSession()");
         expect(html).toContain("Timer wystartuje po kliknięciu");
         expect(html).not.toContain("workout-session-timer");
+        expect(html).not.toContain("resetWorkoutSession()");
+    });
+
+    it("resets only the active session, not the logged workout", () => {
+        const ctx = makeCtx();
+        ctx.getWorkoutSessionSummary = () => ({
+            isLive: true,
+            startedAt: Date.now() - 60_000,
+            endedAt: 0,
+            durationMs: 60_000,
+            doneSets: 1,
+            totalSets: 3,
+            totalExercises: 1,
+            completedExercises: 0,
+            volume: 450,
+            prs: []
+        });
+        ctx.isSessionSummaryOpen = () => false;
+
+        document.body.innerHTML = '<div id="screen-workout"></div>';
+        window.Views.renderWorkout(ctx);
+        const html = document.getElementById("screen-workout").innerHTML;
+
+        expect(html).toContain("workout-session-timer");
+        expect(html).toContain("resetWorkoutSession()");
+        expect(html).toContain("Zresetuj sesję");
+        expect(html).not.toContain("resetWorkout()");
     });
 
     it("groups superset pairs and points to the partner exercise", () => {
@@ -266,5 +293,6 @@ describe("renderWorkout", () => {
         expect(html).toContain("100 kg × 5");
         expect(html).toContain("+5 kg");
         expect(html).toContain("openWorkoutSummary()");
+        expect(html).not.toContain("resetWorkoutSession()");
     });
 });

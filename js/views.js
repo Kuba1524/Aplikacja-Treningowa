@@ -1042,6 +1042,7 @@ window.Views = (() => {
             : "00:00";
 
         const canStartSession = session && session.isLive && !session.startedAt && !session.endedAt && doneSets < totalSets && !summaryOpen;
+        const canResetSession = session && session.isLive && session.startedAt && doneSets < totalSets;
         const sessionStartCard = canStartSession
             ? `<div class="session-start-card">
                     <div class="session-start-copy">
@@ -1139,7 +1140,9 @@ window.Views = (() => {
                         <div class="workout-sub">${dayDateText} • ${doneSets}/${totalSets} serii</div>
                     </div>
 
-                    <button class="icon-btn" onclick="resetWorkout()">↺</button>
+                    ${canResetSession
+                        ? `<button class="icon-btn" onclick="resetWorkoutSession()" aria-label="Zresetuj sesję" title="Zresetuj sesję">↺</button>`
+                        : `<span class="workout-top-spacer" aria-hidden="true"></span>`}
                 </div>
 
                 <div class="workout-progress-track">
