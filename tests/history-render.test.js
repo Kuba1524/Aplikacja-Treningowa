@@ -225,6 +225,34 @@ describe("renderHistory", () => {
         );
     });
 
+    it("merges exercise names that differ only by letter case", () => {
+        const state = makeState();
+        state.weekPlans[1] = PLAN.map((day) => ({
+            ...day,
+            exercises: day.exercises.map((exercise) => ({ ...exercise }))
+        }));
+        state.weekPlans[1][1].exercises[1].name = "rdl";
+        state.weeks[1].d1_e1 = [
+            { kg: 80, reps: 8, done: true },
+            { kg: 80, reps: 8, done: true }
+        ];
+        window.Views.renderHistory(makeCtx(state));
+
+        const screen = document.getElementById("screen-history");
+        const select = screen.querySelector("#history-exercise-select");
+        const rdlOptions = Array.from(select.options).filter((option) =>
+            /^rdl/i.test(option.textContent)
+        );
+
+        expect(rdlOptions).toHaveLength(1);
+        expect(rdlOptions[0].textContent).toContain("(2)");
+
+        select.value = rdlOptions[0].value;
+        select.dispatchEvent(new Event("change"));
+
+        expect(screen.querySelectorAll(".history-session")).toHaveLength(2);
+    });
+
     it("shows an empty state without sessions", () => {
         const state = makeState();
         state.weeks = [];

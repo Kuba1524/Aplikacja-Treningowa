@@ -5388,7 +5388,7 @@ html[data-theme="light"] .toast.toast-pr {
     box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16);
 }
 
-/* ===== Historia treningów (v96) ===== */
+/* ===== Historia treningów (v97) ===== */
 .history-entry-btn {
     width: 100%;
     margin-top: 12px;
@@ -5770,7 +5770,7 @@ html[data-theme="light"] .history-session[open] {
     box-shadow: 0 12px 26px rgba(24, 36, 60, 0.1);
 }
 
-/* v96 — prostsza historia: jeden filtr z listy, mniej danych na karcie */
+/* v97 — prostsza historia: jeden filtr z listy, mniej danych na karcie */
 .history-filter-bar {
     display: flex;
     align-items: center;

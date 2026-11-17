@@ -968,32 +968,40 @@ window.Views = (() => {
                   )
                 : [];
 
+        const filterKey = (name) =>
+            String(name || "").trim().toLocaleLowerCase("pl");
         const filterMap = new Map();
         sessions.forEach((session) => {
             session.exercises.forEach((exercise) => {
                 const name = exercise.displayName || exercise.name;
                 if (!name) return;
-                filterMap.set(name, (filterMap.get(name) || 0) + 1);
+                const key = filterKey(name);
+                const current = filterMap.get(key);
+                if (current) {
+                    current.count += 1;
+                } else {
+                    filterMap.set(key, { name, count: 1 });
+                }
             });
         });
-        const filterOptions = Array.from(filterMap.entries())
-            .map(([name, count]) => ({ name, count }))
-            .sort((a, b) => a.name.localeCompare(b.name, "pl"));
+        const filterOptions = Array.from(filterMap.values()).sort((a, b) =>
+            a.name.localeCompare(b.name, "pl")
+        );
 
-        if (
-            historyFilter !== "all" &&
-            !filterOptions.some((option) => option.name === historyFilter)
-        ) {
+        let activeFilterKey = historyFilter === "all" ? "all" : filterKey(historyFilter);
+        if (activeFilterKey !== "all" && !filterMap.has(activeFilterKey)) {
             historyFilter = "all";
+            activeFilterKey = "all";
         }
 
         const filteredSessions =
-            historyFilter === "all"
+            activeFilterKey === "all"
                 ? sessions
                 : sessions.filter((session) =>
                       session.exercises.some(
                           (exercise) =>
-                              (exercise.displayName || exercise.name) === historyFilter
+                              filterKey(exercise.displayName || exercise.name) ===
+                              activeFilterKey
                       )
                   );
         const visibleSessions = filteredSessions.slice(0, historyLimit);
@@ -1027,13 +1035,14 @@ window.Views = (() => {
             const title = session.dayLabel || session.dayName || "Trening";
             const subtitle = [session.dayName, date.full].filter(Boolean).join(" · ");
             const matchingExercises =
-                historyFilter === "all"
+                activeFilterKey === "all"
                     ? session.exercises
                     : session.exercises.filter(
                           (exercise) =>
-                              (exercise.displayName || exercise.name) === historyFilter
+                              filterKey(exercise.displayName || exercise.name) ===
+                              activeFilterKey
                       );
-            const focus = historyFilter === "all" ? null : matchingExercises[0] || null;
+            const focus = activeFilterKey === "all" ? null : matchingExercises[0] || null;
             const prCount = focus
                 ? matchingExercises.filter((exercise) => exercise.isPR).length
                 : session.prs.length;
@@ -1149,7 +1158,7 @@ window.Views = (() => {
                     <div class="history-select-wrap">
                         <select id="history-exercise-select" class="history-select">
                             <option value="all" ${
-                                historyFilter === "all" ? "selected" : ""
+                                activeFilterKey === "all" ? "selected" : ""
                             }>Wszystkie ćwiczenia</option>
                             ${filterOptions
                                 .map(
@@ -1157,7 +1166,7 @@ window.Views = (() => {
                                         `<option value="${U.escapeHtml(
                                             option.name
                                         )}" ${
-                                            historyFilter === option.name
+                                            filterKey(option.name) === activeFilterKey
                                                 ? "selected"
                                                 : ""
                                         }>${U.escapeHtml(option.name)} (${option.count})</option>`
