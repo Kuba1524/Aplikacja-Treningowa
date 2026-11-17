@@ -153,6 +153,38 @@ describe("renderWorkout", () => {
         expect(html).not.toContain("ex-expand-btn");
     });
 
+    it("shows the centered start button instead of starting the timer automatically", () => {
+        const ctx = makeCtx();
+        ctx.state.weeks[1].d1 = [
+            { kg: 0, reps: 0, done: false },
+            { kg: 0, reps: 0, done: false },
+            { kg: 0, reps: 0, done: false }
+        ];
+        ctx.getWorkoutSessionSummary = () => ({
+            isLive: true,
+            startedAt: 0,
+            endedAt: 0,
+            durationMs: 0,
+            doneSets: 0,
+            totalSets: 3,
+            totalExercises: 1,
+            completedExercises: 0,
+            volume: 0,
+            prs: []
+        });
+        ctx.isSessionSummaryOpen = () => false;
+
+        document.body.innerHTML = '<div id="screen-workout"></div>';
+        window.Views.renderWorkout(ctx);
+        const html = document.getElementById("screen-workout").innerHTML;
+
+        expect(html).toContain("session-start-card");
+        expect(html).toContain("Rozpocznij trening");
+        expect(html).toContain("startWorkoutSession()");
+        expect(html).toContain("Timer wystartuje po kliknięciu");
+        expect(html).not.toContain("workout-session-timer");
+    });
+
     it("groups superset pairs and points to the partner exercise", () => {
         const set = (kg, reps, done) => ({ kg, reps, done });
         const ctx = makeCtx();

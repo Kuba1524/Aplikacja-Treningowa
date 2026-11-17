@@ -258,7 +258,7 @@ const buildKubaHistoricalPlan = (weekStart, weekData = {}) => {
 
 let DAYS = PLAN_BARTEK;
 let CURRENT_PLAN = PLAN_BARTEK;
-const APP_VERSION = "v92";
+const APP_VERSION = "v93";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -972,6 +972,7 @@ const renderCurrentView = () => {
         currentProfileName,
         getWorkoutSessionSummary,
         isSessionSummaryOpen,
+        startWorkoutSession,
         openWorkoutSummary,
         dismissWorkoutSummary,
         finishWorkout,
@@ -1232,7 +1233,7 @@ const openDay = (id) => {
     day.exercises.forEach((ex, ei) => {
         ensureWorkoutDataExists(id, ei, ex.sets);
     });
-    ensureSessionStart(id);
+    prepareWorkoutSession(id);
 
     persistState();
     currentView = "workout";
@@ -1527,38 +1528,50 @@ const getWorkoutSessionSummary = (dayId) => {
     };
 };
 
-// Start licznika przy wejściu w trening. Jeśli poprzednia sesja zaczęła się
-// innego dnia i nie zapisano żadnej serii, traktujemy ją jako porzuconą.
-const ensureSessionStart = (dayId) => {
+// Sesję uruchamia użytkownik przyciskiem "Rozpocznij trening". Przy wejściu
+// usuwamy tylko porzucony pusty start z poprzedniego dnia.
+const prepareWorkoutSession = (dayId) => {
     if (!isLiveWeek()) return;
     const weekData = state.weeks[state.currentWeekIndex] || {};
     const startKey = getSessionStartKey(dayId);
+    const endKey = getSessionEndKey(dayId);
     const day = DAYS.find((d) => d && d.id === dayId) || null;
-    if (!day) return;
+    if (!day || !weekData[startKey]) return;
 
     const hasDone = day.exercises.some((ex, ei) => {
         const sets = weekData[getExerciseKey(dayId, ei)] || [];
         return sets.some((set) => set && set.done);
     });
-    const allDone = day.exercises.every((ex, ei) => {
-        const planned = Math.max(0, Number(ex.sets) || 0);
-        const sets = weekData[getExerciseKey(dayId, ei)] || [];
-        return sets.filter((set) => set && set.done).length >= planned;
-    });
-
-    if (!weekData[startKey]) {
-        // Dzień ukończony przed wprowadzeniem timera nie dostaje sztucznej sesji.
-        if (!allDone) weekData[startKey] = Date.now();
-        return;
-    }
-
     if (hasDone) return;
 
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     if ((Number(weekData[startKey]) || 0) < todayStart.getTime()) {
-        weekData[startKey] = Date.now();
+        delete weekData[startKey];
+        delete weekData[endKey];
+        if (isSessionSummaryOpen(dayId)) sessionSummaryKey = null;
     }
+};
+
+const startWorkoutSession = () => {
+    if (currentDayId === null || !isLiveWeek()) return;
+    const weekData = state.weeks[state.currentWeekIndex] || {};
+    const startKey = getSessionStartKey(currentDayId);
+    const endKey = getSessionEndKey(currentDayId);
+
+    if (weekData[startKey]) {
+        if (isSessionSummaryOpen(currentDayId)) {
+            sessionSummaryKey = null;
+            renderCurrentView();
+        }
+        return;
+    }
+
+    weekData[startKey] = Date.now();
+    delete weekData[endKey];
+    sessionSummaryKey = null;
+    persistState();
+    renderCurrentView();
 };
 
 const sessionKeyFor = (dayId) => `${state.currentWeekIndex}|${dayId}`;
@@ -1658,7 +1671,12 @@ const stopSessionTicker = () => {
 const startSessionTicker = () => {
     stopSessionTicker();
     updateSessionTimerUI();
-    if (currentView === "workout" && currentDayId !== null) {
+    if (currentView !== "workout" || currentDayId === null) return;
+
+    const weekData = state.weeks[state.currentWeekIndex] || {};
+    const startedAt = Number(weekData[getSessionStartKey(currentDayId)]) || 0;
+    const endedAt = Number(weekData[getSessionEndKey(currentDayId)]) || 0;
+    if (startedAt && !endedAt) {
         sessionTickerId = setInterval(updateSessionTimerUI, 1000);
     }
 };
@@ -2835,6 +2853,7 @@ window.updateNote = updateNote;
 window.updateSet = updateSet;
 window.toggleSet = toggleSet;
 window.toggleExerciseExpand = toggleExerciseExpand;
+window.startWorkoutSession = startWorkoutSession;
 window.openWorkoutSummary = openWorkoutSummary;
 window.dismissWorkoutSummary = dismissWorkoutSummary;
 window.finishWorkout = finishWorkout;

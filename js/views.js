@@ -1041,14 +1041,34 @@ window.Views = (() => {
             ? window.Utils.formatDuration(session.durationMs)
             : "00:00";
 
+        const canStartSession = session && session.isLive && !session.startedAt && !session.endedAt && doneSets < totalSets && !summaryOpen;
+        const sessionStartCard = canStartSession
+            ? `<div class="session-start-card">
+                    <div class="session-start-copy">
+                        <span class="session-start-kicker">Sesja treningowa</span>
+                        <div class="session-start-title">${doneSets > 0 ? "Wracasz do treningu?" : "Gotowy na trening?"}</div>
+                        <div class="session-start-sub">${window.Utils.escapeHtml(day.label)} · ${totalSets} serii · ${day.exercises.length} ćwiczeń</div>
+                    </div>
+                    <button type="button" class="session-start-btn" onclick="startWorkoutSession()">
+                        <span class="session-start-play" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                        </span>
+                        <span>${doneSets > 0 ? "Wznów trening" : "Rozpocznij trening"}</span>
+                    </button>
+                    <div class="session-start-note">Timer wystartuje po kliknięciu</div>
+                </div>`
+            : "";
+
         const sessionBar = session && session.isLive && session.startedAt
-            ? `<div class="workout-session-row">
+            ? `<div class="workout-session-row ${session.endedAt ? "is-done" : "is-running"}">
                     <div id="workout-session-timer" class="workout-session-timer ${session.endedAt ? "done" : "running"}">
                         <span class="workout-session-ico" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                            ${session.endedAt
+                                ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg>`
+                                : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`}
                         </span>
                         <span class="workout-session-meta">
-                            <span class="wst-label">Czas sesji</span>
+                            <span class="wst-label">${session.endedAt ? "Ukończona" : "Sesja trwa"}</span>
                             <span id="workout-session-time" class="wst-time">${sessionTime}</span>
                         </span>
                     </div>
@@ -1056,7 +1076,7 @@ window.Views = (() => {
                         ? `<button type="button" class="workout-session-btn" onclick="openWorkoutSummary()">Podsumowanie</button>`
                         : doneSets > 0
                             ? `<button type="button" class="workout-session-btn finish" onclick="finishWorkout()">Zakończ</button>`
-                            : `<span class="workout-session-hint">Timer startuje z treningiem</span>`}
+                            : `<span class="workout-session-live"><i aria-hidden="true"></i> Timer aktywny</span>`}
                 </div>`
             : "";
 
@@ -1126,6 +1146,7 @@ window.Views = (() => {
                     <div class="workout-progress-fill" style="width:${progressPct}%;"></div>
                 </div>
 
+                ${sessionStartCard}
                 ${sessionBar}
                 ${summaryHtml}
 

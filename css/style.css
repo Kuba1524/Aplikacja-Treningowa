@@ -4749,71 +4749,249 @@ html[data-theme="light"] .tag-CORE {
 }
 .rest-timer-actions button:hover { background: rgba(255,255,255,0.1); }
 
-/* ===== Timer sesji i podsumowanie treningu ===== */
+/* ===== Sesja: start, timer i podsumowanie ===== */
+.session-start-card {
+    position: relative;
+    overflow: hidden;
+    margin: 0 0 18px;
+    padding: 22px 18px 16px;
+    border-radius: 24px;
+    text-align: center;
+    background:
+        radial-gradient(110% 90% at 50% -35%, color-mix(in srgb, var(--accent-2) 26%, transparent), transparent 62%),
+        linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, var(--card-bg)), var(--card-bg));
+    border: 1px solid color-mix(in srgb, var(--accent-2) 24%, transparent);
+    box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.session-start-card::after {
+    content: "";
+    position: absolute;
+    left: 18%;
+    right: 18%;
+    bottom: -72px;
+    height: 130px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--accent) 26%, transparent);
+    filter: blur(34px);
+    pointer-events: none;
+}
+
+.session-start-copy {
+    position: relative;
+    z-index: 1;
+}
+
+.session-start-kicker {
+    display: inline-block;
+    color: color-mix(in srgb, var(--accent-2) 72%, var(--text-main));
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+}
+
+.session-start-title {
+    margin-top: 5px;
+    color: var(--text-main);
+    font-size: 21px;
+    font-weight: 900;
+    line-height: 1.15;
+}
+
+.session-start-sub {
+    margin-top: 6px;
+    color: var(--text-dim);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.session-start-btn {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    width: min(100%, 300px);
+    min-height: 50px;
+    margin: 18px auto 0;
+    padding: 0 18px;
+    border: none;
+    border-radius: 15px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    box-shadow:
+        0 12px 28px color-mix(in srgb, var(--accent) 32%, transparent),
+        inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+.session-start-btn:hover { filter: brightness(1.05); }
+.session-start-btn:active { transform: scale(0.985); }
+
+.session-start-play {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    flex-shrink: 0;
+}
+
+.session-start-play svg {
+    width: 15px;
+    height: 15px;
+    margin-left: 1px;
+}
+
+.session-start-note {
+    position: relative;
+    z-index: 1;
+    margin-top: 10px;
+    color: var(--text-dim);
+    font-size: 10px;
+    font-weight: 700;
+    opacity: 0.82;
+}
+
 .workout-session-row {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin: -2px 0 14px;
+    margin: 0 0 18px;
+    padding: 10px 10px 10px 12px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 9%, var(--card-bg)), var(--card-bg) 72%);
+    border: 1px solid color-mix(in srgb, var(--accent-2) 20%, transparent);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.16);
+}
+
+.workout-session-row.is-done {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--success) 7%, var(--card-bg)), var(--card-bg) 72%);
+    border-color: color-mix(in srgb, var(--success) 26%, transparent);
 }
 
 .workout-session-timer {
     display: flex;
     align-items: center;
-    gap: 9px;
-    padding: 8px 12px;
-    border-radius: 14px;
-    background: color-mix(in srgb, var(--accent) 8%, transparent);
-    border: 1px solid color-mix(in srgb, var(--accent-2) 22%, transparent);
+    gap: 10px;
     min-width: 0;
 }
 
 .workout-session-ico {
     display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-2) 16%, transparent);
     color: var(--accent-2);
 }
 
-.workout-session-ico svg { width: 18px; height: 18px; }
+.workout-session-ico svg { width: 19px; height: 19px; }
 
 .workout-session-meta {
     display: flex;
     flex-direction: column;
-    gap: 1px;
+    gap: 3px;
     line-height: 1;
+    min-width: 0;
 }
 
 .wst-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
     font-size: 9px;
     font-weight: 800;
     letter-spacing: 0.07em;
     text-transform: uppercase;
     color: var(--text-dim);
+    white-space: nowrap;
+}
+
+.wst-label::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent-2);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-2) 14%, transparent);
+    flex-shrink: 0;
 }
 
 .wst-time {
-    font-size: 18px;
+    font-size: 22px;
     font-weight: 900;
     color: var(--text-main);
     font-variant-numeric: tabular-nums;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
 }
 
-.workout-session-timer.running .wst-time { color: var(--accent-2); }
-.workout-session-timer.done .workout-session-ico { color: var(--success); }
+.workout-session-timer.running .wst-label::before {
+    animation: sessionPulse 2.2s ease-in-out infinite;
+}
+
+.workout-session-timer.done .workout-session-ico {
+    background: color-mix(in srgb, var(--success) 14%, transparent);
+    border-color: color-mix(in srgb, var(--success) 22%, transparent);
+    color: var(--success);
+}
+
 .workout-session-timer.done .wst-time { color: var(--success); }
 
-.workout-session-hint {
-    font-size: 11px;
+.workout-session-timer.done .wst-label::before {
+    background: var(--success);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 14%, transparent);
+    animation: none;
+}
+
+@keyframes sessionPulse {
+    0%, 100% { opacity: 0.55; transform: scale(0.9); }
+    50% { opacity: 1; transform: scale(1.12); }
+}
+
+.workout-session-live {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-2) 14%, transparent);
     color: var(--text-dim);
-    font-weight: 700;
+    font-size: 10px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.workout-session-live i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-2);
+    flex-shrink: 0;
 }
 
 .workout-session-btn {
+    min-height: 40px;
     margin-left: auto;
-    padding: 9px 14px;
+    padding: 0 14px;
     border-radius: 12px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.05);
+    border: 1px solid color-mix(in srgb, var(--accent-2) 20%, transparent);
+    background: color-mix(in srgb, var(--accent) 9%, transparent);
     color: var(--text-main);
     font: inherit;
     font-size: 12px;
@@ -4823,20 +5001,22 @@ html[data-theme="light"] .tag-CORE {
 }
 
 .workout-session-btn.finish {
-    background: color-mix(in srgb, var(--success) 16%, transparent);
-    border-color: color-mix(in srgb, var(--success) 38%, transparent);
-    color: color-mix(in srgb, var(--success) 78%, white);
+    background: color-mix(in srgb, var(--success) 14%, transparent);
+    border-color: color-mix(in srgb, var(--success) 34%, transparent);
+    color: color-mix(in srgb, var(--success) 78%, var(--text-main));
 }
 
 .session-summary-card {
+    position: relative;
+    overflow: hidden;
     margin: 0 0 18px;
     padding: 18px;
     border-radius: 22px;
     background:
-        radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--accent-2) 18%, transparent), transparent 46%),
-        linear-gradient(160deg, color-mix(in srgb, var(--accent) 10%, var(--card-bg)), var(--card-bg));
-    border: 1px solid color-mix(in srgb, var(--accent-2) 34%, transparent);
-    box-shadow: 0 14px 34px rgba(0,0,0,0.28);
+        radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--success) 13%, transparent), transparent 44%),
+        linear-gradient(160deg, color-mix(in srgb, var(--accent) 8%, var(--card-bg)), var(--card-bg));
+    border: 1px solid color-mix(in srgb, var(--accent-2) 24%, transparent);
+    box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .session-summary-head {
@@ -4866,8 +5046,8 @@ html[data-theme="light"] .tag-CORE {
     width: 34px;
     height: 34px;
     border-radius: 10px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.04);
+    border: 1px solid color-mix(in srgb, var(--accent-2) 14%, transparent);
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
     color: var(--text-dim);
     font: inherit;
     font-size: 20px;
@@ -4886,17 +5066,17 @@ html[data-theme="light"] .tag-CORE {
 }
 
 .session-summary-stat {
-    padding: 10px 8px;
+    padding: 11px 8px;
     border-radius: 13px;
-    background: rgba(255,255,255,0.045);
-    border: 1px solid rgba(255,255,255,0.055);
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-2) 12%, transparent);
     text-align: center;
     min-width: 0;
 }
 
 .sss-num {
     display: block;
-    font-size: 18px;
+    font-size: 19px;
     font-weight: 900;
     color: var(--text-main);
     font-variant-numeric: tabular-nums;
@@ -4916,8 +5096,8 @@ html[data-theme="light"] .tag-CORE {
 .session-pr-box {
     padding: 12px;
     border-radius: 14px;
-    background: color-mix(in srgb, var(--warning, #f59e0b) 9%, transparent);
-    border: 1px solid color-mix(in srgb, var(--warning, #f59e0b) 24%, transparent);
+    background: color-mix(in srgb, var(--warning, #f59e0b) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--warning, #f59e0b) 22%, transparent);
 }
 
 .session-pr-head {
@@ -4925,7 +5105,7 @@ html[data-theme="light"] .tag-CORE {
     font-weight: 900;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: #fbbf24;
+    color: color-mix(in srgb, var(--warning, #f59e0b) 82%, var(--text-main));
     margin-bottom: 8px;
 }
 
@@ -4935,7 +5115,7 @@ html[data-theme="light"] .tag-CORE {
     align-items: center;
     gap: 8px;
     padding: 6px 0;
-    border-top: 1px solid rgba(255,255,255,0.06);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .session-pr-row:first-of-type { border-top: none; }
@@ -4968,11 +5148,20 @@ html[data-theme="light"] .tag-CORE {
 .session-pr-empty {
     padding: 10px 12px;
     border-radius: 12px;
-    background: rgba(255,255,255,0.04);
+    background: color-mix(in srgb, var(--accent) 5%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-2) 10%, transparent);
     color: var(--text-dim);
     font-size: 12px;
     font-weight: 700;
     text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .session-start-btn,
+    .workout-session-timer.running .wst-label::before {
+        animation: none;
+        transition: none;
+    }
 }
 
 @media (min-width: 560px) {
@@ -4984,14 +5173,17 @@ html[data-theme="light"] .tag-CORE {
     margin: 0 0 18px;
     padding: 8px 8px 0;
     border-radius: 24px;
-    border: 1px dashed color-mix(in srgb, var(--accent-2) 30%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-2) 22%, transparent);
     background:
-        linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 42%);
+        radial-gradient(circle at 14% 0%, color-mix(in srgb, var(--accent-2) 9%, transparent), transparent 42%),
+        color-mix(in srgb, var(--accent) 4%, var(--card-bg));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .superset-group .exercise-card {
     margin-bottom: 10px;
-    background: color-mix(in srgb, var(--card-bg) 92%, var(--accent) 8%);
+    background: var(--card-bg);
+    border-color: color-mix(in srgb, var(--accent-2) 12%, transparent);
 }
 
 .superset-group .exercise-card:last-child { margin-bottom: 8px; }
@@ -5007,9 +5199,9 @@ html[data-theme="light"] .tag-CORE {
 .superset-pill {
     padding: 4px 9px;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--accent-2) 18%, transparent);
-    border: 1px solid color-mix(in srgb, var(--accent-2) 36%, transparent);
-    color: var(--accent-2);
+    background: color-mix(in srgb, var(--accent-2) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-2) 28%, transparent);
+    color: color-mix(in srgb, var(--accent-2) 76%, var(--text-main));
     font-size: 9px;
     font-weight: 900;
     letter-spacing: 0.08em;
@@ -5033,9 +5225,9 @@ html[data-theme="light"] .tag-CORE {
     flex-shrink: 0;
     padding: 3px 7px;
     border-radius: 7px;
-    background: color-mix(in srgb, var(--accent-2) 14%, transparent);
-    border: 1px solid color-mix(in srgb, var(--accent-2) 30%, transparent);
-    color: var(--accent-2);
+    background: color-mix(in srgb, var(--accent-2) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-2) 26%, transparent);
+    color: color-mix(in srgb, var(--accent-2) 76%, var(--text-main));
     font-size: 10px;
     font-weight: 900;
     letter-spacing: 0.03em;
@@ -5048,7 +5240,7 @@ html[data-theme="light"] .tag-CORE {
     border-radius: 999px;
     background: color-mix(in srgb, var(--success) 14%, transparent);
     border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
-    color: color-mix(in srgb, var(--success) 75%, white);
+    color: color-mix(in srgb, var(--success) 76%, var(--text-main));
     font-size: 9px;
     font-weight: 900;
     letter-spacing: 0.05em;
@@ -5092,10 +5284,12 @@ html[data-theme="light"] .tag-CORE {
 
 .toast.toast-pr {
     background:
-        radial-gradient(circle at 6% 0%, rgba(251,191,36,0.2), transparent 52%),
+        radial-gradient(circle at 6% 0%, color-mix(in srgb, var(--warning) 20%, transparent), transparent 52%),
         var(--card-bg);
-    border-color: rgba(251,191,36,0.38);
-    box-shadow: 0 14px 38px rgba(0,0,0,0.42), 0 0 0 1px rgba(251,191,36,0.08);
+    border-color: color-mix(in srgb, var(--warning) 38%, transparent);
+    box-shadow:
+        0 14px 38px rgba(0, 0, 0, 0.42),
+        0 0 0 1px color-mix(in srgb, var(--warning) 8%, transparent);
     text-align: left;
 }
 
@@ -5144,29 +5338,44 @@ html[data-theme="light"] .tag-CORE {
     z-index: 450;
 }
 
-/* Jasny motyw – delikatniejsze tła nowych kart */
+/* Jasny motyw — delikatniejsze tła nowych kart */
+html[data-theme="light"] .session-start-card,
+html[data-theme="light"] .workout-session-row,
 html[data-theme="light"] .session-summary-card {
-    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.10);
 }
 
 html[data-theme="light"] .session-summary-stat,
 html[data-theme="light"] .session-pr-empty,
 html[data-theme="light"] .workout-session-btn {
-    background: rgba(15, 23, 42, 0.04);
-    border-color: rgba(15, 23, 42, 0.09);
+    background: color-mix(in srgb, var(--accent) 6%, #fff);
+    border-color: color-mix(in srgb, var(--accent-2) 18%, transparent);
 }
 
 html[data-theme="light"] .session-pr-row {
     border-top-color: rgba(15, 23, 42, 0.09);
 }
 
-html[data-theme="light"] .workout-session-btn.finish {
-    background: rgba(16, 185, 129, 0.12);
+html[data-theme="light"] .session-start-kicker {
+    color: var(--accent);
+}
+
+html[data-theme="light"] .workout-session-timer.done .workout-session-ico,
+html[data-theme="light"] .workout-session-timer.done .wst-time,
+html[data-theme="light"] .session-summary-kicker,
+html[data-theme="light"] .session-pr-gain,
+html[data-theme="light"] .ss-next-badge {
     color: #047857;
 }
 
-html[data-theme="light"] .ss-next-badge {
+html[data-theme="light"] .workout-session-btn.finish {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.28);
     color: #047857;
+}
+
+html[data-theme="light"] .set-row.superset-target .set-pill {
+    background: #047857;
 }
 
 html[data-theme="light"] .toast.toast-pr {
