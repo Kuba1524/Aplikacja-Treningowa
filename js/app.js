@@ -258,7 +258,7 @@ const buildKubaHistoricalPlan = (weekStart, weekData = {}) => {
 
 let DAYS = PLAN_BARTEK;
 let CURRENT_PLAN = PLAN_BARTEK;
-const APP_VERSION = "v90";
+const APP_VERSION = "v91";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -528,6 +528,149 @@ const seedWeekFromPrevious = (prevWeek = {}, prevPlan = [], newPlan = [], curren
     return out;
 };
 
+const collectWeekHistory = (idx) => {
+    const history = [];
+    for (let wi = idx - 1; wi >= 0; wi -= 1) {
+        const weekPlan = state.weekPlans && state.weekPlans[wi];
+        if (!Array.isArray(weekPlan) || !weekPlan.length) continue;
+        history.push({
+            weekPlan,
+            week: state.weeks[wi] || {}
+        });
+    }
+    return history;
+};
+
+const findExerciseHistory = (day, ex, history) => {
+    const nameKey = exerciseNameKey(ex.name);
+    const matches = [];
+
+    history.forEach(({ weekPlan, week }) => {
+        const oldDay = (weekPlan || []).find((d) => d && d.id === day.id);
+        if (!oldDay) return;
+
+        const oldIdx = (oldDay.exercises || []).findIndex(
+            (oldEx) => exerciseNameKey(oldEx && oldEx.name) === nameKey
+        );
+        if (oldIdx < 0) return;
+
+        const fromKey = getExerciseKey(day.id, oldIdx);
+        const sets = week[fromKey];
+        if (Array.isArray(sets)) {
+            matches.push({
+                sets,
+                note: week[fromKey + "_note"]
+            });
+        }
+    });
+
+    return matches;
+};
+
+// Wybieramy jeden spójny trening: najpierw taki, w którym wszystkie serie
+// mają zapisane powtórzenia. Dzięki temu nie mieszamy ciężaru z jednego
+// tygodnia z powtórzeniami z innego.
+const pickHistorySource = (matches, setCount) => {
+    if (!matches.length) return null;
+
+    const count = Math.max(1, Number(setCount) || 0);
+    const complete = matches.find((entry) => (
+        Array.from({ length: count }, (_, si) => entry.sets[si])
+            .every((set) => set && Number(set.reps) > 0)
+    ));
+    if (complete) return complete;
+
+    let best = null;
+    let bestScore = -1;
+    matches.forEach((entry) => {
+        let score = 0;
+        for (let si = 0; si < count; si += 1) {
+            if (entry.sets[si] && Number(entry.sets[si].reps) > 0) score += 1;
+        }
+        if (score > bestScore) {
+            bestScore = score;
+            best = entry;
+        }
+    });
+    return best;
+};
+
+const legacyHistoryValue = (matches, si) => {
+    for (const entry of matches) {
+        const candidate = entry.sets[si];
+        if (candidate && Number(candidate.reps) > 0) return candidate;
+    }
+    for (const entry of matches) {
+        const candidate = entry.sets[si];
+        if (candidate && Number(candidate.kg) > 0) return candidate;
+    }
+    return null;
+};
+
+// Poprawia wartości wpisane przez pierwszą wersję uzupełniania (v90), która
+// mogła wziąć ciężar i powtórzenia z różnych tygodni. Naprawiamy tylko serie
+// nietknięte przez użytkownika i tylko wtedy, gdy nadal mają wartości z v90.
+const repairBartekSeededV1 = () => {
+    const idx = state.currentWeekIndex;
+    if (idx <= 0 || !state.weeks || !state.weeks[idx]) return;
+
+    const currentWeek = state.weeks[idx] || {};
+    const plan = getWeekPlan(idx);
+    const history = collectWeekHistory(idx);
+    if (!history.length) return;
+
+    const out = { ...currentWeek };
+
+    (plan || []).forEach((day) => {
+        (day.exercises || []).forEach((ex, ei) => {
+            const toKey = getExerciseKey(day.id, ei);
+            const currentSets = out[toKey];
+            if (!Array.isArray(currentSets) || !currentSets.length) return;
+            if (currentSets.some((set) => set && set.done)) return;
+
+            const matches = findExerciseHistory(day, ex, history);
+            if (!matches.length) return;
+
+            const source = pickHistorySource(matches, Number(ex.sets) || currentSets.length);
+            if (!source) return;
+
+            const setCount = Math.max(currentSets.length, Number(ex.sets) || 0);
+            const legacy = Array.from(
+                { length: setCount },
+                (_, si) => legacyHistoryValue(matches, si) || {}
+            );
+            const matchesLegacy = currentSets.every((set, si) => {
+                const cur = set || {};
+                return (Number(cur.kg) || 0) === (Number(legacy[si].kg) || 0)
+                    && (Number(cur.reps) || 0) === (Number(legacy[si].reps) || 0);
+            });
+            if (!matchesLegacy) return;
+
+            let changed = false;
+            const repaired = currentSets.map((set, si) => {
+                const cur = set || { kg: 0, reps: 0, done: false };
+                const old = legacy[si] || {};
+                const next = source.sets[si] || {};
+                const curKg = Number(cur.kg) || 0;
+                const curReps = Number(cur.reps) || 0;
+                const oldKg = Number(old.kg) || 0;
+                const oldReps = Number(old.reps) || 0;
+                const nextKg = Number(next.kg) || 0;
+                const nextReps = Number(next.reps) || 0;
+                const kg = curKg === oldKg ? nextKg : curKg;
+                const reps = curReps === oldReps ? nextReps : curReps;
+
+                if (kg !== curKg || reps !== curReps) changed = true;
+                return { ...cur, kg, reps };
+            });
+
+            if (changed) out[toKey] = repaired;
+        });
+    });
+
+    state.weeks[idx] = out;
+};
+
 // Jednorazowe dopełnienie bieżącego tygodnia Bartka. Szukamy ostatnich
 // zapisanych serii tego samego ćwiczenia w jego historii, ale tylko uzupełniamy
 // brakujące kilogramy/powtórzenia. Istniejących wpisów nie nadpisujemy.
@@ -537,17 +680,7 @@ const seedCurrentWeekFromHistory = () => {
 
     const currentWeek = state.weeks[idx] || {};
     const plan = getWeekPlan(idx);
-    const history = [];
-
-    for (let wi = idx - 1; wi >= 0; wi -= 1) {
-        const weekPlan = state.weekPlans && state.weekPlans[wi];
-        if (!Array.isArray(weekPlan) || !weekPlan.length) continue;
-        history.push({
-            weekPlan,
-            week: state.weeks[wi] || {}
-        });
-    }
-
+    const history = collectWeekHistory(idx);
     if (!history.length) return;
 
     const out = { ...currentWeek };
@@ -556,64 +689,29 @@ const seedCurrentWeekFromHistory = () => {
         (day.exercises || []).forEach((ex, ei) => {
             const toKey = getExerciseKey(day.id, ei);
             const currentSets = Array.isArray(out[toKey]) ? out[toKey] : [];
-            const nameKey = exerciseNameKey(ex.name);
-            const matches = [];
-
-            history.forEach(({ weekPlan, week }) => {
-                const oldDay = (weekPlan || []).find((d) => d && d.id === day.id);
-                if (!oldDay) return;
-
-                const oldIdx = (oldDay.exercises || []).findIndex(
-                    (oldEx) => exerciseNameKey(oldEx && oldEx.name) === nameKey
-                );
-                if (oldIdx < 0) return;
-
-                const fromKey = getExerciseKey(day.id, oldIdx);
-                const sets = week[fromKey];
-                if (Array.isArray(sets)) {
-                    matches.push({
-                        sets,
-                        note: week[fromKey + "_note"]
-                    });
-                }
-            });
-
+            const matches = findExerciseHistory(day, ex, history);
             if (!matches.length) return;
+
+            const source = pickHistorySource(
+                matches,
+                Number(ex.sets) || currentSets.length || 1
+            );
+            if (!source) return;
 
             const targetCount = Math.max(
                 Number(ex.sets) || 0,
                 currentSets.length,
-                ...matches.map((entry) => entry.sets.length)
+                source.sets.length
             );
 
             let changed = false;
             const merged = Array.from({ length: targetCount }, (_, si) => {
                 const cur = currentSets[si] || { kg: 0, reps: 0, done: false };
-                let source = null;
-
-                // Najpierw szukamy ostatniej serii z zapisanymi powtórzeniami,
-                // żeby nie kopiować pustych wpisów (0 powtórzeń).
-                for (const entry of matches) {
-                    const candidate = entry.sets[si];
-                    if (candidate && Number(candidate.reps) > 0) {
-                        source = candidate;
-                        break;
-                    }
-                }
-                if (!source) {
-                    for (const entry of matches) {
-                        const candidate = entry.sets[si];
-                        if (candidate && Number(candidate.kg) > 0) {
-                            source = candidate;
-                            break;
-                        }
-                    }
-                }
-
+                const src = source.sets[si] || {};
                 const curKg = Number(cur.kg) || 0;
                 const curReps = Number(cur.reps) || 0;
-                const kg = curKg > 0 ? curKg : Number(source && source.kg) || 0;
-                const reps = curReps > 0 ? curReps : Number(source && source.reps) || 0;
+                const kg = curKg > 0 ? curKg : Number(src.kg) || 0;
+                const reps = curReps > 0 ? curReps : Number(src.reps) || 0;
                 const done = !!cur.done;
 
                 if (kg !== curKg || reps !== curReps) changed = true;
@@ -622,9 +720,8 @@ const seedCurrentWeekFromHistory = () => {
 
             if (changed) out[toKey] = merged;
 
-            if (!currentWeek[toKey + "_note"]) {
-                const noteEntry = matches.find((entry) => entry.note);
-                if (noteEntry) out[toKey + "_note"] = noteEntry.note;
+            if (!currentWeek[toKey + "_note"] && source.note) {
+                out[toKey + "_note"] = source.note;
             }
         });
     });
@@ -704,8 +801,9 @@ const seedCurrentWeekFromPrevious = () => {
     if (!state.migrations) return;
 
     if (currentPlanKey === "bartek") {
-        if (state.migrations["bartek_week_seed_v1"]) return;
-        state.migrations["bartek_week_seed_v1"] = true;
+        if (state.migrations["bartek_week_seed_v2"]) return;
+        if (state.migrations["bartek_week_seed_v1"]) repairBartekSeededV1();
+        state.migrations["bartek_week_seed_v2"] = true;
         seedCurrentWeekFromHistory();
         return;
     }

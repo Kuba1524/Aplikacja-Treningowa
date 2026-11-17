@@ -4,6 +4,8 @@ import { describe, it, expect, beforeAll } from "vitest";
 const BARTEK_ID = "user_u2x8glbug_1787607478584";
 
 const set = (kg, reps, count) => Array.from({ length: count }, () => ({ kg, reps, done: true }));
+const customSets = (rows) => rows.map(([kg, reps]) => ({ kg, reps, done: true }));
+const mixedSets = (rows) => rows.map(([kg, reps]) => ({ kg, reps, done: false }));
 const ex = (name, sets = 3, reps = "8-12", tag = "CORE") => ({ name, sets, reps, tag });
 
 const oldPlan = () => [
@@ -103,7 +105,16 @@ const setupStorage = () => {
         d1_e0: set(20, 5, 3),
         d1_e5: set(30, 13, 3),
         d3_e1: set(7.5, 12, 3),
-        d3_e5: set(16, 9, 3),
+        // Ciężar bez powtórzeń, tak jak w danych Bartka.
+        d3_e5: customSets([[16, 0], [16, 0], [16, 0]]),
+    };
+
+    // Starsze wpisy pokazują, skąd v90 wzięła mieszane wartości.
+    weeks[21] = {
+        d3_e5: customSets([[9, 10], [0, 0], [0, 0]]),
+    };
+    weeks[5] = {
+        d3_e5: customSets([[16, 9], [16, 10], [16, 10]]),
     };
 
     // Bieżący tydzień (15.11) ma już wpisane serie w starym układzie.
@@ -125,6 +136,8 @@ const setupStorage = () => {
         d2_e7: set(70, 11, 4),
         d3_e0: set(90, 7, 3),
         d3_e2: set(30, 9, 3),
+        // Wartości pozostawione przez v90 (mieszany ciężar z różnych tygodni).
+        d3_e5: mixedSets([[9, 10], [16, 10], [16, 10]]),
     };
 
     // Istniejący przyszły tydzień też ma dostać nowy plan.
@@ -138,7 +151,9 @@ const setupStorage = () => {
         startSunday,
         weeks,
         bodyWeight: [],
-        migrations: {},
+        migrations: {
+            bartek_week_seed_v1: true,
+        },
         customPlan: oldPlan().reduce((acc, day) => {
             acc[day.id] = day.exercises.map((exercise) => ({ ...exercise, rest: 105 }));
             return acc;
@@ -149,6 +164,8 @@ const setupStorage = () => {
         weekSchedule: {},
         // Brak snapshotu 25 sprawdza, że uzupełniamy go starym planem.
         weekPlans: {
+            5: oldPlan(),
+            21: oldPlan(),
             26: oldPlan(),
             27: oldPlan(),
             28: oldPlan(),
@@ -272,12 +289,16 @@ describe("Bartek dostaje ćwiczenia Kuby od bieżącego tygodnia", () => {
     });
 
     it("uzupełnia brakujące ciężary i powtórzenia z historii Bartka", () => {
-        expect(saved.migrations.bartek_week_seed_v1).toBe(true);
+        expect(saved.migrations.bartek_week_seed_v2).toBe(true);
 
         // Puste pola dostały wartości z ostatniego zapisanego treningu.
         expect(saved.weeks[27].d1_e0[0]).toMatchObject({ kg: 20, reps: 5, done: false });
         expect(saved.weeks[27].d3_e1[0]).toMatchObject({ kg: 7.5, reps: 12, done: false });
-        expect(saved.weeks[27].d3_e5[0]).toMatchObject({ kg: 16, reps: 9, done: false });
+        expect(saved.weeks[27].d3_e5).toEqual([
+            { kg: 16, reps: 9, done: false },
+            { kg: 16, reps: 10, done: false },
+            { kg: 16, reps: 10, done: false },
+        ]);
 
         // Istniejący wpis z bieżącego tygodnia nie został nadpisany historią.
         expect(saved.weeks[27].d1_e4[0]).toMatchObject({ kg: 30, reps: 12, done: true });
