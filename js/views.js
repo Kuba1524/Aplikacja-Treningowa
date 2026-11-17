@@ -11,6 +11,26 @@ window.Views = (() => {
     let historyFilter = "all";
     let historyLimit = 12;
 
+    const closeHistoryPicker = () => {
+        const picker = document.querySelector(".history-picker.open");
+        if (!picker) return;
+        picker.classList.remove("open");
+        const trigger = picker.querySelector("[data-history-picker-trigger]");
+        if (trigger) trigger.setAttribute("aria-expanded", "false");
+        const popover = picker.querySelector("[data-history-picker-popover]");
+        if (popover) popover.hidden = true;
+    };
+
+    document.addEventListener("click", (event) => {
+        const picker = document.querySelector(".history-picker.open");
+        if (!picker) return;
+        if (!picker.contains(event.target)) closeHistoryPicker();
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeHistoryPicker();
+    });
+
     let libReady = false;
     let libError = false;
     let libQuery = "";
@@ -1202,6 +1222,43 @@ window.Views = (() => {
                   );
         const visibleSessions = filteredSessions.slice(0, historyLimit);
 
+        const selectedOption =
+            activeFilterKey === "all"
+                ? null
+                : filterOptions.find(
+                      (option) => filterKey(option.name) === activeFilterKey
+                  );
+        const selectedName = selectedOption
+            ? selectedOption.name
+            : "Wszystkie ćwiczenia";
+        const selectedCount = selectedOption ? selectedOption.count : sessions.length;
+        const selectedMeta = `${selectedCount} ${plural(
+            selectedCount,
+            "sesja",
+            "sesje",
+            "sesji"
+        )}`;
+        const headerSub = sessions.length
+            ? activeFilterKey === "all"
+                ? `${sessions.length} ${plural(
+                      sessions.length,
+                      "sesja",
+                      "sesje",
+                      "sesji"
+                  )} · ${filterOptions.length} ${plural(
+                      filterOptions.length,
+                      "ćwiczenie",
+                      "ćwiczenia",
+                      "ćwiczeń"
+                  )}`
+                : `${filteredSessions.length} ${plural(
+                      filteredSessions.length,
+                      "sesja",
+                      "sesje",
+                      "sesji"
+                  )} · ${selectedName}`
+            : "Tu pojawią się Twoje ukończone treningi";
+
         const formatSet = (set) => {
             if (!set) return "—";
             const kg = Number(set.kg) || 0;
@@ -1367,28 +1424,109 @@ window.Views = (() => {
             `;
         };
 
+        const pickerOptions = [
+            {
+                name: "Wszystkie ćwiczenia",
+                value: "all",
+                count: sessions.length,
+                active: activeFilterKey === "all"
+            },
+            ...filterOptions.map((option) => ({
+                name: option.name,
+                value: option.name,
+                count: option.count,
+                active: filterKey(option.name) === activeFilterKey
+            }))
+        ];
+        const pickerOptionsHtml = pickerOptions
+            .map(
+                (option) => `
+                    <button
+                        type="button"
+                        class="history-picker-option ${option.active ? "active" : ""}"
+                        data-history-exercise="${
+                            option.value === "all"
+                                ? "all"
+                                : U.escapeHtml(option.value)
+                        }"
+                        role="option"
+                        aria-selected="${option.active ? "true" : "false"}"
+                    >
+                        <span class="history-picker-check" aria-hidden="true">${
+                            option.active ? "✓" : ""
+                        }</span>
+                        <span class="history-picker-option-main">
+                            <span class="history-picker-option-name">${U.escapeHtml(
+                                option.name
+                            )}</span>
+                            <span class="history-picker-option-meta">${option.count} ${plural(
+                                option.count,
+                                "sesja",
+                                "sesje",
+                                "sesji"
+                            )}</span>
+                        </span>
+                    </button>
+                `
+            )
+            .join("");
+
         const filtersHtml = sessions.length
             ? `
-                <div class="history-filter-bar">
-                    <label class="history-filter-label" for="history-exercise-select">Ćwiczenie</label>
-                    <div class="history-select-wrap">
-                        <select id="history-exercise-select" class="history-select">
-                            <option value="all" ${
-                                activeFilterKey === "all" ? "selected" : ""
-                            }>Wszystkie ćwiczenia</option>
-                            ${filterOptions
-                                .map(
-                                    (option) =>
-                                        `<option value="${U.escapeHtml(
-                                            option.name
-                                        )}" ${
-                                            filterKey(option.name) === activeFilterKey
-                                                ? "selected"
-                                                : ""
-                                        }>${U.escapeHtml(option.name)} (${option.count})</option>`
-                                )
-                                .join("")}
-                        </select>
+                <div class="history-filter-card">
+                    <div class="history-filter-head">
+                        <div class="history-filter-heading">
+                            <span class="history-filter-kicker">Historia ćwiczeń</span>
+                            <span class="history-filter-sub">${
+                                activeFilterKey === "all"
+                                    ? "Filtruj sesje po wybranym ćwiczeniu"
+                                    : `Filtr: ${U.escapeHtml(selectedName)}`
+                            }</span>
+                        </div>
+                        <button type="button" class="history-filter-clear" data-history-clear ${
+                            activeFilterKey === "all" ? "hidden" : ""
+                        }>Wyczyść</button>
+                    </div>
+
+                    <div class="history-picker" data-history-picker>
+                        <button
+                            type="button"
+                            class="history-picker-trigger"
+                            data-history-picker-trigger
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                        >
+                            <span class="history-picker-icon">${iconFor("💪")}</span>
+                            <span class="history-picker-value">
+                                <span class="history-picker-name">${U.escapeHtml(
+                                    selectedName
+                                )}</span>
+                                <span class="history-picker-meta">${selectedMeta}</span>
+                            </span>
+                            <span class="history-picker-chevron" aria-hidden="true">⌄</span>
+                        </button>
+
+                        <div class="history-picker-popover" data-history-picker-popover hidden>
+                            <div class="history-picker-search">
+                                <span class="history-picker-search-ico">${miscIcon(
+                                    "search"
+                                )}</span>
+                                <input
+                                    type="search"
+                                    class="history-picker-search-input"
+                                    data-history-picker-search
+                                    placeholder="Szukaj ćwiczenia..."
+                                    aria-label="Szukaj ćwiczenia"
+                                    autocomplete="off"
+                                />
+                            </div>
+                            <div class="history-picker-list" role="listbox" aria-label="Wybierz ćwiczenie">
+                                ${pickerOptionsHtml}
+                            </div>
+                            <div class="history-picker-empty" data-history-picker-empty hidden>
+                                Brak pasującego ćwiczenia
+                            </div>
+                        </div>
                     </div>
                 </div>
             `
@@ -1427,21 +1565,7 @@ window.Views = (() => {
                     </button>
                     <div class="fullplan-top-info">
                         <div class="header-title">Historia</div>
-                        <div class="header-sub">${
-                            sessions.length
-                                ? `${sessions.length} ${plural(
-                                      sessions.length,
-                                      "sesja",
-                                      "sesje",
-                                      "sesji"
-                                  )} · ${filterOptions.length} ${plural(
-                                      filterOptions.length,
-                                      "ćwiczenie",
-                                      "ćwiczenia",
-                                      "ćwiczeń"
-                                  )}`
-                                : "Tu pojawią się Twoje ukończone treningi"
-                        }</div>
+                        <div class="header-sub">${headerSub}</div>
                     </div>
                 </div>
 
@@ -1451,10 +1575,65 @@ window.Views = (() => {
             </div>
         `;
 
-        const filterSelect = screen.querySelector("#history-exercise-select");
-        if (filterSelect) {
-            filterSelect.addEventListener("change", () => {
-                historyFilter = filterSelect.value || "all";
+        const picker = screen.querySelector("[data-history-picker]");
+        const pickerTrigger = picker?.querySelector("[data-history-picker-trigger]");
+        const pickerPopover = picker?.querySelector("[data-history-picker-popover]");
+        const pickerSearch = picker?.querySelector("[data-history-picker-search]");
+        const pickerOptionEls = Array.from(
+            picker?.querySelectorAll("[data-history-exercise]") || []
+        );
+        const pickerEmpty = picker?.querySelector("[data-history-picker-empty]");
+
+        const setPickerOpen = (open) => {
+            if (!picker || !pickerTrigger || !pickerPopover) return;
+            picker.classList.toggle("open", open);
+            pickerTrigger.setAttribute("aria-expanded", open ? "true" : "false");
+            pickerPopover.hidden = !open;
+            if (open && pickerSearch) {
+                pickerSearch.value = "";
+                pickerOptionEls.forEach((option) => {
+                    option.hidden = false;
+                });
+                if (pickerEmpty) pickerEmpty.hidden = true;
+                pickerSearch.focus();
+            }
+        };
+
+        const filterPickerOptions = () => {
+            if (!pickerSearch) return;
+            const query = pickerSearch.value.trim().toLocaleLowerCase("pl");
+            let visible = 0;
+            pickerOptionEls.forEach((option) => {
+                const name =
+                    option.querySelector(".history-picker-option-name")
+                        ?.textContent || "";
+                const match =
+                    !query || name.toLocaleLowerCase("pl").includes(query);
+                option.hidden = !match;
+                if (match) visible += 1;
+            });
+            if (pickerEmpty) pickerEmpty.hidden = visible > 0;
+        };
+
+        pickerTrigger?.addEventListener("click", () => {
+            setPickerOpen(!picker.classList.contains("open"));
+        });
+        pickerSearch?.addEventListener("input", filterPickerOptions);
+
+        pickerOptionEls.forEach((option) => {
+            option.addEventListener("click", () => {
+                const value = option.dataset.historyExercise;
+                historyFilter = value && value !== "all" ? value : "all";
+                historyLimit = 12;
+                setPickerOpen(false);
+                renderHistory(ctx);
+            });
+        });
+
+        const clearButton = screen.querySelector("[data-history-clear]");
+        if (clearButton) {
+            clearButton.addEventListener("click", () => {
+                historyFilter = "all";
                 historyLimit = 12;
                 renderHistory(ctx);
             });

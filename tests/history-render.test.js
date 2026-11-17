@@ -190,7 +190,10 @@ describe("renderHistory", () => {
         expect(screen.textContent).not.toContain("1390 kg");
         expect(screen.querySelector(".history-summary")).toBeNull();
         expect(screen.querySelectorAll("details.history-session")).toHaveLength(3);
-        expect(screen.querySelectorAll("#history-exercise-select option")).toHaveLength(5);
+        expect(screen.querySelectorAll(".history-picker-option")).toHaveLength(5);
+        expect(screen.querySelector(".history-filter-kicker").textContent).toBe(
+            "Historia ćwiczeń"
+        );
         expect(screen.querySelector(".history-details-title").textContent).toBe(
             "Szczegóły sesji"
         );
@@ -220,15 +223,34 @@ describe("renderHistory", () => {
         window.Views.renderHistory(makeCtx(state));
 
         const screen = document.getElementById("screen-history");
-        const select = screen.querySelector("#history-exercise-select");
-        select.value = "RDL";
-        select.dispatchEvent(new Event("change"));
+        const option = screen.querySelector('[data-history-exercise="RDL"]');
+        option.click();
 
         expect(screen.querySelectorAll(".history-session")).toHaveLength(1);
         expect(screen.querySelector(".history-session").textContent).toContain("RDL");
         expect(screen.querySelector(".history-session").textContent).not.toContain(
             "Weighted Pull Ups"
         );
+    });
+
+    it("opens the exercise picker and searches options", () => {
+        const state = makeState();
+        window.Views.renderHistory(makeCtx(state));
+
+        const screen = document.getElementById("screen-history");
+        screen.querySelector("[data-history-picker-trigger]").click();
+        const popover = screen.querySelector("[data-history-picker-popover]");
+        expect(popover.hidden).toBe(false);
+
+        const search = screen.querySelector("[data-history-picker-search]");
+        search.value = "rdl";
+        search.dispatchEvent(new Event("input"));
+
+        const visible = Array.from(
+            screen.querySelectorAll(".history-picker-option")
+        ).filter((option) => !option.hidden);
+        expect(visible).toHaveLength(1);
+        expect(visible[0].textContent).toContain("RDL");
     });
 
     it("merges exercise names that differ only by letter case", () => {
@@ -245,16 +267,19 @@ describe("renderHistory", () => {
         window.Views.renderHistory(makeCtx(state));
 
         const screen = document.getElementById("screen-history");
-        const select = screen.querySelector("#history-exercise-select");
-        const rdlOptions = Array.from(select.options).filter((option) =>
-            /^rdl/i.test(option.textContent)
+        const rdlOptions = Array.from(
+            screen.querySelectorAll(".history-picker-option")
+        ).filter((option) =>
+            /^rdl/i.test(
+                option.querySelector(".history-picker-option-name")?.textContent ||
+                    ""
+            )
         );
 
         expect(rdlOptions).toHaveLength(1);
-        expect(rdlOptions[0].textContent).toContain("(2)");
+        expect(rdlOptions[0].textContent).toContain("2 sesje");
 
-        select.value = rdlOptions[0].value;
-        select.dispatchEvent(new Event("change"));
+        rdlOptions[0].click();
 
         expect(screen.querySelectorAll(".history-session")).toHaveLength(2);
     });
