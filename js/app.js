@@ -1,4 +1,4 @@
-const PLAN_BARTEK = [
+const PLAN_BARTEK_V1 = [
     {
         id: 0,
         weekday: 0,
@@ -70,11 +70,13 @@ const PLAN_BARTEK = [
     }
 ];
 
-const makeKubaPlan = (days) =>
-    PLAN_BARTEK.map((day, idx) => ({
+const makePlan = (baseDays, days) =>
+    baseDays.map((day, idx) => ({
         ...day,
         exercises: (days[idx] || []).map((ex) => ({ ...ex }))
     }));
+
+const makeKubaPlan = (days) => makePlan(PLAN_BARTEK_V1, days);
 
 // PUSH i UPPER z planu v3 zostają bez zmian również w v5.
 const KUBA_PUSH_V3 = [
@@ -84,7 +86,7 @@ const KUBA_PUSH_V3 = [
     { name: "Chest Dips", sets: 2, reps: "6-10", tag: "CHEST" },
     { name: "Dumbbell Lateral Raises", sets: 3, reps: "8-12", tag: "SHOULDER" },
     { name: "Ab Wheel", sets: 3, reps: "8-12", tag: "CORE" },
-    { name: "Dragon Flag (negatywy)", sets: 2, reps: "8-12", tag: "CORE" }
+    { name: "Dragon Flag (negatives)", sets: 2, reps: "8-12", tag: "CORE" }
 ];
 const KUBA_UPPER_V3 = [
     { name: "Bench Press", sets: 3, reps: "5-8", tag: "CHEST" },
@@ -110,7 +112,7 @@ const KUBA_PULL = [
     { name: "Barbell Wrist Curl", sets: 3, reps: "10-15", tag: "FOREARMS" }
 ];
 const KUBA_LEGS = [
-    { name: "RDL (sztanga)", sets: 3, reps: "6-10", tag: "HAM" },
+    { name: "RDL", sets: 3, reps: "6-10", tag: "HAM" },
     { name: "Hack Squat / Leg Press", sets: 3, reps: "6-10", tag: "QUADS" },
     { name: "Leg Extension", sets: 3, reps: "10-12", tag: "QUADS" },
     { name: "Seated Leg Curl", sets: 3, reps: "8-12", tag: "HAM" },
@@ -122,6 +124,18 @@ const KUBA_LEGS = [
 const KUBA_UPPER = KUBA_UPPER_V3.map((ex) => ({ ...ex }));
 
 const PLAN_KUBA = makeKubaPlan([KUBA_PUSH, KUBA_PULL, KUBA_LEGS, KUBA_UPPER]);
+
+// Od 15.11.2026 Bartek ma dokładnie te same ćwiczenia co Kuba. Wcześniejsze
+// tygodnie zostają na jego starym planie dzięki zamrożonym snapshotom.
+const PLAN_BARTEK = makePlan(PLAN_BARTEK_V1, [KUBA_PUSH, KUBA_PULL, KUBA_LEGS, KUBA_UPPER]);
+PLAN_BARTEK.forEach((day) => {
+    day.exercises = day.exercises.map((ex) => ({
+        ...ex,
+        rest: Number(ex.rest) > 0
+            ? Number(ex.rest)
+            : window.Utils.defaultRestSeconds(ex.reps)
+    }));
+});
 
 // Plan Kuby sprzed zmiany (obowiązywał do tygodnia z 8.11.2026).
 // Trzymamy go zamrożonego, żeby stare tygodnie dalej pokazywały swoje ćwiczenia.
@@ -140,6 +154,9 @@ const KUBA_LEGS_V1 = [
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const KUBA_PLAN_V3_START = new Date(2026, 10, 8, 0, 0, 0, 0).getTime();
 const KUBA_PLAN_V5_START = KUBA_PLAN_V3_START;
+// Od tego tygodnia Bartek ćwiczy to samo co Kuba. Wcześniejsze tygodnie
+// pozostają bez zmian, a bieżący i kolejne dostają nowy plan od razu.
+const BARTEK_PLAN_V2_START = new Date(2026, 10, 15, 0, 0, 0, 0).getTime();
 
 // Granice wcześniejszych zmian planu Kuby (odtworzone z historii i z danych):
 // - do 16.08.2026 wiosłowania miały po 4 serie,
@@ -220,10 +237,10 @@ const buildKubaHistoricalPlan = (weekStart, weekData = {}) => {
     ];
 
     const plan = [
-        { ...PLAN_BARTEK[0], exercises: day0 },
-        { ...PLAN_BARTEK[1], exercises: day1 },
-        { ...PLAN_BARTEK[2], exercises: day2 },
-        { ...PLAN_BARTEK[3], exercises: day3 }
+        { ...PLAN_BARTEK_V1[0], exercises: day0 },
+        { ...PLAN_BARTEK_V1[1], exercises: day1 },
+        { ...PLAN_BARTEK_V1[2], exercises: day2 },
+        { ...PLAN_BARTEK_V1[3], exercises: day3 }
     ];
 
     // Nie pozwól, żeby plan miał mniej serii niż dane zapisane w tygodniu —
@@ -241,7 +258,7 @@ const buildKubaHistoricalPlan = (weekStart, weekData = {}) => {
 
 let DAYS = PLAN_BARTEK;
 let CURRENT_PLAN = PLAN_BARTEK;
-const APP_VERSION = "v88";
+const APP_VERSION = "v89";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -267,12 +284,19 @@ const fitPlanSetsToWeek = (plan, weekData = {}) => {
 };
 
 const getPlanForWeekIndex = (weekIndex, weekData = {}, planKey = currentPlanKey) => {
-    if (planKey !== "kuba" || !state || !state.startSunday) {
-        return copyPlan(CURRENT_PLAN);
-    }
+    if (!state || !state.startSunday) return copyPlan(CURRENT_PLAN);
 
     const weekStart = kubaWeekStart(state.startSunday, weekIndex);
     if (weekStart === null) return copyPlan(CURRENT_PLAN);
+
+    if (planKey === "bartek") {
+        if (weekStart < BARTEK_PLAN_V2_START) {
+            return copyPlan(PLAN_BARTEK_V1);
+        }
+        return copyPlan(CURRENT_PLAN);
+    }
+
+    if (planKey !== "kuba") return copyPlan(CURRENT_PLAN);
 
     if (weekStart < KUBA_PLAN_V3_START) {
         return buildKubaHistoricalPlan(weekStart, weekData);
@@ -347,6 +371,58 @@ const getDayDateKey = (dayId) => `day_${dayId}_date`;
 const getDayTimestampKey = (dayId) => `day_${dayId}_ts`;
 const getExerciseKey = (dayId, exerciseIndex) => `d${dayId}_e${exerciseIndex}`;
 const getNoteKey = (dayId, exerciseIndex) => `d${dayId}_e${exerciseIndex}_note`;
+
+// Nazwy, które w starym planie Bartka znaczyły to samo ćwiczenie co w planie Kuby.
+const exerciseNameKey = (name) => {
+    const key = String(name || "").trim().toLowerCase();
+    if (key === "smith") return "incline smith machine press";
+    if (key === "rdl (sztanga)") return "rdl";
+    if (key === "dragon flag (negatywy)") return "dragon flag (negatives)";
+    return key;
+};
+
+// Przepina serie i notatki z dotychczasowego planu tygodnia na nowy plan,
+// dopasowując ćwiczenia po nazwie. Ćwiczenia usunięte z planu nie zostawiają
+// danych pod nowymi indeksami.
+const remapWeekToPlan = (weekData = {}, oldPlan = [], newPlan = []) => {
+    const out = { ...weekData };
+
+    (newPlan || []).forEach((newDay) => {
+        const prefix = `d${newDay.id}_e`;
+        const oldDay = (oldPlan || []).find((day) => day && day.id === newDay.id);
+        const oldLogs = {};
+
+        if (oldDay) {
+            (oldDay.exercises || []).forEach((oldEx, oldIdx) => {
+                const fromKey = getExerciseKey(newDay.id, oldIdx);
+                oldLogs[oldIdx] = {
+                    sets: weekData[fromKey],
+                    note: weekData[fromKey + "_note"]
+                };
+            });
+        }
+
+        Object.keys(out).forEach((key) => {
+            if (key.startsWith(prefix)) delete out[key];
+        });
+
+        (newDay.exercises || []).forEach((newEx, newIdx) => {
+            const oldIdx = (oldDay ? oldDay.exercises || [] : []).findIndex((oldEx) =>
+                exerciseNameKey(oldEx && oldEx.name) === exerciseNameKey(newEx && newEx.name)
+            );
+            if (oldIdx < 0) return;
+
+            const oldEntry = oldLogs[oldIdx];
+            if (!oldEntry) return;
+
+            const toKey = getExerciseKey(newDay.id, newIdx);
+            if (oldEntry.sets !== undefined) out[toKey] = oldEntry.sets;
+            if (oldEntry.note !== undefined) out[toKey + "_note"] = oldEntry.note;
+        });
+    });
+
+    return out;
+};
 
 const normalizeWeek = (week = {}) => {
     const normalized = {};
@@ -1207,6 +1283,7 @@ const runPlanMigrations = (planKey) => {
     const hadHistory = state.migrations && state.migrations["kuba_plan_history_v1"];
     const hadHistoryV2 = state.migrations && state.migrations["kuba_plan_history_v2"];
     const hadRdlHam = state.migrations && state.migrations["kuba_rdl_ham_v1"];
+    const hadBartekPlan = state.migrations && state.migrations["bartek_kuba_plan_v1"];
 
     if (planKey === "kuba" && !hadLegs) {
         state.weeks = (state.weeks || []).map((week) =>
@@ -1454,6 +1531,48 @@ const runPlanMigrations = (planKey) => {
         state.migrations["kuba_rdl_ham_v1"] = true;
     }
 
+    // Bartek od 15.11.2026 ma te same ćwiczenia co Kuba. Zmiana wchodzi od
+    // razu w bieżącym tygodniu i obowiązuje w kolejnych, ale nie przepisuje
+    // snapshotów starszych tygodni. Serie i notatki przepinamy po nazwie.
+    if (planKey === "bartek" && state.migrations && !hadBartekPlan) {
+        if (!state.weekPlans || typeof state.weekPlans !== "object" || Array.isArray(state.weekPlans)) {
+            state.weekPlans = {};
+        }
+
+        const oldPlan = copyPlan(PLAN_BARTEK_V1);
+        applyCustomPlanTo(oldPlan);
+        const newPlan = copyPlan(PLAN_BARTEK);
+        const startIdx = state.startSunday
+            ? Math.max(0, Math.floor((BARTEK_PLAN_V2_START - state.startSunday) / WEEK_MS))
+            : Math.max(0, state.currentWeekIndex || 0);
+
+        (state.weeks || []).forEach((week, idx) => {
+            const weekData = week || {};
+
+            if (idx < startIdx) {
+                // Brakujący snapshot starego tygodnia uzupełniamy starym
+                // planem, żeby ensureWeekPlans nie wstawiło tam planu Kuby.
+                if (!Array.isArray(state.weekPlans[idx]) || !state.weekPlans[idx].length) {
+                    state.weekPlans[idx] = fitPlanSetsToWeek(copyPlan(oldPlan), weekData);
+                }
+                return;
+            }
+
+            const oldWeekPlan =
+                Array.isArray(state.weekPlans[idx]) && state.weekPlans[idx].length
+                    ? state.weekPlans[idx]
+                    : oldPlan;
+            const remapped = remapWeekToPlan(weekData, oldWeekPlan, newPlan);
+
+            state.weeks[idx] = remapped;
+            state.weekPlans[idx] = fitPlanSetsToWeek(copyPlan(newPlan), remapped);
+        });
+
+        // Stare ręczne edycje planu Bartka nie mogą przesłonić planu Kuby.
+        state.customPlan = {};
+        state.migrations["bartek_kuba_plan_v1"] = true;
+    }
+
     if (
         state.migrations &&
         (!hadLegs ||
@@ -1465,6 +1584,7 @@ const runPlanMigrations = (planKey) => {
             !hadHistory ||
             !hadHistoryV2 ||
             !hadRdlHam ||
+            !hadBartekPlan ||
             !state.migrations["reps_sets_v3"])
     ) {
         persistState();
