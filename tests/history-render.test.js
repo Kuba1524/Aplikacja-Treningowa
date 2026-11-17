@@ -233,6 +233,57 @@ describe("renderHistory", () => {
         );
     });
 
+    it("shows a progress summary and session deltas for the selected exercise", () => {
+        const state = makeState();
+        window.Views.renderHistory(makeCtx(state));
+
+        const screen = document.getElementById("screen-history");
+        expect(screen.querySelector(".history-progress-card")).toBeNull();
+
+        screen.querySelector('[data-history-exercise="Bench Press"]').click();
+
+        const progress = screen.querySelector(".history-progress-card");
+        expect(progress).not.toBeNull();
+        expect(progress.textContent).toContain("Postęp ćwiczenia");
+        expect(progress.textContent).toContain("Bench Press");
+        expect(progress.textContent).toContain("55 kg × 8");
+        expect(progress.textContent).toContain("+5 kg");
+        expect(progress.querySelectorAll(".history-progress-metric")).toHaveLength(4);
+        expect(progress.querySelectorAll(".history-progress-bar")).toHaveLength(2);
+
+        const deltas = Array.from(screen.querySelectorAll(".history-delta"));
+        expect(deltas).toHaveLength(1);
+        expect(deltas[0].textContent).toBe("+5 kg");
+        expect(deltas[0].classList.contains("up")).toBe(true);
+    });
+
+    it("marks the best set as a PR only when it beats an earlier result", () => {
+        const state = makeState();
+        window.Views.renderHistory(makeCtx(state));
+
+        const screen = document.getElementById("screen-history");
+        screen.querySelector('[data-history-exercise="Bench Press"]').click();
+        const prCard = screen.querySelector(".history-session");
+        prCard.open = true;
+        const prSet = prCard.querySelector(".history-set.best");
+
+        expect(prSet).not.toBeNull();
+        expect(prSet.textContent).toContain("55 kg × 8");
+        expect(prSet.textContent).toContain("PR");
+
+        screen.querySelector('[data-history-exercise="RDL"]').click();
+        const firstCard = screen.querySelector(".history-session");
+        firstCard.open = true;
+        const firstSet = firstCard.querySelector(".history-set.best");
+
+        expect(screen.querySelector(".history-progress-card").textContent).toContain(
+            "brak rekordu"
+        );
+        expect(firstSet).not.toBeNull();
+        expect(firstSet.textContent).toContain("Najlepsza");
+        expect(firstSet.textContent).not.toContain("PR");
+    });
+
     it("opens the exercise picker and searches options", () => {
         const state = makeState();
         window.Views.renderHistory(makeCtx(state));

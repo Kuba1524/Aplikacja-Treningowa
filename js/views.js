@@ -1222,6 +1222,84 @@ window.Views = (() => {
                   );
         const visibleSessions = filteredSessions.slice(0, historyLimit);
 
+        const compareBestSets = (current, previous) => {
+            if (!current || !previous) return null;
+            const curKg = Number(current.kg) || 0;
+            const prevKg = Number(previous.kg) || 0;
+            const curReps = Number(current.reps) || 0;
+            const prevReps = Number(previous.reps) || 0;
+
+            if (curKg !== prevKg) {
+                const diff = Math.round((curKg - prevKg) * 10) / 10;
+                return {
+                    dir: diff > 0 ? "up" : "down",
+                    text: `${diff > 0 ? "+" : "−"}${U.formatNumberPL(
+                        Math.abs(diff)
+                    )} kg`
+                };
+            }
+
+            if (curReps !== prevReps) {
+                const diff = curReps - prevReps;
+                return {
+                    dir: diff > 0 ? "up" : "down",
+                    text: `${diff > 0 ? "+" : "−"}${Math.abs(diff)} powt.`
+                };
+            }
+
+            return { dir: "same", text: "bez zmian" };
+        };
+
+        const selectedEntries =
+            activeFilterKey === "all"
+                ? []
+                : filteredSessions
+                      .map((session) => {
+                          const exercise = session.exercises.find(
+                              (item) =>
+                                  filterKey(item.displayName || item.name) ===
+                                  activeFilterKey
+                          );
+                          return exercise ? { session, exercise } : null;
+                      })
+                      .filter(Boolean);
+
+        const deltaBySession = new Map();
+        selectedEntries.forEach((entry, index) => {
+            const previous = selectedEntries[index + 1];
+            if (!previous) return;
+            const delta = compareBestSets(
+                entry.exercise.bestSet,
+                previous.exercise.bestSet
+            );
+            if (delta) deltaBySession.set(entry.session.id, delta);
+        });
+
+        let bestEntry = null;
+        selectedEntries.forEach((entry) => {
+            const current = entry.exercise.bestSet;
+            const best = bestEntry && bestEntry.exercise.bestSet;
+            if (
+                current &&
+                (!best ||
+                    current.kg > best.kg ||
+                    (current.kg === best.kg && current.reps > best.reps))
+            ) {
+                bestEntry = entry;
+            }
+        });
+
+        const prEntry =
+            bestEntry && bestEntry.exercise.isPR ? bestEntry : null;
+        const trendEntries = selectedEntries.slice(0, 6).reverse();
+        const trendComparison =
+            trendEntries.length >= 2
+                ? compareBestSets(
+                      trendEntries[trendEntries.length - 1].exercise.bestSet,
+                      trendEntries[0].exercise.bestSet
+                  )
+                : null;
+
         const selectedOption =
             activeFilterKey === "all"
                 ? null
@@ -1283,6 +1361,135 @@ window.Views = (() => {
             };
         };
 
+        const shortDate = (ts) => {
+            const parts = dateParts(ts);
+            return parts.day && parts.month
+                ? `${Number(parts.day)} ${parts.month.toLocaleLowerCase("pl")}`
+                : "—";
+        };
+
+        const progressMetric = (label, value, sub) => `
+            <div class="history-progress-metric">
+                <span class="history-progress-label">${label}</span>
+                <span class="history-progress-value">${value}</span>
+                <span class="history-progress-sub">${sub || ""}</span>
+            </div>
+        `;
+
+        let progressHtml = "";
+        if (activeFilterKey !== "all" && selectedEntries.length) {
+            const lastEntry = selectedEntries[0];
+            const best = bestEntry || lastEntry;
+            const bestSet = best.exercise.bestSet;
+            const estimated = bestSet
+                ? U.estimate1RM(bestSet.kg, bestSet.reps)
+                : 0;
+            const prGain = prEntry
+                ? (
+                      prEntry.session.prs.find(
+                          (pr) =>
+                              pr.name ===
+                              (prEntry.exercise.displayName ||
+                                  prEntry.exercise.name)
+                      ) || {}
+                  ).gain
+                : "";
+            const trendChip = trendComparison
+                ? `<span class="history-progress-delta ${trendComparison.dir}">${trendComparison.text}</span>`
+                : "";
+
+            let barsHtml = "";
+            if (trendEntries.length >= 2) {
+                const weighted = trendEntries.some(
+                    (entry) => Number(entry.exercise.bestSet?.kg) > 0
+                );
+                const values = trendEntries.map((entry) => {
+                    const set = entry.exercise.bestSet || {};
+                    return weighted
+                        ? Number(set.kg) || 0
+                        : Number(set.reps) || 0;
+                });
+                const min = Math.min(...values);
+                const max = Math.max(...values);
+                barsHtml = `<span class="history-progress-bars" aria-hidden="true">${trendEntries
+                    .map((entry, index) => {
+                        const pct =
+                            max === min
+                                ? 55
+                                : 25 +
+                                  ((values[index] - min) / (max - min)) * 75;
+                        return `<span class="history-progress-bar" style="height:${pct.toFixed(
+                            0
+                        )}%" title="${U.escapeHtml(
+                            formatSet(entry.exercise.bestSet)
+                        )} · ${U.escapeHtml(
+                            shortDate(entry.session.ts)
+                        )}"></span>`;
+                    })
+                    .join("")}</span>`;
+            }
+
+            progressHtml = `
+                <div class="history-progress-card">
+                    <div class="history-progress-head">
+                        <div class="history-progress-heading">
+                            <span class="history-progress-kicker">Postęp ćwiczenia</span>
+                            <span class="history-progress-name">${U.escapeHtml(
+                                selectedName
+                            )}</span>
+                            <span class="history-progress-count">${
+                                selectedEntries.length
+                            } ${plural(
+                                selectedEntries.length,
+                                "sesja",
+                                "sesje",
+                                "sesji"
+                            )}</span>
+                        </div>
+                        ${trendChip}
+                    </div>
+                    <div class="history-progress-grid">
+                        ${progressMetric(
+                            "Ostatnio",
+                            formatSet(lastEntry.exercise.bestSet),
+                            shortDate(lastEntry.session.ts)
+                        )}
+                        ${progressMetric(
+                            "Najlepsza",
+                            formatSet(best.exercise.bestSet),
+                            shortDate(best.session.ts)
+                        )}
+                        ${progressMetric(
+                            "1RM",
+                            estimated > 0
+                                ? `${U.formatNumberPL(
+                                      Math.round(estimated * 10) / 10
+                                  )} kg`
+                                : "—",
+                            estimated > 0 ? "szacunkowo" : "bez obciążenia"
+                        )}
+                        ${progressMetric(
+                            "PR",
+                            prEntry ? shortDate(prEntry.session.ts) : "—",
+                            prEntry ? prGain || "rekord" : "brak rekordu"
+                        )}
+                    </div>
+                    ${
+                        barsHtml
+                            ? `<div class="history-progress-chart">${barsHtml}<span class="history-progress-chart-label">Ostatnie ${
+                                  trendEntries.length
+                              } ${plural(
+                                  trendEntries.length,
+                                  "sesja",
+                                  "sesje",
+                                  "sesji"
+                              )}</span></div>`
+                            : ""
+                    }
+                </div>
+            `;
+        }
+
         const sessionHtml = (session) => {
             const date = dateParts(session.ts);
             const title = session.dayLabel || session.dayName || "Trening";
@@ -1296,6 +1503,7 @@ window.Views = (() => {
                               activeFilterKey
                       );
             const focus = activeFilterKey === "all" ? null : matchingExercises[0] || null;
+            const focusDelta = focus ? deltaBySession.get(session.id) || null : null;
             const prCount = focus
                 ? matchingExercises.filter((exercise) => exercise.isPR).length
                 : session.prs.length;
@@ -1332,13 +1540,18 @@ window.Views = (() => {
             if (session.durationMs > 0) {
                 metaChips.push(U.formatDuration(session.durationMs));
             }
-            const meta = metaChips.length
-                ? `<span class="history-meta">${metaChips
-                      .map(
-                          (chip) => `<span class="history-stat-chip">${chip}</span>`
-                      )
-                      .join("")}</span>`
+            const deltaChip = focusDelta
+                ? `<span class="history-delta ${focusDelta.dir}">${focusDelta.text}</span>`
                 : "";
+            const meta =
+                metaChips.length || deltaChip
+                    ? `<span class="history-meta">${deltaChip}${metaChips
+                          .map(
+                              (chip) =>
+                                  `<span class="history-stat-chip">${chip}</span>`
+                          )
+                          .join("")}</span>`
+                    : "";
 
             const detailSetCount = matchingExercises.reduce(
                 (sum, exercise) => sum + (exercise.sets ? exercise.sets.length : 0),
@@ -1361,12 +1574,28 @@ window.Views = (() => {
                     const prInfo = session.prs.find(
                         (pr) => pr.name === exercise.displayName
                     );
+                    const bestSet = exercise.bestSet;
+                    let bestMarked = false;
                     const sets = exercise.sets.length
                         ? `<div class="history-sets">${exercise.sets
-                              .map(
-                                  (set) =>
-                                      `<span class="history-set">${formatSet(set)}</span>`
-                              )
+                              .map((set) => {
+                                  const isBest =
+                                      !bestMarked &&
+                                      bestSet &&
+                                      (Number(set.kg) || 0) === bestSet.kg &&
+                                      (Number(set.reps) || 0) === bestSet.reps;
+                                  if (isBest) bestMarked = true;
+                                  const badge = isBest
+                                      ? `<span class="history-set-badge">${
+                                            exercise.isPR ? "PR" : "Najlepsza"
+                                        }</span>`
+                                      : "";
+                                  return `<span class="history-set${
+                                      isBest ? " best" : ""
+                                  }${isBest && exercise.isPR ? " is-pr" : ""}">${formatSet(
+                                      set
+                                  )}${badge}</span>`;
+                              })
                               .join("")}</div>`
                         : "";
                     const note = exercise.note
@@ -1570,6 +1799,7 @@ window.Views = (() => {
                 </div>
 
                 ${filtersHtml}
+                ${progressHtml}
                 <div class="history-list">${listHtml}</div>
                 ${moreHtml}
             </div>
