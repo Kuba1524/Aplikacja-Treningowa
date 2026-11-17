@@ -113,6 +113,58 @@ describe("getWeeklyVolume", () => {
     });
 });
 
+describe("exercise name variants", () => {
+    const plan = (name) => [
+        {
+            id: 0,
+            weekday: 0,
+            name: "Niedziela",
+            label: "PUSH",
+            exercises: [{ name, sets: 3, reps: "8-12", tag: "BICEPS" }]
+        }
+    ];
+
+    it("merges [SS] and case variants in getAllExercisePRs", () => {
+        const state = {
+            ...makeState([
+                { d0_e0: [{ kg: 12, reps: 8, done: true }] },
+                { d0_e0: [{ kg: 14, reps: 8, done: true }] },
+                { d0_e0: [{ kg: 18, reps: 8, done: true }] }
+            ]),
+            weekPlans: [
+                plan("Incline Hammer Curl [SS]"),
+                plan("Incline Hammer Curl"),
+                plan("incline hammer curl")
+            ]
+        };
+
+        const prs = S().getAllExercisePRs(state, [], getExerciseKey);
+        const hammer = prs.filter((item) => item.name === "Incline Hammer Curl");
+        expect(hammer).toHaveLength(1);
+        expect(hammer[0].history).toHaveLength(3);
+        expect(hammer[0].history[2].bestSet).toEqual({ kg: 18, reps: 8 });
+    });
+
+    it("matches [SS] variants in getExerciseHistory", () => {
+        const state = {
+            ...makeState([
+                { d0_e0: [{ kg: 12, reps: 8, done: true }] },
+                { d0_e0: [{ kg: 14, reps: 8, done: true }] }
+            ]),
+            weekPlans: [plan("EZ-bar Reverse Curl"), plan("Ez-bar Reverse Curl [SS]")]
+        };
+
+        const history = S().getExerciseHistory(
+            state,
+            [],
+            "Ez-bar Reverse Curl",
+            getExerciseKey
+        );
+        expect(history).toHaveLength(2);
+        expect(history[1].bestSet).toEqual({ kg: 14, reps: 8 });
+    });
+});
+
 describe("getStagnantExercises", () => {
     const plank = (kg, reps) => ({ kg, reps, done: true });
     const week = (bench, crunches) => ({ d0_e0: bench, d0_e1: crunches });

@@ -1,4 +1,22 @@
 window.StatsModule = (() => {
+    // Nazwa ćwiczenia bez technicznego znacznika superserii i bez różnic
+    // wielkości liter. Dzięki temu statystyki nie pokazują dwóch kart dla
+    // tego samego ćwiczenia (np. "Incline Hammer Curl" i "Incline Hammer Curl [SS]").
+    const stripExerciseTag = (name) =>
+        window.Utils && typeof window.Utils.stripSupersetTag === "function"
+            ? window.Utils.stripSupersetTag(name)
+            : String(name || "").trim();
+
+    const exerciseDisplayName = (name) => String(stripExerciseTag(name) || "").trim();
+
+    const exerciseNameKey = (name) => {
+        const key = exerciseDisplayName(name).toLowerCase();
+        if (key === "smith") return "incline smith machine press";
+        if (key === "rdl (sztanga)") return "rdl";
+        if (key === "dragon flag (negatywy)") return "dragon flag (negatives)";
+        return key;
+    };
+
     const getWeekStats = (state, DAYS, weekIndex, getExerciseKey) => {
         const weekData = state.weeks[weekIndex] || {};
         let completedSets = 0;
@@ -125,6 +143,7 @@ window.StatsModule = (() => {
 
     const getExerciseHistory = (state, DAYS, exerciseName, getExerciseKey, getDayTimestampKey) => {
         const history = [];
+        const targetKey = exerciseNameKey(exerciseName);
 
         state.weeks.forEach((weekData, weekIndex) => {
             const weekPlan =
@@ -134,7 +153,7 @@ window.StatsModule = (() => {
 
             (weekPlan || []).forEach((day) => {
                 (day.exercises || []).forEach((ex, ei) => {
-                    if (ex.name !== exerciseName) return;
+                    if (exerciseNameKey(ex.name) !== targetKey) return;
 
                     const key = getExerciseKey(day.id, ei);
                     const sets = weekData[key] || [];
@@ -390,26 +409,31 @@ window.StatsModule = (() => {
     ];
 
     const getAllExercisePRs = (state, DAYS, getExerciseKey, getDayTimestampKey) => {
-        const names = new Set(PRIMARY_EXERCISE_NAMES);
+        const names = new Map();
+        const addName = (name) => {
+            if (!name) return;
+            const key = exerciseNameKey(name);
+            if (!key || names.has(key)) return;
+            names.set(key, exerciseDisplayName(name));
+        };
+
+        PRIMARY_EXERCISE_NAMES.forEach(addName);
         Object.values(state.weekPlans || {}).forEach((plan) => {
             (plan || []).forEach((day) => {
-                (day.exercises || []).forEach((ex) => {
-                    if (ex && ex.name) names.add(ex.name);
-                });
+                (day.exercises || []).forEach((ex) => addName(ex && ex.name));
             });
         });
         (DAYS || []).forEach((day) => {
-            (day.exercises || []).forEach((ex) => {
-                if (ex && ex.name) names.add(ex.name);
-            });
+            (day.exercises || []).forEach((ex) => addName(ex && ex.name));
         });
 
+        const primaryKeys = PRIMARY_EXERCISE_NAMES.map(exerciseNameKey);
         const preferredIndex = (name) => {
-            const index = PRIMARY_EXERCISE_NAMES.indexOf(name);
-            return index === -1 ? PRIMARY_EXERCISE_NAMES.length : index;
+            const index = primaryKeys.indexOf(exerciseNameKey(name));
+            return index === -1 ? primaryKeys.length : index;
         };
 
-        return [...names]
+        return [...names.values()]
             .map((name) => ({
                 name,
                 history: getExerciseHistory(state, DAYS, name, getExerciseKey, getDayTimestampKey)
@@ -460,10 +484,12 @@ window.StatsModule = (() => {
 
         (DAYS || []).forEach((day) => {
             (day.exercises || []).forEach((ex) => {
-                if (seen.has(ex.name)) return;
-                seen.add(ex.name);
+                const nameKey = exerciseNameKey(ex.name);
+                if (seen.has(nameKey)) return;
+                seen.add(nameKey);
 
-                const history = getExerciseHistory(state, DAYS, ex.name, getExerciseKey);
+                const displayName = exerciseDisplayName(ex.name);
+                const history = getExerciseHistory(state, DAYS, displayName, getExerciseKey);
                 const bodyweight = isBodyweight(history);
                 if (history.length < minStreak) return;
 
@@ -478,7 +504,7 @@ window.StatsModule = (() => {
 
                 const last = history[history.length - 1];
                 result.push({
-                    name: ex.name,
+                    name: displayName,
                     tag: ex.tag,
                     streak,
                     kg: (last.bestSet && last.bestSet.kg) || last.topWeight || 0,

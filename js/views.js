@@ -955,6 +955,17 @@ window.Views = (() => {
 
         const S = window.StatsModule;
         const U = window.Utils;
+        const stripTag =
+            U && typeof U.stripSupersetTag === "function"
+                ? U.stripSupersetTag
+                : (name) => name;
+        const baseNameKey =
+            typeof ctx.exerciseNameKey === "function"
+                ? ctx.exerciseNameKey
+                : (name) => String(name || "").trim().toLowerCase();
+        // Znacznik [SS] nie tworzy osobnego ćwiczenia — PR liczymy dla tej
+        // samej nazwy niezależnie od tego, czy dana seria była superserią.
+        const historyNameKey = (name) => baseNameKey(stripTag(name));
         const sessions =
             typeof S.getWorkoutHistory === "function"
                 ? S.getWorkoutHistory(
@@ -964,7 +975,7 @@ window.Views = (() => {
                       ctx.getExerciseKey,
                       ctx.getDayTimestampKey,
                       ctx.getNoteKey,
-                      ctx.exerciseNameKey
+                      historyNameKey
                   )
                 : [];
 

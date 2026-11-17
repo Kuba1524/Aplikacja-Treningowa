@@ -341,7 +341,7 @@ const buildKubaHistoricalPlan = (weekStart, weekData = {}) => {
 
 let DAYS = PLAN_BARTEK;
 let CURRENT_PLAN = PLAN_BARTEK;
-const APP_VERSION = "v98";
+const APP_VERSION = "v99";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
