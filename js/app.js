@@ -159,12 +159,17 @@ const KUBA_PLAN_V5_START = KUBA_PLAN_V3_START;
 const BARTEK_PLAN_V2_START = new Date(2026, 10, 15, 0, 0, 0, 0).getTime();
 
 // Granice wcześniejszych zmian planu Kuby (odtworzone z historii i z danych):
-// - do 16.08.2026 wiosłowania miały po 4 serie,
+// - do 12.07.2026 obowiązywał pierwszy plan (polskie nazwy, inne ćwiczenia),
+// - od 14.07.2026 plan został przetłumaczony i zmieniono część ćwiczeń,
+// - od 17.08.2026 wrócił Bench Press i Pallof Press,
 // - od 20.09.2026 Incline Dumbbell Press zastąpił Incline Smith Machine Press,
-// - od 27.09.2026 Weighted Pull Ups mają 3 serie (wcześniej 4).
-const KUBA_ROWS4_UNTIL = new Date(2026, 7, 16, 0, 0, 0, 0).getTime();
+// - od 27.09.2026 obowiązuje nowy układ nóg i Weighted Pull Ups mają 3 serie.
+const KUBA_PLAN_INITIAL_UNTIL = new Date(2026, 6, 12, 0, 0, 0, 0).getTime();
+const KUBA_UPPER_FLYES_FROM = new Date(2026, 5, 14, 0, 0, 0, 0).getTime();
+const KUBA_PLAN_AUG_FROM = new Date(2026, 7, 16, 0, 0, 0, 0).getTime();
 const KUBA_SMITH_FROM = new Date(2026, 8, 20, 0, 0, 0, 0).getTime();
-const KUBA_WPU3_FROM = new Date(2026, 8, 27, 0, 0, 0, 0).getTime();
+const KUBA_PLAN_LEGS_V2_FROM = new Date(2026, 8, 27, 0, 0, 0, 0).getTime();
+const KUBA_WPU3_FROM = KUBA_PLAN_LEGS_V2_FROM;
 
 // Data początku tygodnia liczona po dniach kalendarzowych (bez dryfu DST).
 const kubaWeekStart = (startSunday, weekIndex) => {
@@ -174,56 +179,118 @@ const kubaWeekStart = (startSunday, weekIndex) => {
     return d.getTime();
 };
 
-// Plan Kuby obowiązujący w danym tygodniu (przed nowym planem z 8.11.2026).
-// Ćwiczenia nóg zostają w układzie po migracji z 28.09.2026, bo dane w
-// starych tygodniach są do niego dopasowane.
-const buildKubaHistoricalPlan = (weekStart, weekData = {}) => {
-    const rows4 = weekStart < KUBA_ROWS4_UNTIL;
-    const smith = weekStart >= KUBA_SMITH_FROM;
+const buildHistoricalPush = (weekStart) => {
+    if (weekStart < KUBA_PLAN_INITIAL_UNTIL) {
+        return [
+            { name: "Incline Dumbbell Press", sets: 4, reps: "6-10", tag: "CHEST" },
+            { name: "Seated Dumbbell OHP", sets: 3, reps: "6-10", tag: "SHOULDER" },
+            { name: "Machine Chest Press", sets: 3, reps: "6-10", tag: "CHEST" },
+            { name: "Rozpiętki", sets: 3, reps: "8-12", tag: "CHEST" },
+            { name: "Dumbbell Lateral Raises", sets: 4, reps: "8-12", tag: "DELTS" },
+            { name: "Ab Wheel", sets: 3, reps: "8-12", tag: "CORE" }
+        ];
+    }
+
+    if (weekStart < KUBA_PLAN_AUG_FROM) {
+        return [
+            { name: "Incline Dumbbell Press", sets: 4, reps: "6-10", tag: "CHEST" },
+            { name: "Seated Dumbbell OHP", sets: 3, reps: "6-10", tag: "SHOULDER" },
+            { name: "Machine Chest Press", sets: 3, reps: "6-10", tag: "CHEST" },
+            { name: "Chest Dips", sets: 3, reps: "6-10", tag: "CHEST" },
+            { name: "Dumbbell Lateral Raises", sets: 4, reps: "8-12", tag: "DELTS" },
+            { name: "Ab Wheel", sets: 3, reps: "8-12", tag: "CORE" },
+            { name: "Dumbbell Side Bend", sets: 3, reps: "8-12", tag: "CORE" }
+        ];
+    }
+
+    if (weekStart < KUBA_SMITH_FROM) {
+        return [
+            { name: "Incline Dumbbell Press", sets: 4, reps: "6-10", tag: "CHEST" },
+            { name: "Seated Dumbbell OHP", sets: 3, reps: "6-10", tag: "SHOULDER" },
+            { name: "Machine Chest Press", sets: 3, reps: "6-10", tag: "CHEST" },
+            { name: "Chest Dips", sets: 3, reps: "6-10", tag: "CHEST" },
+            { name: "Dumbbell Lateral Raises", sets: 4, reps: "8-12", tag: "DELTS" },
+            { name: "Ab Wheel", sets: 3, reps: "8-12", tag: "CORE" },
+            { name: "Pallof Press", sets: 3, reps: "8-12", tag: "CORE" }
+        ];
+    }
+
+    return [
+        { name: "Incline Smith Machine Press", sets: 3, reps: "6-8", tag: "CHEST" },
+        { name: "Seated Dumbbell OHP", sets: 3, reps: "6-10", tag: "SHOULDER" },
+        { name: "Machine Chest Press", sets: 3, reps: "8-10", tag: "CHEST" },
+        { name: "Chest Dips", sets: 3, reps: "6-10", tag: "CHEST" },
+        { name: "Dumbbell Lateral Raises", sets: 4, reps: "8-12", tag: "SHOULDER" },
+        { name: "Ab Wheel", sets: 3, reps: "8-12", tag: "CORE" },
+        { name: "Decline Oblique Crunches", sets: 3, reps: "8-12", tag: "CORE" }
+    ];
+};
+
+const buildHistoricalPull = (weekStart) => {
+    const rows4 = weekStart < KUBA_PLAN_AUG_FROM;
     const late = weekStart >= KUBA_WPU3_FROM;
 
-    const day0 = [
-        smith
-            ? { name: "Incline Smith Machine Press", sets: 3, reps: "6-8", tag: "CHEST" }
-            : { name: "Incline Dumbbell Press", sets: 4, reps: "6-10", tag: "CHEST" },
-        { name: "Seated Dumbbell OHP", sets: 3, reps: "6-10", tag: "SHOULDER" },
-        { name: "Machine Chest Press", sets: 3, reps: smith ? "8-10" : "6-10", tag: "CHEST" },
-        { name: "Chest Dips", sets: 3, reps: "6-10", tag: "CHEST" },
-        {
-            name: "Dumbbell Lateral Raises",
-            sets: 4,
-            reps: "8-12",
-            tag: late ? "SHOULDER" : "DELTS"
-        },
-        { name: "Ab Wheel", sets: 3, reps: "8-12", tag: "CORE" },
-        smith
-            ? { name: "Decline Oblique Crunches", sets: 3, reps: "8-12", tag: "CORE" }
-            : { name: "Pallof Press", sets: 3, reps: "8-12", tag: "CORE" }
-    ];
-
-    const day1 = [
+    return [
         { name: "Weighted Pull Ups", sets: late ? 3 : 4, reps: "6-8", tag: "BACK" },
-        {
-            name: "Single-Arm Dumbbell Row",
-            sets: rows4 ? 4 : 3,
-            reps: "6-10",
-            tag: "BACK"
-        },
+        { name: "Single-Arm Dumbbell Row", sets: rows4 ? 4 : 3, reps: "6-10", tag: "BACK" },
         { name: "Seated Cable Row", sets: rows4 ? 4 : 3, reps: "6-10", tag: "BACK" },
         { name: "Reverse Peck Deck", sets: 4, reps: "8-12", tag: "REAR" },
         { name: "Dumbbell Shrugs", sets: 3, reps: "8-12", tag: "TRAPS" },
         { name: "Ez-bar Reverse Curl", sets: 3, reps: "8-12", tag: "FOREARMS" },
         { name: "Barbell Wrist Curl", sets: 3, reps: "10-15", tag: "FOREARMS" }
     ];
+};
 
-    const day2 = KUBA_LEGS_V1.map((ex) => ({
-        ...ex,
-        reps: !late && /Hammer Curl/.test(ex.name) ? "8-12" : ex.reps
-    }));
+const buildHistoricalLegs = (weekStart) => {
+    if (weekStart >= KUBA_PLAN_LEGS_V2_FROM) {
+        return KUBA_LEGS_V1.map((ex) => ({ ...ex }));
+    }
 
-    const day3 = [
+    const initial = weekStart < KUBA_PLAN_INITIAL_UNTIL;
+
+    // Po migracji z 28.09.2026 dane nóg są w nowym układzie. W starych
+    // tygodniach slot 0 zawiera więc ćwiczenie, które wtedy było na slocie 2:
+    // Bulgarian Split (pierwszy plan) albo RDL (od 14.07.2026).
+    return [
+        {
+            name: initial ? "Bulgarian Split" : "RDL",
+            sets: 3,
+            reps: "6-10",
+            tag: initial ? "LEGS" : "HAM"
+        },
+        { name: "Hack Squat / Leg Press", sets: 3, reps: "6-10", tag: "QUADS" },
+        { name: "Leg Extension", sets: 3, reps: "10-12", tag: "QUADS" },
+        { name: "Seated Leg Curl", sets: 3, reps: "8-12", tag: "HAM" },
+        { name: "Supination Curl", sets: 3, reps: "8-12", tag: "BICEPS" },
+        {
+            name: initial ? "Katana Extension" : "Single-Arm Cable Pushdown [SS]",
+            sets: 3,
+            reps: "8-12",
+            tag: "TRICEPS"
+        },
+        {
+            name: initial ? "Hammer Curl" : "Cross-Body Hammer Curl [SS]",
+            sets: 3,
+            reps: "8-12",
+            tag: "BICEPS"
+        },
+        { name: "Calf Raises [SS]", sets: 4, reps: "10-15", tag: "CALVES" }
+    ];
+};
+
+const buildHistoricalUpper = (weekStart) => {
+    const initial = weekStart < KUBA_PLAN_INITIAL_UNTIL;
+    const flyes = weekStart >= KUBA_UPPER_FLYES_FROM;
+    const late = weekStart >= KUBA_WPU3_FROM;
+
+    return [
         { name: "Bench Press", sets: 3, reps: "5-8", tag: "CHEST" },
-        { name: "Cable Flyes (Low to High)", sets: 3, reps: "8-12", tag: "CHEST" },
+        {
+            name: flyes ? "Cable Flyes (Low to High)" : "Incline Machine Press",
+            sets: 3,
+            reps: "8-12",
+            tag: "CHEST"
+        },
         { name: "Single-Arm Lat Pulldown", sets: 3, reps: "6-10", tag: "BACK" },
         {
             name: "Cable Lateral Raise",
@@ -231,16 +298,32 @@ const buildKubaHistoricalPlan = (weekStart, weekData = {}) => {
             reps: "8-12",
             tag: late ? "SHOULDER" : "DELTS"
         },
-        { name: "EZ-bar Preacher Curl", sets: 3, reps: "8-12", tag: "BICEPS" },
-        { name: "Incline Skull Crushers", sets: 3, reps: late ? "8-10" : "8-12", tag: "TRICEPS" },
+        {
+            name: initial ? "Incline Dumbbell Curl" : "EZ-bar Preacher Curl",
+            sets: 3,
+            reps: "8-12",
+            tag: "BICEPS"
+        },
+        {
+            name: initial ? "Tricep Pushdown" : "Incline Skull Crushers",
+            sets: 3,
+            reps: initial ? "8-12" : "8-10",
+            tag: "TRICEPS"
+        },
         { name: "Cable Crunch", sets: 4, reps: "8-12", tag: "CORE" }
     ];
+};
 
+// Plan Kuby obowiązujący w danym tygodniu (przed nowym planem z 8.11.2026).
+// Odtwarzamy właściwą erę planu, bo nazwy ćwiczeń zmieniały się 14.07,
+// 17.08, 20.09 i 27.09.2026. Dzięki temu stare serie nie dostają nazw
+// ćwiczeń, których wtedy jeszcze nie było.
+const buildKubaHistoricalPlan = (weekStart, weekData = {}) => {
     const plan = [
-        { ...PLAN_BARTEK_V1[0], exercises: day0 },
-        { ...PLAN_BARTEK_V1[1], exercises: day1 },
-        { ...PLAN_BARTEK_V1[2], exercises: day2 },
-        { ...PLAN_BARTEK_V1[3], exercises: day3 }
+        { ...PLAN_BARTEK_V1[0], exercises: buildHistoricalPush(weekStart) },
+        { ...PLAN_BARTEK_V1[1], exercises: buildHistoricalPull(weekStart) },
+        { ...PLAN_BARTEK_V1[2], exercises: buildHistoricalLegs(weekStart) },
+        { ...PLAN_BARTEK_V1[3], exercises: buildHistoricalUpper(weekStart) }
     ];
 
     // Nie pozwól, żeby plan miał mniej serii niż dane zapisane w tygodniu —
@@ -258,7 +341,7 @@ const buildKubaHistoricalPlan = (weekStart, weekData = {}) => {
 
 let DAYS = PLAN_BARTEK;
 let CURRENT_PLAN = PLAN_BARTEK;
-const APP_VERSION = "v97";
+const APP_VERSION = "v98";
 
 const getPlanByKey = (planKey) =>
     planKey === "kuba" ? PLAN_KUBA : PLAN_BARTEK;
@@ -1963,6 +2046,7 @@ const runPlanMigrations = (planKey) => {
     const hadRepair = state.migrations && state.migrations["kuba_plan_v3_repair"];
     const hadHistory = state.migrations && state.migrations["kuba_plan_history_v1"];
     const hadHistoryV2 = state.migrations && state.migrations["kuba_plan_history_v2"];
+    const hadHistoryV3 = state.migrations && state.migrations["kuba_plan_history_v3"];
     const hadRdlHam = state.migrations && state.migrations["kuba_rdl_ham_v1"];
     const hadBartekPlan = state.migrations && state.migrations["bartek_kuba_plan_v1"];
 
@@ -2095,6 +2179,30 @@ const runPlanMigrations = (planKey) => {
         });
 
         state.migrations["kuba_plan_history_v2"] = true;
+    }
+
+    // v98: poprzednie migracje odtwarzały jeden zamrożony plan dla wszystkich
+    // starych tygodni. Przez to serie z pierwszego planu dostawały późniejsze
+    // nazwy (np. Bulgarian Split jako RDL, Rozpiętki jako Chest Dips).
+    // Odtwarzamy plany z właściwej ery, nie ruszając snapshotów od 8.11.2026.
+    if (planKey === "kuba" && state.startSunday && state.migrations && !hadHistoryV3) {
+        if (!state.weekPlans || typeof state.weekPlans !== "object" || Array.isArray(state.weekPlans)) {
+            state.weekPlans = {};
+        }
+
+        const boundary = Math.max(
+            0,
+            Math.floor((KUBA_PLAN_V3_START - state.startSunday) / WEEK_MS)
+        );
+
+        (state.weeks || []).forEach((week, idx) => {
+            if (idx >= boundary) return;
+            const weekStart = kubaWeekStart(state.startSunday, idx);
+            if (weekStart === null) return;
+            state.weekPlans[idx] = buildKubaHistoricalPlan(weekStart, week || {});
+        });
+
+        state.migrations["kuba_plan_history_v3"] = true;
     }
 
     if (state.migrations && !state.migrations["reps_sets_v3"]) {
@@ -2264,6 +2372,7 @@ const runPlanMigrations = (planKey) => {
             !hadRepair ||
             !hadHistory ||
             !hadHistoryV2 ||
+            !hadHistoryV3 ||
             !hadRdlHam ||
             !hadBartekPlan ||
             !state.migrations["reps_sets_v3"])

@@ -188,6 +188,41 @@ describe("historyczny plan Kuby per tydzień", () => {
         expect(plan[1].exercises[2].sets).toBe(4); // Seated Cable Row
     });
 
+    it("stare tygodnie mają nazwy ćwiczeń z właściwej ery planu", () => {
+        const names = (plan, dayId) => plan[dayId].exercises.map((ex) => ex.name);
+
+        // PUSH: pierwszy plan miał Rozpiętki, od 14.07.2026 Chest Dips.
+        expect(names(saved.weekPlans[0], 0)).toContain("Rozpiętki");
+        expect(names(saved.weekPlans[0], 0)).not.toContain("Chest Dips");
+        expect(names(saved.weekPlans[9], 0)).toContain("Chest Dips");
+        expect(names(saved.weekPlans[9], 0)).not.toContain("Rozpiętki");
+
+        // UPPER: Incline Machine tylko do 4. tygodnia, potem Cable Flyes.
+        expect(names(saved.weekPlans[0], 3)).toContain("Incline Machine Press");
+        expect(names(saved.weekPlans[0], 3)).toContain("Incline Dumbbell Curl");
+        expect(names(saved.weekPlans[0], 3)).toContain("Tricep Pushdown");
+        expect(names(saved.weekPlans[4], 3)).toContain("Incline Machine Press");
+        expect(names(saved.weekPlans[5], 3)).toContain("Cable Flyes (Low to High)");
+        expect(names(saved.weekPlans[9], 3)).toContain("EZ-bar Preacher Curl");
+        expect(names(saved.weekPlans[9], 3)).toContain("Incline Skull Crushers");
+
+        // Po migracji nóg slot 0 to Bulgarian Split (pierwszy plan), potem RDL.
+        const legs0 = names(saved.weekPlans[0], 2);
+        expect(legs0[0]).toBe("Bulgarian Split");
+        expect(legs0).not.toContain("RDL");
+        expect(legs0).toContain("Supination Curl");
+        expect(legs0).toContain("Hammer Curl");
+        expect(legs0).not.toContain("Incline Hammer Curl [SS]");
+        expect(names(saved.weekPlans[9], 2)[0]).toBe("RDL");
+        expect(names(saved.weekPlans[9], 2)).toContain("Cross-Body Hammer Curl [SS]");
+        expect(names(saved.weekPlans[20], 2)[0]).toBe("RDL");
+        expect(names(saved.weekPlans[20], 2)).toContain("Incline Hammer Curl [SS]");
+
+        // Plan z 14.07 miał poprawiony Bench Press (nie Dumbbell Press).
+        expect(names(saved.weekPlans[9], 3)[0]).toBe("Bench Press");
+        expect(names(saved.weekPlans[9], 3)).not.toContain("Dumbbell Press");
+    });
+
     it("od 15. tygodnia wiosłowania mają 3 serie", () => {
         expect(saved.weekPlans[13][1].exercises[1].sets).toBe(4);
         expect(saved.weekPlans[14][1].exercises[1].sets).toBe(3);
@@ -321,8 +356,11 @@ describe("historyczny plan Kuby per tydzień", () => {
         saved = readSavedState();
 
         expect(saved.migrations.kuba_plan_history_v2).toBe(true);
+        expect(saved.migrations.kuba_plan_history_v3).toBe(true);
         expect(saved.weekPlans[0][0].exercises[0].name).toBe("Incline Dumbbell Press");
         expect(saved.weekPlans[0][0].exercises[0].sets).toBe(4);
+        expect(saved.weekPlans[0][2].exercises[0].name).toBe("Bulgarian Split");
+        expect(saved.weekPlans[9][3].exercises[0].name).toBe("Bench Press");
         expect(saved.weekPlans[14][1].exercises[1].sets).toBe(3);
         expect(saved.weekPlans[19][0].exercises[0].name).toBe("Incline Smith Machine Press");
     });
@@ -405,15 +443,15 @@ describe("historyczny plan Kuby per tydzień", () => {
     it("v87 zmienia tag RDL z LEGS na HAM w customPlan i zapisanych planach", async () => {
         const fixture = globalThis.__kubaFixture;
         const plan27 = JSON.parse(JSON.stringify(saved.weekPlans[27]));
-        const plan0 = JSON.parse(JSON.stringify(saved.weekPlans[0]));
+        const plan20 = JSON.parse(JSON.stringify(saved.weekPlans[20]));
         const findRdl = (plan) =>
             plan[2].exercises.find((ex) => /^RDL/i.test(ex.name));
 
         findRdl(plan27).tag = "LEGS";
-        findRdl(plan0).tag = "LEGS";
+        findRdl(plan20).tag = "LEGS";
 
         fixture.customPlan = { 2: JSON.parse(JSON.stringify(plan27[2].exercises)) };
-        fixture.weekPlans = { ...fixture.weekPlans, 0: plan0, 27: plan27 };
+        fixture.weekPlans = { ...fixture.weekPlans, 20: plan20, 27: plan27 };
         fixture.weeks[27] = {};
         fixture.migrations = {
             kuba_legs_v2: true,
@@ -424,6 +462,7 @@ describe("historyczny plan Kuby per tydzień", () => {
             kuba_plan_v5_now: true,
             kuba_plan_history_v1: true,
             kuba_plan_history_v2: true,
+            kuba_plan_history_v3: true,
             reps_sets_v3: true,
             week_plans_v1: true,
             kuba_week_seed_v1: true,
@@ -435,7 +474,7 @@ describe("historyczny plan Kuby per tydzień", () => {
 
         expect(saved.migrations.kuba_rdl_ham_v1).toBe(true);
         expect(saved.customPlan[2].find((ex) => /^RDL/i.test(ex.name)).tag).toBe("HAM");
-        expect(findRdl(saved.weekPlans[0]).tag).toBe("HAM");
+        expect(findRdl(saved.weekPlans[20]).tag).toBe("HAM");
         expect(findRdl(saved.weekPlans[27]).tag).toBe("HAM");
         expect(
             saved.weekPlans[27][2].exercises.some((ex) => ex.tag === "LEGS")
